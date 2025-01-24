@@ -1,0 +1,16 @@
+{
+      // Use IntelliSense to learn about possible attributes.
+      // Hover to view descriptions of existing attributes.
+      // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+      "version": "0.2.0",
+      "configurations": [
+            {
+                  "type": "lldb",
+                  "request": "launch",
+                  "name": "Debug",
+                  "program": "${workspaceFolder}/target/debug/testit-daemon",
+                  "args": ["--file", "/home/kjetil/code/testit/test/resources/test.json", "--id", "bb94eec1-bb45-4122-adf7-a69132509cfe"],
+                  "cwd": "${workspaceFolder}"
+            }
+      ]
+}

@@ -1,0 +1,9 @@
+[package]
+name = "testit-lib"
+version = "0.0.1"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = { version = "1.0.137" }
+uuid = { version = "1.12.1", features = ["v4"] }

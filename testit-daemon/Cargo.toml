@@ -1,0 +1,28 @@
+[package]
+name = "testit-daemon"
+version = "0.0.1"
+edition = "2021"
+description = "An application for testing apis."
+license = "Apache 2.0"
+repository = "https://github.com/kjetilfjellheim/testit"
+readme = "README.md"
+keywords = ["monitoring", "agent", "health", "system"]
+authors = ["Kjetil Fjellheim <kjetil@forgottendonkey.net>"]
+categories = ["testing", "api"]
+
+[dependencies]
+testit-lib = { path = "../testit-lib" }
+clap = { version = "4.5.27", features = ["derive"] }
+serde = { version = "1.0.217", features = ["derive"] }
+serde_json = { version = "1.0.137" }
+tokio = { version = "1.43.0", features = ["full"] }
+regex = "1.11.1"
+actix-web = { version = "4.9.0", features = ["rustls-0_23"] }
+rustls = { version = "0.23.21", features = ["logging"] }
+rustls-pemfile = "2.2.0"
+
+[dev-dependencies]
+reqwest = { version = "0.12.12" }
+
+[profile.release]
+lto = true
