@@ -302,19 +302,30 @@ impl MockResponseConfiguration {
 pub struct RouteConfiguration {
     // The URL of the endpoint.
     pub endpoint: String,
+    // The proxy url. Example: `<http://localhost:8080>`
+    pub proxy_url: Option<String>,
+    // The log file where the requests and responses are stored.
+    //TODO: Unimplemented
+    pub log: Option<String>,
 }
 
 impl RouteConfiguration {
     /**
      * Create a new route configuration.
      *
-     * `endpoint` The URL of the endpoint.
+     * `endpoint` The URL of the endpoint. Example `<http://localhost:8080>`
+     * `proxy_url` Proxy to use.
+     * `log` The log file where the requests and responses are stored.
      *
      * The route configuration.
      */
     #[must_use]
-    pub fn new(endpoint: String) -> Self {
-        RouteConfiguration { endpoint }
+    pub fn new(endpoint: String, proxy_url: Option<String>, log: Option<String>) -> Self {
+        RouteConfiguration {
+            endpoint,
+            proxy_url,
+            log,
+        }
     }
 }
 
@@ -347,7 +358,7 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string())),
+                        Some(RouteConfiguration::new("/test".to_string(), None, None)),
                     )],
                     None,
                 )],
@@ -434,7 +445,7 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string())),
+                        Some(RouteConfiguration::new("/test".to_string(), None, None)),
                     )],
                     None,
                 )],
@@ -468,7 +479,7 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string())),
+                        Some(RouteConfiguration::new("/test".to_string(), None, None)),
                     )],
                     None,
                 )],

@@ -142,12 +142,12 @@ fn get_test<'a>(
 
 /**
  * Wait for the terminate signal.
- * 
+ *
  * This function is only available on Linux.
- * 
+ *
  * # Returns
  * Ok if the signal was received.
- * 
+ *
  * # Errors
  * An error if the signals could not be initialized.
  */
@@ -172,12 +172,12 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
 
 /**
  * Wait for the terminate signal.
- * 
+ *
  * This function is only available on Windows.
- * 
+ *
  * # Returns
  * Ok if the signal was received.
- * 
+ *
  * # Errors
  * An error if the signals could not be initialized.
  */

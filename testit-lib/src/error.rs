@@ -8,6 +8,7 @@ pub enum ApplicationError {
     CouldNotFindTest(String),
     ConfigurationError(String),
     ServerStartUpError(String),
+    RoutingError(String),
 }
 
 /**
@@ -23,6 +24,7 @@ impl std::fmt::Display for ApplicationError {
             ApplicationError::ServerStartUpError(err) => {
                 write!(f, "Server start up error: {err}")
             }
+            ApplicationError::RoutingError(err) => write!(f, "Routing error: {err}"),
         }
     }
 }

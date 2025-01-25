@@ -2,6 +2,7 @@ use std::{fs::File, io::BufReader, sync::Arc};
 
 use actix_web::{http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
 use regex::Regex;
+use reqwest::Method;
 use rustls::{
     pki_types::PrivateKeyDer,
     server::{danger::ClientCertVerifier, WebPkiClientVerifier},
@@ -10,12 +11,15 @@ use rustls::{
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use testit_lib::{
     config::{
-        EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration,
-        TestConfiguration,
+        EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration,
+        ServerConfiguration, TestConfiguration,
     },
     error::ApplicationError,
 };
 use tokio::sync::RwLock;
+
+const QUERYPARAMSEPARATOR: char = '&';
+const KEYVALUESEPARATOR: char = '=';
 
 /**
  * The `ServerSetup` struct is used to start and stop servers.
@@ -171,17 +175,18 @@ impl AppServer {
 async fn request_handler(
     server_configuration: web::Data<ServerConfiguration>,
     req: HttpRequest,
+    payload: Option<web::Payload>,
 ) -> HttpResponse {
     for endpoint in &server_configuration.endpoints {
         match is_valid_endpoint(&req, endpoint) {
-            Ok(true) => match handle_endpoint(endpoint) {
+            Ok(true) => match handle_endpoint(endpoint, req, payload).await {
                 Ok(response) => return response,
                 Err(err) => {
                     eprintln!("{err}");
                     return HttpResponse::NotImplemented().body("Not implemented");
                 }
             },
-            Ok(false) => {},
+            Ok(false) => {}
             Err(err) => return HttpResponse::ServiceUnavailable().body(err.to_string()),
         }
     }
@@ -223,12 +228,190 @@ fn is_valid_endpoint(
  * # Errors
  * An error if the status code is invalid.
  */
-fn handle_endpoint(endpoint: &EndpointConfiguration) -> Result<HttpResponse, ApplicationError> {
+async fn handle_endpoint(
+    endpoint: &EndpointConfiguration,
+    req: HttpRequest,
+    payload: Option<web::Payload>,
+) -> Result<HttpResponse, ApplicationError> {
     if let Some(mock_response) = &endpoint.mock_response {
         std::thread::sleep(std::time::Duration::from_millis(mock_response.delay));
         return generate_mock_response(mock_response);
     }
+    if let Some(route_configuration) = &endpoint.route {
+        return route_request(route_configuration, req, payload).await;
+    }
     Ok(HttpResponse::NotImplemented().body("Not implemented"))
+}
+
+/**
+ * Route the request.
+ *
+ * # Arguments
+ * `route_configuration`: The route configuration.
+ * `req`: The request.
+ *
+ * # Returns
+ * The response.
+ */
+async fn route_request(
+    route_configuration: &RouteConfiguration,
+    req: HttpRequest,
+    payload: Option<web::Payload>,
+) -> Result<HttpResponse, ApplicationError> {
+    let mut url = route_configuration.endpoint.clone();
+    url.push_str(req.path());
+
+    let request = get_request(req, payload, url).await?;
+
+    let client = get_client(route_configuration)?;
+
+    let response = client
+        .execute(request)
+        .await
+        .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
+
+    let response = get_response(response).await?;
+
+    Ok(response)
+}
+
+/**
+ * Converts the request response to this applications response.
+ *
+ * # Arguments
+ * `response`: The response.
+ *
+ * # Returns
+ * The response.
+ *
+ * # Errors
+ * An error if the status code is invalid.
+ */
+async fn get_response(response: reqwest::Response) -> Result<HttpResponse, ApplicationError> {
+    let mut response_builder = HttpResponse::build(
+        StatusCode::from_u16(response.status().as_u16())
+            .map_err(|err| ApplicationError::RoutingError(err.to_string()))?,
+    );
+    for (key, value) in response.headers() {
+        response_builder.append_header((
+            key.as_str(),
+            value
+                .to_str()
+                .map_err(|err| ApplicationError::RoutingError(err.to_string()))?,
+        ));
+    }
+    let body = response
+        .text()
+        .await
+        .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
+    
+    let response = response_builder.body(body);
+
+    Ok(response)
+}
+
+/**
+ * Get the function name. This is required due to the fact that the client 
+ * allows proxy while sending from the request object does not.
+ *
+ * # Arguments
+ * `route_configuration`: The route configuration.
+ *
+ * # Returns
+ * Client object to make the requests. 
+ *
+ * # Errors
+ * An error if the client could not be created.
+ * 
+ */
+fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Client, ApplicationError> {
+    let client = match &route_configuration.proxy_url {
+        Some(proxy) => {
+            let reqwest_proxy = reqwest::Proxy::all(proxy.clone())
+                .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
+            reqwest::Client::builder()
+                .proxy(reqwest_proxy)
+                .build()
+                .map_err(|err| ApplicationError::RoutingError(err.to_string()))?
+        }
+        None => reqwest::Client::builder()
+            .build()
+            .map_err(|err| ApplicationError::RoutingError(err.to_string()))?,
+    };
+    Ok(client)
+}
+
+/**
+ * Get request object for client.
+ * 
+ * # Arguments
+ * `req`: The original request.
+ * `payload`: The payload.
+ * `url`: The URL.
+ * 
+ * # Returns
+ * The request object.
+ * 
+ * # Errors
+ * An error if the method is invalid.
+ * An error if the version is invalid.
+ * An error if the headers are invalid.
+ * An error if the payload is invalid.
+ * An error if the query parameters are invalid.
+ * An error if the request could not be built.
+ * 
+ * # Example
+ * ```
+ * let request = get_request(req, payload, url).await?;
+ * ```
+ * 
+ */
+async fn get_request(req: HttpRequest, payload: Option<web::Payload>, url: String) -> Result<reqwest::Request, ApplicationError> {
+    let mut request_builder = reqwest::Client::new().request(
+        Method::from_bytes(req.method().as_str().as_bytes())
+            .map_err(|err| ApplicationError::RoutingError(err.to_string()))?,
+        url.as_str(),
+    );
+    request_builder = match req.version() {
+        actix_web::http::Version::HTTP_09 => request_builder.version(reqwest::Version::HTTP_09),
+        actix_web::http::Version::HTTP_10 => request_builder.version(reqwest::Version::HTTP_10),
+        actix_web::http::Version::HTTP_11 => request_builder.version(reqwest::Version::HTTP_11),
+        actix_web::http::Version::HTTP_2 => request_builder.version(reqwest::Version::HTTP_2),
+        actix_web::http::Version::HTTP_3 => request_builder.version(reqwest::Version::HTTP_3),
+        _ => {
+            return Err(ApplicationError::RoutingError(
+                "Invalid version".to_string(),
+            ))
+        }
+    };
+    for (key, value) in req.headers() {
+        let value = value
+            .to_str()
+            .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
+        request_builder = request_builder.header(key.as_str(), value);
+    }
+    if let Some(payload) = payload {
+        let bytes = payload
+            .to_bytes()
+            .await
+            .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
+        request_builder = request_builder.body(bytes);
+    }
+    request_builder = request_builder.query(
+        &req.query_string()
+            .split(QUERYPARAMSEPARATOR)
+            .map(|x| {
+                let mut parts = x.split(KEYVALUESEPARATOR);
+                let key = parts.next().map_or_else(|| "", |x| x);
+                let value = parts.next().map_or_else(|| "", |x| x);
+                (key.to_owned(), value.to_owned())
+            })
+            .collect::<Vec<(String, String)>>(),
+    );
+    let request = request_builder
+        .build()
+        .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
+    Ok(request)
 }
 
 /**
@@ -484,7 +667,6 @@ mod test {
         server_setup.setup_test(&test_configuration).await;
         let result = server_setup.start_servers().await;
         thread::sleep(Duration::from_secs(1));
-        println!("{:?}", result);
         assert!(result.is_ok());
         let mut buf = Vec::new();
         File::open(server_cert_path)

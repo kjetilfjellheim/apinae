@@ -14,7 +14,7 @@
           "endpoints": [
             {
               "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-              "endpoint": "/test",
+              "endpoint": "^\/test$",
               "method": "GET",
               "soapAction": null,
               "mockResponse": {
@@ -24,11 +24,27 @@
                   "Content-Type": "application/json" 
                 },
                 "delay": 0
-              },
-              "route": {
-                "endpoint": "/test"
               }
-            }
+            },
+            {
+              "id": "0a583546-5d23-4fa1-a053-543df7b6fce6",
+              "endpoint": "^\/test_route$",
+              "method": "GET",
+              "soapAction": null,
+              "route": {
+                "endpoint": "http://localhost:8083"                
+              }              
+            },
+            {
+              "id": "0a583546-5d23-4fa1-a053-543df7b6fce7",
+              "endpoint": "^\/test_route_proxy$",
+              "method": "GET",
+              "soapAction": null,
+              "route": {
+                "endpoint": "http://localhost:80",
+                "proxyUrl": "http://localhost:8084"                
+              }              
+            }                
           ]
         },
         {
