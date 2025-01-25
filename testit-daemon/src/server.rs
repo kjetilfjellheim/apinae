@@ -4,7 +4,10 @@ use actix_web::{http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServe
 use regex::Regex;
 use reqwest::Method;
 use rustls::{
-    pki_types::PrivateKeyDer, server::{danger::ClientCertVerifier, WebPkiClientVerifier}, version::{TLS12, TLS13}, ProtocolVersion, RootCertStore, ServerConfig, SupportedProtocolVersion
+    pki_types::PrivateKeyDer,
+    server::{danger::ClientCertVerifier, WebPkiClientVerifier},
+    version::{TLS12, TLS13},
+    RootCertStore, ServerConfig, SupportedProtocolVersion,
 };
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use testit_lib::{
@@ -110,10 +113,10 @@ impl AppServer {
                 App::new()
                     .app_data(appstate.clone())
                     .default_service(web::to(request_handler))
-            })            
-            .bind(("127.0.0.1", http_port))                        
+            })
+            .bind(("127.0.0.1", http_port))
             .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
-            let server = server.workers(2).run();            
+            let server = server.workers(2).run();
             tokio::spawn(async move {
                 match server.await {
                     Ok(()) => {}
@@ -139,16 +142,16 @@ impl AppServer {
             let ssl_builder = ssl_builder(&https_config)?;
             let appstate = web::Data::new(self.server_configuration.clone());
             let server = HttpServer::new(move || {
-                App::new()                    
+                App::new()
                     .app_data(appstate.clone())
                     .default_service(web::to(request_handler))
             })
             .bind_rustls_0_23(
                 "127.0.0.1:".to_owned() + https_config.https_port.to_string().as_str(),
                 ssl_builder,
-            )            
+            )
             .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
-            let server = server.workers(2).run();    
+            let server = server.workers(2).run();
             tokio::spawn(async move {
                 match server.await {
                     Ok(()) => {}
@@ -341,10 +344,18 @@ fn get_client(
 
     if let Some(min_tls_version) = &route_configuration.min_tls_version {
         match min_tls_version {
-            TlsVersion::TLSv1_0 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_0),       
-            TlsVersion::TLSv1_1 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_1),       
-            TlsVersion::TLSv1_2 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_2),       
-            TlsVersion::TLSv1_3 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_3),   
+            TlsVersion::TLSv1_0 => {
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_0)
+            }
+            TlsVersion::TLSv1_1 => {
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_1)
+            }
+            TlsVersion::TLSv1_2 => {
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_2)
+            }
+            TlsVersion::TLSv1_3 => {
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_3)
+            }
         }
     }
 
@@ -485,7 +496,9 @@ fn generate_mock_response(
  *
  */
 fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, ApplicationError> {
-    let config_builder = ServerConfig::builder_with_protocol_versions(&get_protocol_versions(&https_config.supported_tls_versions));
+    let config_builder = ServerConfig::builder_with_protocol_versions(&get_protocol_versions(
+        &https_config.supported_tls_versions,
+    ));
     let config_builder = match https_config.clone().client_certificate {
         Some(client_certificate) => {
             let client_auth = get_client_verifier(client_certificate)?;
@@ -511,7 +524,7 @@ fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, Applic
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?;
     let config = config_builder
-        .with_single_cert(cert_chain, keys.remove(0))        
+        .with_single_cert(cert_chain, keys.remove(0))
         .map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?;
 
     Ok(config)
@@ -527,15 +540,16 @@ fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, Applic
  * The protocol versions.
  *
  */
-fn get_protocol_versions(supported_tls_versions: &Vec<TlsVersion>) -> Vec<&'static SupportedProtocolVersion> {
-    supported_tls_versions.iter().map(|version| {
-        match version {
-            TlsVersion::TLSv1_0 => &TLS12,
-            TlsVersion::TLSv1_1 => &TLS12,
-            TlsVersion::TLSv1_2 => &TLS12,
+fn get_protocol_versions(
+    supported_tls_versions: &[TlsVersion],
+) -> Vec<&'static SupportedProtocolVersion> {
+    supported_tls_versions
+        .iter()
+        .map(|version| match version {
+            TlsVersion::TLSv1_0 | TlsVersion::TLSv1_1 | TlsVersion::TLSv1_2 => &TLS12,
             TlsVersion::TLSv1_3 => &TLS13,
-        }
-    }).collect()
+        })
+        .collect()
 }
 
 /**
@@ -690,8 +704,13 @@ mod test {
             "/testit-daemon/test/resources/https_test/server_key.pem"
         )
         .to_owned();
-        let https_config =
-            HttpsConfiguration::new(server_cert_path.clone(), server_key_path, 8084, None);
+        let https_config = HttpsConfiguration::new(
+            server_cert_path.clone(),
+            server_key_path,
+            8084,
+            None,
+            vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3],
+        );
         let test_configuration = TestConfiguration::new(
             "test".to_string(),
             "test".to_string(),

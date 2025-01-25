@@ -129,7 +129,7 @@ pub struct HttpsConfiguration {
     pub client_certificate: Option<String>,
     // The supported versions. Only 1.2 and 1.3 are supported.
     #[serde(default = "default_server_supported_tls_versions")]
-    pub supported_tls_versions: Vec<TlsVersion>,    
+    pub supported_tls_versions: Vec<TlsVersion>,
 }
 
 impl HttpsConfiguration {
@@ -148,14 +148,14 @@ impl HttpsConfiguration {
         private_key: String,
         https_port: u16,
         client_certificate: Option<String>,
-        supported_tls_versions: Vec<TlsVersion>
+        supported_tls_versions: Vec<TlsVersion>,
     ) -> Self {
         HttpsConfiguration {
             server_certificate,
             private_key,
             https_port,
             client_certificate,
-            supported_tls_versions
+            supported_tls_versions,
         }
     }
 }
@@ -310,6 +310,7 @@ pub enum TlsVersion {
 /**
  * Configuration for a route.
  */
+#[allow(clippy::struct_excessive_bools)]
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RouteConfiguration {
@@ -359,6 +360,8 @@ impl RouteConfiguration {
      * `connect_timeout` Connect timeout
      *
      */
+    #[allow(clippy::too_many_arguments)]
+    #[allow(clippy::fn_params_excessive_bools)]
     #[must_use]
     pub fn new(
         endpoint: String,
@@ -422,7 +425,19 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string(), None, None, false, false, false, false, None, None, None, None)),
+                        Some(RouteConfiguration::new(
+                            "/test".to_string(),
+                            None,
+                            None,
+                            false,
+                            false,
+                            false,
+                            false,
+                            None,
+                            None,
+                            None,
+                            None,
+                        )),
                     )],
                     None,
                 )],
@@ -509,7 +524,19 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string(), None, None, false, false, false, false, None, None, None, None)), 
+                        Some(RouteConfiguration::new(
+                            "/test".to_string(),
+                            None,
+                            None,
+                            false,
+                            false,
+                            false,
+                            false,
+                            None,
+                            None,
+                            None,
+                            None,
+                        )),
                     )],
                     None,
                 )],
@@ -543,7 +570,19 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string(), None, None, false, false, false, false, None, None, None, None)),
+                        Some(RouteConfiguration::new(
+                            "/test".to_string(),
+                            None,
+                            None,
+                            false,
+                            false,
+                            false,
+                            false,
+                            None,
+                            None,
+                            None,
+                            None,
+                        )),
                     )],
                     None,
                 )],
