@@ -127,6 +127,9 @@ pub struct HttpsConfiguration {
     pub https_port: u16,
     // The path to the client certificate.
     pub client_certificate: Option<String>,
+    // The supported versions. Only 1.2 and 1.3 are supported.
+    #[serde(default = "default_server_supported_tls_versions")]
+    pub supported_tls_versions: Vec<TlsVersion>,    
 }
 
 impl HttpsConfiguration {
@@ -145,12 +148,14 @@ impl HttpsConfiguration {
         private_key: String,
         https_port: u16,
         client_certificate: Option<String>,
+        supported_tls_versions: Vec<TlsVersion>
     ) -> Self {
         HttpsConfiguration {
             server_certificate,
             private_key,
             https_port,
             client_certificate,
+            supported_tls_versions
         }
     }
 }
@@ -294,6 +299,14 @@ impl MockResponseConfiguration {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub enum TlsVersion {
+    TLSv1_0,
+    TLSv1_1,
+    TLSv1_2,
+    TLSv1_3,
+}
+
 /**
  * Configuration for a route.
  */
@@ -307,6 +320,26 @@ pub struct RouteConfiguration {
     // The log file where the requests and responses are stored.
     //TODO: Unimplemented
     pub log: Option<String>,
+    // Verbose
+    #[serde(default)]
+    pub verbose: bool,
+    // HTTP/1 only
+    #[serde(default)]
+    pub http1_only: bool,
+    // Accept invalid certificates
+    #[serde(default)]
+    pub accept_invalid_certs: bool,
+    // Accept invalid hostnames
+    #[serde(default)]
+    pub accept_invalid_hostnames: bool,
+    // Minimum TLS version
+    pub min_tls_version: Option<TlsVersion>,
+    // Maximum TLS version
+    pub max_tls_version: Option<TlsVersion>,
+    // Read timeout
+    pub read_timeout: Option<u64>,
+    // Connect timeout
+    pub connect_timeout: Option<u64>,
 }
 
 impl RouteConfiguration {
@@ -316,17 +349,48 @@ impl RouteConfiguration {
      * `endpoint` The URL of the endpoint. Example `<http://localhost:8080>`
      * `proxy_url` Proxy to use.
      * `log` The log file where the requests and responses are stored.
+     * `verbose` Verbose
+     * `http1_only` HTTP/1 only
+     * `accept_invalid_certs` Accept invalid certificates
+     * `accept_invalid_hostnames` Accept invalid hostnames
+     * `min_tls_version` Minimum TLS version
+     * `max_tls_version` Maximum TLS version
+     * `read_timeout` Read timeout
+     * `connect_timeout` Connect timeout
      *
-     * The route configuration.
      */
     #[must_use]
-    pub fn new(endpoint: String, proxy_url: Option<String>, log: Option<String>) -> Self {
+    pub fn new(
+        endpoint: String,
+        proxy_url: Option<String>,
+        log: Option<String>,
+        verbose: bool,
+        http1_only: bool,
+        accept_invalid_certs: bool,
+        accept_invalid_hostnames: bool,
+        min_tls_version: Option<TlsVersion>,
+        max_tls_version: Option<TlsVersion>,
+        read_timeout: Option<u64>,
+        connect_timeout: Option<u64>,
+    ) -> Self {
         RouteConfiguration {
             endpoint,
             proxy_url,
             log,
+            verbose,
+            http1_only,
+            accept_invalid_certs,
+            accept_invalid_hostnames,
+            min_tls_version,
+            max_tls_version,
+            read_timeout,
+            connect_timeout,
         }
     }
+}
+
+fn default_server_supported_tls_versions() -> Vec<TlsVersion> {
+    vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3]
 }
 
 #[cfg(test)]
@@ -358,7 +422,7 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string(), None, None)),
+                        Some(RouteConfiguration::new("/test".to_string(), None, None, false, false, false, false, None, None, None, None)),
                     )],
                     None,
                 )],
@@ -445,7 +509,7 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string(), None, None)),
+                        Some(RouteConfiguration::new("/test".to_string(), None, None, false, false, false, false, None, None, None, None)), 
                     )],
                     None,
                 )],
@@ -479,7 +543,7 @@ mod test {
                             HashMap::new(),
                             0,
                         )),
-                        Some(RouteConfiguration::new("/test".to_string(), None, None)),
+                        Some(RouteConfiguration::new("/test".to_string(), None, None, false, false, false, false, None, None, None, None)),
                     )],
                     None,
                 )],

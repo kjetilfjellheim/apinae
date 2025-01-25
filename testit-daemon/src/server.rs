@@ -1,18 +1,16 @@
-use std::{fs::File, io::BufReader, sync::Arc};
+use std::{fs::File, io::BufReader, sync::Arc, time::Duration};
 
 use actix_web::{http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
 use regex::Regex;
 use reqwest::Method;
 use rustls::{
-    pki_types::PrivateKeyDer,
-    server::{danger::ClientCertVerifier, WebPkiClientVerifier},
-    RootCertStore, ServerConfig,
+    pki_types::PrivateKeyDer, server::{danger::ClientCertVerifier, WebPkiClientVerifier}, version::{TLS12, TLS13}, ProtocolVersion, RootCertStore, ServerConfig, SupportedProtocolVersion
 };
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use testit_lib::{
     config::{
         EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration,
-        ServerConfiguration, TestConfiguration,
+        ServerConfiguration, TestConfiguration, TlsVersion,
     },
     error::ApplicationError,
 };
@@ -112,10 +110,10 @@ impl AppServer {
                 App::new()
                     .app_data(appstate.clone())
                     .default_service(web::to(request_handler))
-            })
-            .bind(("127.0.0.1", http_port))
+            })            
+            .bind(("127.0.0.1", http_port))                        
             .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
-            let server = server.workers(2).run();
+            let server = server.workers(2).run();            
             tokio::spawn(async move {
                 match server.await {
                     Ok(()) => {}
@@ -141,16 +139,16 @@ impl AppServer {
             let ssl_builder = ssl_builder(&https_config)?;
             let appstate = web::Data::new(self.server_configuration.clone());
             let server = HttpServer::new(move || {
-                App::new()
+                App::new()                    
                     .app_data(appstate.clone())
                     .default_service(web::to(request_handler))
             })
             .bind_rustls_0_23(
                 "127.0.0.1:".to_owned() + https_config.https_port.to_string().as_str(),
                 ssl_builder,
-            )
+            )            
             .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
-            let server = server.workers(2).run();
+            let server = server.workers(2).run();    
             tokio::spawn(async move {
                 match server.await {
                     Ok(()) => {}
@@ -304,37 +302,62 @@ async fn get_response(response: reqwest::Response) -> Result<HttpResponse, Appli
         .text()
         .await
         .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
-    
+
     let response = response_builder.body(body);
 
     Ok(response)
 }
 
 /**
- * Get the function name. This is required due to the fact that the client 
+ * Get the function name. This is required due to the fact that the client
  * allows proxy while sending from the request object does not.
  *
  * # Arguments
  * `route_configuration`: The route configuration.
  *
  * # Returns
- * Client object to make the requests. 
+ * Client object to make the requests.
  *
  * # Errors
  * An error if the client could not be created.
- * 
+ *
  */
-fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Client, ApplicationError> {
+fn get_client(
+    route_configuration: &RouteConfiguration,
+) -> Result<reqwest::Client, ApplicationError> {
+    let mut client_builder = reqwest::Client::builder();
+    if let Some(connect_timeout) = route_configuration.connect_timeout {
+        client_builder = client_builder.connect_timeout(Duration::from_millis(connect_timeout));
+    }
+    if let Some(read_timeout) = route_configuration.read_timeout {
+        client_builder = client_builder.read_timeout(Duration::from_millis(read_timeout));
+    }
+    if route_configuration.http1_only {
+        client_builder = client_builder.http1_only();
+    }
+    client_builder = client_builder
+        .danger_accept_invalid_certs(route_configuration.accept_invalid_certs)
+        .danger_accept_invalid_hostnames(route_configuration.accept_invalid_hostnames);
+
+    if let Some(min_tls_version) = &route_configuration.min_tls_version {
+        match min_tls_version {
+            TlsVersion::TLSv1_0 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_0),       
+            TlsVersion::TLSv1_1 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_1),       
+            TlsVersion::TLSv1_2 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_2),       
+            TlsVersion::TLSv1_3 => client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_3),   
+        }
+    }
+
     let client = match &route_configuration.proxy_url {
         Some(proxy) => {
             let reqwest_proxy = reqwest::Proxy::all(proxy.clone())
                 .map_err(|err| ApplicationError::RoutingError(err.to_string()))?;
-            reqwest::Client::builder()
+            client_builder
                 .proxy(reqwest_proxy)
                 .build()
                 .map_err(|err| ApplicationError::RoutingError(err.to_string()))?
         }
-        None => reqwest::Client::builder()
+        None => client_builder
             .build()
             .map_err(|err| ApplicationError::RoutingError(err.to_string()))?,
     };
@@ -343,15 +366,15 @@ fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Clien
 
 /**
  * Get request object for client.
- * 
+ *
  * # Arguments
  * `req`: The original request.
  * `payload`: The payload.
  * `url`: The URL.
- * 
+ *
  * # Returns
  * The request object.
- * 
+ *
  * # Errors
  * An error if the method is invalid.
  * An error if the version is invalid.
@@ -359,14 +382,18 @@ fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Clien
  * An error if the payload is invalid.
  * An error if the query parameters are invalid.
  * An error if the request could not be built.
- * 
+ *
  * # Example
  * ```
  * let request = get_request(req, payload, url).await?;
  * ```
- * 
+ *
  */
-async fn get_request(req: HttpRequest, payload: Option<web::Payload>, url: String) -> Result<reqwest::Request, ApplicationError> {
+async fn get_request(
+    req: HttpRequest,
+    payload: Option<web::Payload>,
+    url: String,
+) -> Result<reqwest::Request, ApplicationError> {
     let mut request_builder = reqwest::Client::new().request(
         Method::from_bytes(req.method().as_str().as_bytes())
             .map_err(|err| ApplicationError::RoutingError(err.to_string()))?,
@@ -458,12 +485,13 @@ fn generate_mock_response(
  *
  */
 fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, ApplicationError> {
+    let config_builder = ServerConfig::builder_with_protocol_versions(&get_protocol_versions(&https_config.supported_tls_versions));
     let config_builder = match https_config.clone().client_certificate {
         Some(client_certificate) => {
             let client_auth = get_client_verifier(client_certificate)?;
-            ServerConfig::builder().with_client_cert_verifier(client_auth)
+            config_builder.with_client_cert_verifier(client_auth)
         }
-        None => ServerConfig::builder().with_no_client_auth(),
+        None => config_builder.with_no_client_auth(),
     };
 
     let cert_file = &mut BufReader::new(
@@ -483,9 +511,31 @@ fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, Applic
         .collect::<Result<Vec<_>, _>>()
         .map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?;
     let config = config_builder
-        .with_single_cert(cert_chain, keys.remove(0))
+        .with_single_cert(cert_chain, keys.remove(0))        
         .map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?;
+
     Ok(config)
+}
+
+/**
+ * Get the protocol versions.
+ *
+ * # Arguments
+ * `supported_tls_versions`: The supported TLS versions.
+ *
+ * # Returns
+ * The protocol versions.
+ *
+ */
+fn get_protocol_versions(supported_tls_versions: &Vec<TlsVersion>) -> Vec<&'static SupportedProtocolVersion> {
+    supported_tls_versions.iter().map(|version| {
+        match version {
+            TlsVersion::TLSv1_0 => &TLS12,
+            TlsVersion::TLSv1_1 => &TLS12,
+            TlsVersion::TLSv1_2 => &TLS12,
+            TlsVersion::TLSv1_3 => &TLS13,
+        }
+    }).collect()
 }
 
 /**

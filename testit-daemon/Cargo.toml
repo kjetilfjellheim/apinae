@@ -18,7 +18,7 @@ serde_json = { version = "1.0.137" }
 tokio = { version = "1.43.0", features = ["full"] }
 regex = "1.11.1"
 actix-web = { version = "4.9.0", features = ["rustls-0_23"] }
-rustls = { version = "0.23.21", features = ["logging"] }
+rustls = { version = "0.23.21", features = ["logging", "tls12"] }
 rustls-pemfile = "2.2.0"
 reqwest = { version = "0.12.12" }
 
