@@ -345,16 +345,16 @@ fn get_client(
     if let Some(min_tls_version) = &route_configuration.min_tls_version {
         match min_tls_version {
             TlsVersion::TLSv1_0 => {
-                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_0)
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_0);
             }
             TlsVersion::TLSv1_1 => {
-                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_1)
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_1);
             }
             TlsVersion::TLSv1_2 => {
-                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_2)
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_2);
             }
             TlsVersion::TLSv1_3 => {
-                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_3)
+                client_builder = client_builder.min_tls_version(reqwest::tls::Version::TLS_1_3);
             }
         }
     }
