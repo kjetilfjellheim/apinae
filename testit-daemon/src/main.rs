@@ -110,7 +110,7 @@ async fn start_daemon(
     server_setup
         .start_servers()
         .await
-        .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
+        .map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
     Ok(())
 }
 
@@ -160,9 +160,9 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
     // Infos here:
     // https://www.gnu.org/software/libc/manual/html_node/Termination-Signals.html
     let mut signal_terminate = signal(SignalKind::terminate())
-        .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
+        .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
     let mut signal_interrupt = signal(SignalKind::interrupt())
-        .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
+        .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
 
     tokio::select! {
         _ = signal_terminate.recv() => exit(0),
@@ -192,11 +192,11 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
     let mut signal_c =
         windows::ctrl_c().map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
     let mut signal_break = windows::ctrl_break()
-        .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
+        .map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
     let mut signal_close = windows::ctrl_close()
-        .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
+        .map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
     let mut signal_shutdown = windows::ctrl_shutdown()
-        .map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
+        .map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
 
     tokio::select! {
         _ = signal_c.recv() => exit(0),

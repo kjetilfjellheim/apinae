@@ -52,9 +52,9 @@ impl AppConfiguration {
      */
     pub fn save(&self, path: &str) -> Result<(), ApplicationError> {
         let string_data = serde_json::to_string_pretty(&self)
-            .map_err(|err| ApplicationError::FileError(err.to_string()))?;
+            .map_err(|err| ApplicationError::FileError(format!("Failed to convert model to string: {err}")))?;
         std::fs::write(path, string_data)
-            .map_err(|err| ApplicationError::FileError(err.to_string()))?;
+            .map_err(|err| ApplicationError::FileError(format!("Failed to write model to file: {err}")))?;
         Ok(())
     }
 
@@ -70,9 +70,9 @@ impl AppConfiguration {
      */
     pub fn load(path: &str) -> Result<Self, ApplicationError> {
         let string_data = std::fs::read_to_string(path)
-            .map_err(|err| ApplicationError::FileError(err.to_string()))?;
+            .map_err(|err| ApplicationError::FileError(format!("Failed to read input data to string: {err}")))?;
         serde_json::from_str(&string_data)
-            .map_err(|err| ApplicationError::FileError(err.to_string()))
+            .map_err(|err| ApplicationError::FileError(format!("Failed to convert input string to config model: {err}")))
     }
 }
 
