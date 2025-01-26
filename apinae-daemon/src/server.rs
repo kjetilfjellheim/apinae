@@ -1,6 +1,13 @@
 use std::{fs::File, io::BufReader, sync::Arc, time::Duration};
 
 use actix_web::{http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
+use apinae_lib::{
+    config::{
+        EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration,
+        ServerConfiguration, TestConfiguration, TlsVersion,
+    },
+    error::ApplicationError,
+};
 use regex::Regex;
 use reqwest::Method;
 use rustls::{
@@ -10,13 +17,6 @@ use rustls::{
     RootCertStore, ServerConfig, SupportedProtocolVersion,
 };
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use apinae_lib::{
-    config::{
-        EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration,
-        ServerConfiguration, TestConfiguration, TlsVersion,
-    },
-    error::ApplicationError,
-};
 use tokio::sync::RwLock;
 
 const QUERYPARAMSEPARATOR: char = '&';
@@ -115,7 +115,9 @@ impl AppServer {
                     .default_service(web::to(request_handler))
             })
             .bind(("127.0.0.1", http_port))
-            .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to create http server: {err}")))?;
+            .map_err(|err| {
+                ApplicationError::ServerStartUpError(format!("Failed to create http server: {err}"))
+            })?;
             let server = server.workers(2).run();
             tokio::spawn(async move {
                 match server.await {
@@ -150,7 +152,11 @@ impl AppServer {
                 "127.0.0.1:".to_owned() + https_config.https_port.to_string().as_str(),
                 ssl_builder,
             )
-            .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to create https server: {err}")))?;
+            .map_err(|err| {
+                ApplicationError::ServerStartUpError(format!(
+                    "Failed to create https server: {err}"
+                ))
+            })?;
             let server = server.workers(2).run();
             tokio::spawn(async move {
                 match server.await {
@@ -213,10 +219,13 @@ fn is_valid_endpoint(
     request_method: &str,
     endpoint: &EndpointConfiguration,
 ) -> Result<bool, ApplicationError> {
-    let regexp = Regex::new(&endpoint.endpoint)
-        .map_err(|err| ApplicationError::ConfigurationError(format!("Error in regular expression {}: {err}", endpoint.endpoint)))?;
-    Ok(regexp.is_match(request_path)
-        && request_method == endpoint.method.as_str())
+    let regexp = Regex::new(&endpoint.endpoint).map_err(|err| {
+        ApplicationError::ConfigurationError(format!(
+            "Error in regular expression {}: {err}",
+            endpoint.endpoint
+        ))
+    })?;
+    Ok(regexp.is_match(request_path) && request_method == endpoint.method.as_str())
 }
 
 /**
@@ -268,10 +277,9 @@ async fn route_request(
 
     let client = get_client(route_configuration)?;
 
-    let response = client
-        .execute(request)
-        .await
-        .map_err(|err| ApplicationError::RoutingError(format!("Error executing client request: {err}")))?;
+    let response = client.execute(request).await.map_err(|err| {
+        ApplicationError::RoutingError(format!("Error executing client request: {err}"))
+    })?;
 
     let response = get_response(response).await?;
 
@@ -292,21 +300,26 @@ async fn route_request(
  */
 async fn get_response(response: reqwest::Response) -> Result<HttpResponse, ApplicationError> {
     let mut response_builder = HttpResponse::build(
-        StatusCode::from_u16(response.status().as_u16())
-            .map_err(|err| ApplicationError::RoutingError(format!("Invalid status code for response {}: {err}", response.status().as_str())))?,
+        StatusCode::from_u16(response.status().as_u16()).map_err(|err| {
+            ApplicationError::RoutingError(format!(
+                "Invalid status code for response {}: {err}",
+                response.status().as_str()
+            ))
+        })?,
     );
     for (key, value) in response.headers() {
         response_builder.append_header((
             key.as_str(),
-            value
-                .to_str()
-                .map_err(|err| ApplicationError::RoutingError(format!("Invalid header value for response {value:?}: {err}")))?,
+            value.to_str().map_err(|err| {
+                ApplicationError::RoutingError(format!(
+                    "Invalid header value for response {value:?}: {err}"
+                ))
+            })?,
         ));
     }
-    let body = response
-        .text()
-        .await
-        .map_err(|err| ApplicationError::RoutingError(format!("Invalid body for response: {err}")))?;
+    let body = response.text().await.map_err(|err| {
+        ApplicationError::RoutingError(format!("Invalid body for response: {err}"))
+    })?;
 
     let response = response_builder.body(body);
 
@@ -363,16 +376,16 @@ fn get_client(
 
     let client = match &route_configuration.proxy_url {
         Some(proxy) => {
-            let reqwest_proxy = reqwest::Proxy::all(proxy.clone())
-                .map_err(|err| ApplicationError::RoutingError(format!("Could not create proxy settings: {err}")))?;
-            client_builder
-                .proxy(reqwest_proxy)
-                .build()
-                .map_err(|err| ApplicationError::RoutingError(format!("Failed to create client with proxy: {err}")))?
+            let reqwest_proxy = reqwest::Proxy::all(proxy.clone()).map_err(|err| {
+                ApplicationError::RoutingError(format!("Could not create proxy settings: {err}"))
+            })?;
+            client_builder.proxy(reqwest_proxy).build().map_err(|err| {
+                ApplicationError::RoutingError(format!("Failed to create client with proxy: {err}"))
+            })?
         }
-        None => client_builder
-            .build()
-            .map_err(|err| ApplicationError::RoutingError(format!("Failed to create vlient without proxy: {err}")))?,
+        None => client_builder.build().map_err(|err| {
+            ApplicationError::RoutingError(format!("Failed to create vlient without proxy: {err}"))
+        })?,
     };
     Ok(client)
 }
@@ -408,8 +421,12 @@ async fn get_request(
     url: String,
 ) -> Result<reqwest::Request, ApplicationError> {
     let mut request_builder = reqwest::Client::new().request(
-        Method::from_bytes(req.method().as_str().as_bytes())
-            .map_err(|err| ApplicationError::RoutingError(format!("Failed to map method {}: {err}", req.method().as_str())))?,
+        Method::from_bytes(req.method().as_str().as_bytes()).map_err(|err| {
+            ApplicationError::RoutingError(format!(
+                "Failed to map method {}: {err}",
+                req.method().as_str()
+            ))
+        })?,
         url.as_str(),
     );
     request_builder = match req.version() {
@@ -425,16 +442,15 @@ async fn get_request(
         }
     };
     for (key, value) in req.headers() {
-        let value = value
-            .to_str()
-            .map_err(|err| ApplicationError::RoutingError(format!("Failed to map request header: {err}")))?;
+        let value = value.to_str().map_err(|err| {
+            ApplicationError::RoutingError(format!("Failed to map request header: {err}"))
+        })?;
         request_builder = request_builder.header(key.as_str(), value);
     }
     if let Some(payload) = payload {
-        let bytes = payload
-            .to_bytes()
-            .await
-            .map_err(|err| ApplicationError::RoutingError(format!("Failed to map request header: {err}")))?;
+        let bytes = payload.to_bytes().await.map_err(|err| {
+            ApplicationError::RoutingError(format!("Failed to map request header: {err}"))
+        })?;
         request_builder = request_builder.body(bytes);
     }
     request_builder = request_builder.query(
@@ -448,9 +464,9 @@ async fn get_request(
             })
             .collect::<Vec<(String, String)>>(),
     );
-    let request = request_builder
-        .build()
-        .map_err(|err| ApplicationError::RoutingError(format!("Failed to create request: {err}")))?;
+    let request = request_builder.build().map_err(|err| {
+        ApplicationError::RoutingError(format!("Failed to create request: {err}"))
+    })?;
     Ok(request)
 }
 
@@ -510,24 +526,35 @@ fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, Applic
     };
 
     let cert_file = &mut BufReader::new(
-        File::open(https_config.clone().server_certificate)
-            .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to read certificate file: {err}")))?,
+        File::open(https_config.clone().server_certificate).map_err(|err| {
+            ApplicationError::ConfigurationError(format!("Failed to read certificate file: {err}"))
+        })?,
     );
-    let key_file = &mut BufReader::new(
-        File::open(https_config.clone().private_key)
-            .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to read private key file: {err}")))?,
-    );
+    let key_file =
+        &mut BufReader::new(File::open(https_config.clone().private_key).map_err(|err| {
+            ApplicationError::ConfigurationError(format!("Failed to read private key file: {err}"))
+        })?);
 
     let cert_chain = certs(cert_file)
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to convert certificate to der: {err}")))?;
+        .map_err(|err| {
+            ApplicationError::ConfigurationError(format!(
+                "Failed to convert certificate to der: {err}"
+            ))
+        })?;
     let mut keys = pkcs8_private_keys(key_file)
         .map(|key| key.map(PrivateKeyDer::Pkcs8))
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to convert private key to der: {err}")))?;
+        .map_err(|err| {
+            ApplicationError::ConfigurationError(format!(
+                "Failed to convert private key to der: {err}"
+            ))
+        })?;
     let config = config_builder
         .with_single_cert(cert_chain, keys.remove(0))
-        .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to create server config: {err}")))?;
+        .map_err(|err| {
+            ApplicationError::ConfigurationError(format!("Failed to create server config: {err}"))
+        })?;
 
     Ok(config)
 }
@@ -570,25 +597,32 @@ fn get_protocol_versions(
 fn get_client_verifier(
     client_certificate: String,
 ) -> Result<Arc<dyn ClientCertVerifier>, ApplicationError> {
-    let cert_file = &mut BufReader::new(
-        File::open(client_certificate)
-            .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to read client certificate: {err}")))?,
-    );
+    let cert_file = &mut BufReader::new(File::open(client_certificate).map_err(|err| {
+        ApplicationError::ConfigurationError(format!("Failed to read client certificate: {err}"))
+    })?);
     let cert_chain = certs(cert_file)
         .collect::<Result<Vec<_>, _>>()
-        .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to convert client certificate to der: {err}")))?;
+        .map_err(|err| {
+            ApplicationError::ConfigurationError(format!(
+                "Failed to convert client certificate to der: {err}"
+            ))
+        })?;
 
     let mut cert_store = RootCertStore::empty();
 
     for cert in cert_chain {
-        cert_store
-            .add(cert)
-            .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to add certificate to store: {err}")))?;
+        cert_store.add(cert).map_err(|err| {
+            ApplicationError::ConfigurationError(format!(
+                "Failed to add certificate to store: {err}"
+            ))
+        })?;
     }
 
     let client_auth = WebPkiClientVerifier::builder(Arc::new(cert_store))
         .build()
-        .map_err(|err| ApplicationError::ConfigurationError(format!("Failed to create client verifier: {err}")))?;
+        .map_err(|err| {
+            ApplicationError::ConfigurationError(format!("Failed to create client verifier: {err}"))
+        })?;
 
     Ok(client_auth)
 }
@@ -605,8 +639,9 @@ mod test {
      */
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_valid_endpoint() {
-        let endpoint = EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None, None, None);
-        assert!(is_valid_endpoint("/test","GET", &endpoint).unwrap());
+        let endpoint =
+            EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None, None, None);
+        assert!(is_valid_endpoint("/test", "GET", &endpoint).unwrap());
     }
 
     /**
@@ -615,9 +650,9 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_client_verifier() {
         let client_certificate = "tests/resources/client_cert.pem".to_owned();
-        let client_auth = get_client_verifier(client_certificate);    
+        let client_auth = get_client_verifier(client_certificate);
         assert!(client_auth.is_ok());
-    }  
+    }
 
     /**
      * Create client verifier for mtls.
@@ -625,7 +660,7 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_client_verifier_no_file() {
         let client_certificate = "tests/resources/no_file.pem".to_owned();
-        let client_auth = get_client_verifier(client_certificate);    
+        let client_auth = get_client_verifier(client_certificate);
         assert!(client_auth.is_err());
     }
 
@@ -633,10 +668,14 @@ mod test {
      * Verify get_supported_tls_versions method.
      */
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
-    async fn test_get_supported_tls_versions() {          
-        let supported_tls_versions = vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2];
+    async fn test_get_supported_tls_versions() {
+        let supported_tls_versions = vec![
+            TlsVersion::TLSv1_0,
+            TlsVersion::TLSv1_1,
+            TlsVersion::TLSv1_2,
+        ];
         let protocol_versions = get_protocol_versions(&supported_tls_versions);
-        assert_eq!(protocol_versions.len(), 3);        
+        assert_eq!(protocol_versions.len(), 3);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
@@ -646,7 +685,11 @@ mod test {
             "tests/resources/server_key.pem".to_owned(),
             8080,
             None,
-            vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2],            
+            vec![
+                TlsVersion::TLSv1_0,
+                TlsVersion::TLSv1_1,
+                TlsVersion::TLSv1_2,
+            ],
         );
         let ssl_builder = ssl_builder(&https_config);
         assert!(ssl_builder.is_ok());
@@ -659,11 +702,15 @@ mod test {
             "tests/resources/server_key.pem".to_owned(),
             8080,
             Some("tests/resources/client_cert.pem".to_owned()),
-            vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2],            
+            vec![
+                TlsVersion::TLSv1_0,
+                TlsVersion::TLSv1_1,
+                TlsVersion::TLSv1_2,
+            ],
         );
         let ssl_builder = ssl_builder(&https_config);
         assert!(ssl_builder.is_ok());
-    }    
+    }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_https_ssl_builder_no_file() {
@@ -672,7 +719,11 @@ mod test {
             "tests/resources/no_file.pem".to_owned(),
             8080,
             None,
-            vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2],            
+            vec![
+                TlsVersion::TLSv1_0,
+                TlsVersion::TLSv1_1,
+                TlsVersion::TLSv1_2,
+            ],
         );
         let ssl_builder = ssl_builder(&https_config);
         assert!(ssl_builder.is_err());
@@ -680,23 +731,47 @@ mod test {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_generate_mock_response() {
-        let mock_response = MockResponseConfiguration::new(Some("Test".to_owned()), 200, HashMap::new(), 0);
+        let mock_response =
+            MockResponseConfiguration::new(Some("Test".to_owned()), 200, HashMap::new(), 0);
         let response = generate_mock_response(&mock_response);
         assert!(response.is_ok());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_get_client_no_proxy() {
-        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), None, None, false, false, false, false, None, None, None, None);
+        let route_configuration = RouteConfiguration::new(
+            "http://localhost:8080".to_owned(),
+            None,
+            None,
+            false,
+            false,
+            false,
+            false,
+            None,
+            None,
+            None,
+            None,
+        );
         let client = get_client(&route_configuration);
         assert!(client.is_ok());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_get_client_with_proxy() {
-        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), Some("http_//proxy.com:9999".to_owned()), None, false, false, false, false, None, None, None, None);
+        let route_configuration = RouteConfiguration::new(
+            "http://localhost:8080".to_owned(),
+            Some("http_//proxy.com:9999".to_owned()),
+            None,
+            false,
+            false,
+            false,
+            false,
+            None,
+            None,
+            None,
+            None,
+        );
         let client = get_client(&route_configuration);
         assert!(client.is_ok());
-    }    
-
+    }
 }

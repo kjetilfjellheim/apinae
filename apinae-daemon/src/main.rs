@@ -3,12 +3,12 @@ mod server;
 
 use clap::Parser;
 
-use args::Args;
-use server::ServerSetup;
 use apinae_lib::{
     config::{AppConfiguration, TestConfiguration},
     error::ApplicationError,
 };
+use args::Args;
+use server::ServerSetup;
 
 /**
  * The main function for the apinae-daemon application.
@@ -107,10 +107,9 @@ async fn start_daemon(
     let test = get_test(id, config)?;
     let mut server_setup = ServerSetup::new();
     server_setup.setup_test(test).await;
-    server_setup
-        .start_servers()
-        .await
-        .map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
+    server_setup.start_servers().await.map_err(|err| {
+        ApplicationError::ServerStartUpError(format!("Server startup failed: {err}"))
+    })?;
     Ok(())
 }
 
@@ -159,10 +158,12 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
 
     // Infos here:
     // https://www.gnu.org/software/libc/manual/html_node/Termination-Signals.html
-    let mut signal_terminate = signal(SignalKind::terminate())
-        .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
-    let mut signal_interrupt = signal(SignalKind::interrupt())
-        .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
+    let mut signal_terminate = signal(SignalKind::terminate()).map_err(|err| {
+        ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}"))
+    })?;
+    let mut signal_interrupt = signal(SignalKind::interrupt()).map_err(|err| {
+        ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}"))
+    })?;
 
     tokio::select! {
         _ = signal_terminate.recv() => exit(0),
@@ -206,7 +207,6 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
     };
 }
 
-
 #[cfg(test)]
 mod test {
 
@@ -221,11 +221,14 @@ mod test {
         assert!(get_test("2", &config).is_err());
     }
 
-
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_start_daemon() {
-        let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
-        println!("{:?}", start_daemon(Some(&"1".to_string()), &config).await.is_ok());
+        let config: AppConfiguration =
+            AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
+        println!(
+            "{:?}",
+            start_daemon(Some(&"1".to_string()), &config).await.is_ok()
+        );
         assert!(start_daemon(Some(&"2".to_string()), &config).await.is_err());
         assert!(start_daemon(None, &config).await.is_err());
     }
