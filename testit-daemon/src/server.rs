@@ -179,7 +179,7 @@ async fn request_handler(
     payload: Option<web::Payload>,
 ) -> HttpResponse {
     for endpoint in &server_configuration.endpoints {
-        match is_valid_endpoint(&req.uri().path(), &req.method().as_str(), endpoint) {
+        match is_valid_endpoint(req.uri().path(), req.method().as_str(), endpoint) {
             Ok(true) => match handle_endpoint(endpoint, req, payload).await {
                 Ok(response) => return response,
                 Err(err) => {
