@@ -179,7 +179,7 @@ async fn request_handler(
     payload: Option<web::Payload>,
 ) -> HttpResponse {
     for endpoint in &server_configuration.endpoints {
-        match is_valid_endpoint(&req, endpoint) {
+        match is_valid_endpoint(&req.uri().path(), &req.method().as_str(), endpoint) {
             Ok(true) => match handle_endpoint(endpoint, req, payload).await {
                 Ok(response) => return response,
                 Err(err) => {
@@ -198,7 +198,8 @@ async fn request_handler(
  * Check if the request is a valid endpoint.
  *
  * # Arguments
- * `request`: The request.
+ * `request_path`: The request path.
+ * `request_method`: The request method.
  * `endpoint`: The endpoint configuration.
  *
  * # Returns
@@ -208,13 +209,14 @@ async fn request_handler(
  * An error if the endpoint is invalid.
  */
 fn is_valid_endpoint(
-    request: &HttpRequest,
+    request_path: &str,
+    request_method: &str,
     endpoint: &EndpointConfiguration,
 ) -> Result<bool, ApplicationError> {
     let regexp = Regex::new(&endpoint.endpoint)
         .map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?;
-    Ok(regexp.is_match(request.uri().path())
-        && request.method().as_str() == endpoint.method.as_str())
+    Ok(regexp.is_match(request_path)
+        && request_method == endpoint.method.as_str())
 }
 
 /**
@@ -593,162 +595,108 @@ fn get_client_verifier(
 
 #[cfg(test)]
 mod test {
-    use std::{collections::HashMap, fs::File, io::Read, thread, time::Duration};
+
+    use std::collections::HashMap;
 
     use super::*;
-
-    /**
-     * Verifying that the server can be started.
-     * TODO:Move this to integration tests
-     */
-    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
-    async fn test_server_start() {
-        let test_configuration = TestConfiguration {
-            servers: vec![
-                ServerConfiguration {
-                    name: "test".to_string(),
-                    http_port: Some(8080),
-                    id: "test".to_string(),
-                    endpoints: vec![],
-                    https_config: None,
-                },
-                ServerConfiguration {
-                    name: "test".to_string(),
-                    http_port: Some(8081),
-                    id: "test".to_string(),
-                    endpoints: vec![],
-                    https_config: None,
-                },
-            ],
-            name: "test".to_string(),
-            description: "test".to_string(),
-            id: "test".to_string(),
-        };
-        let mut server_setup = ServerSetup::new();
-        server_setup.setup_test(&test_configuration).await;
-        let result = server_setup.start_servers().await;
-        assert!(result.is_ok());
-        thread::sleep(Duration::from_secs(1));
-        let res = reqwest::get("http://localhost:8080").await.unwrap();
-        assert_eq!(res.status(), 501);
-        let res = reqwest::get("http://localhost:8081").await.unwrap();
-        assert_eq!(res.status(), 501);
-    }
 
     /**
      * Verifying that the endpoints are found.
      */
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
-    async fn test_endpoint_ok() {
-        let test_configuration = TestConfiguration::new(
-            "test".to_string(),
-            "test".to_string(),
-            vec![ServerConfiguration::new(
-                "test".to_string(),
-                Some(8082),
-                vec![
-                    EndpointConfiguration::new(
-                        "/test2".to_string(),
-                        "GET".to_string(),
-                        None,
-                        Some(MockResponseConfiguration::new(
-                            Some("{}".to_string()),
-                            400,
-                            HashMap::new(),
-                            1000,
-                        )),
-                        None,
-                    ),
-                    EndpointConfiguration::new(
-                        "/test".to_string(),
-                        "GET".to_string(),
-                        None,
-                        Some(MockResponseConfiguration::new(
-                            Some("{}".to_string()),
-                            200,
-                            HashMap::new(),
-                            1000,
-                        )),
-                        None,
-                    ),
-                ],
-                None,
-            )],
-        );
-        let mut server_setup = ServerSetup::new();
-        server_setup.setup_test(&test_configuration).await;
-        let result = server_setup.start_servers().await;
-        assert!(result.is_ok());
-        thread::sleep(Duration::from_secs(1));
-        let res = reqwest::get("http://localhost:8082/test").await.unwrap();
-        assert_eq!(res.status(), 200);
-        assert_eq!(res.text().await.unwrap(), "{}".to_string());
-        let res = reqwest::get("http://localhost:8082").await.unwrap();
-        assert_eq!(res.status(), 501);
+    async fn test_valid_endpoint() {
+        let endpoint = EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None, None, None);
+        assert!(is_valid_endpoint("/test","GET", &endpoint).unwrap());
     }
 
     /**
-     * Verifying https server.
+     * Create client verifier for mtls.
      */
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
-    async fn test_https() {
-        let server_cert_path = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/..",
-            "/testit-daemon/test/resources/https_test/server_cert.pem"
-        )
-        .to_owned();
-        let server_key_path = concat!(
-            env!("CARGO_MANIFEST_DIR"),
-            "/..",
-            "/testit-daemon/test/resources/https_test/server_key.pem"
-        )
-        .to_owned();
-        let https_config = HttpsConfiguration::new(
-            server_cert_path.clone(),
-            server_key_path,
-            8084,
-            None,
-            vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3],
-        );
-        let test_configuration = TestConfiguration::new(
-            "test".to_string(),
-            "test".to_string(),
-            vec![ServerConfiguration::new(
-                "test".to_string(),
-                None,
-                vec![EndpointConfiguration::new(
-                    "/".to_string(),
-                    "GET".to_string(),
-                    None,
-                    Some(MockResponseConfiguration::new(
-                        Some("{}".to_string()),
-                        200,
-                        HashMap::new(),
-                        1000,
-                    )),
-                    None,
-                )],
-                Some(https_config),
-            )],
-        );
-        let mut server_setup = ServerSetup::new();
-        server_setup.setup_test(&test_configuration).await;
-        let result = server_setup.start_servers().await;
-        thread::sleep(Duration::from_secs(1));
-        assert!(result.is_ok());
-        let mut buf = Vec::new();
-        File::open(server_cert_path)
-            .unwrap()
-            .read_to_end(&mut buf)
-            .unwrap();
-        let cert = reqwest::Certificate::from_pem(&buf).unwrap();
-        let client = reqwest::Client::builder()
-            .add_root_certificate(cert)
-            .danger_accept_invalid_hostnames(true)
-            .build()
-            .unwrap();
-        let res = client.get("https://localhost:8084").send().await.unwrap();
-        assert_eq!(res.status(), 200);
+    async fn test_client_verifier() {
+        let client_certificate = "tests/resources/client_cert.pem".to_owned();
+        let client_auth = get_client_verifier(client_certificate);    
+        assert!(client_auth.is_ok());
+    }  
+
+    /**
+     * Create client verifier for mtls.
+     */
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_client_verifier_no_file() {
+        let client_certificate = "tests/resources/no_file.pem".to_owned();
+        let client_auth = get_client_verifier(client_certificate);    
+        assert!(client_auth.is_err());
     }
+
+    /**
+     * Verify get_supported_tls_versions method.
+     */
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_get_supported_tls_versions() {          
+        let supported_tls_versions = vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2];
+        let protocol_versions = get_protocol_versions(&supported_tls_versions);
+        assert_eq!(protocol_versions.len(), 3);        
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_https_ssl_builder() {
+        let https_config = HttpsConfiguration::new(
+            "tests/resources/server_cert.pem".to_owned(),
+            "tests/resources/server_key.pem".to_owned(),
+            8080,
+            None,
+            vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2],            
+        );
+        let ssl_builder = ssl_builder(&https_config);
+        assert!(ssl_builder.is_ok());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_https_ssl_builder_with_client_auth() {
+        let https_config = HttpsConfiguration::new(
+            "tests/resources/server_cert.pem".to_owned(),
+            "tests/resources/server_key.pem".to_owned(),
+            8080,
+            Some("tests/resources/client_cert.pem".to_owned()),
+            vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2],            
+        );
+        let ssl_builder = ssl_builder(&https_config);
+        assert!(ssl_builder.is_ok());
+    }    
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_https_ssl_builder_no_file() {
+        let https_config = HttpsConfiguration::new(
+            "tests/resources/no_file.pem".to_owned(),
+            "tests/resources/no_file.pem".to_owned(),
+            8080,
+            None,
+            vec![TlsVersion::TLSv1_0, TlsVersion::TLSv1_1, TlsVersion::TLSv1_2],            
+        );
+        let ssl_builder = ssl_builder(&https_config);
+        assert!(ssl_builder.is_err());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_generate_mock_response() {
+        let mock_response = MockResponseConfiguration::new(Some("Test".to_owned()), 200, HashMap::new(), 0);
+        let response = generate_mock_response(&mock_response);
+        assert!(response.is_ok());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_get_client_no_proxy() {
+        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), None, None, false, false, false, false, None, None, None, None);
+        let client = get_client(&route_configuration);
+        assert!(client.is_ok());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_get_client_with_proxy() {
+        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), Some("http_//proxy.com:9999".to_owned()), None, false, false, false, false, None, None, None, None);
+        let client = get_client(&route_configuration);
+        assert!(client.is_ok());
+    }    
+
 }

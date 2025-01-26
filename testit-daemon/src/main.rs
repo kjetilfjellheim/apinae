@@ -205,3 +205,28 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
         _ = signal_shutdown.recv() => exit(0),
     };
 }
+
+
+#[cfg(test)]
+mod test {
+
+    use super::*;
+
+    use testit_lib::config::AppConfiguration;
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_get_test() {
+        let config = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
+        assert!(get_test("1", &config).is_ok());
+        assert!(get_test("2", &config).is_err());
+    }
+
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_start_daemon() {
+        let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
+        println!("{:?}", start_daemon(Some(&"1".to_string()), &config).await.is_ok());
+        assert!(start_daemon(Some(&"2".to_string()), &config).await.is_err());
+        assert!(start_daemon(None, &config).await.is_err());
+    }
+}

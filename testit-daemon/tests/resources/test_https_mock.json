@@ -1,0 +1,38 @@
+{
+  "name": "Test Configuration",
+  "description": "Test Configuration Description",
+  "tests": [
+    {
+      "id": "1",
+      "name": "Test",
+      "description": "Test Description",
+      "servers": [
+        {
+          "id": "2",
+          "name": "Test https",
+          "httpsConfig": {
+            "httpsPort": 8080,
+            "serverCertificate": "./tests/resources/server_cert.pem",
+            "privateKey": "./tests/resources/server_key.pem"
+          },
+          "endpoints": [
+            {
+              "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+              "endpoint": "^\/test$",
+              "method": "GET",
+              "soapAction": null,
+              "mockResponse": {
+                "response": "{ \"test\": \"Success https\" }",
+                "status": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "delay": 0
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
