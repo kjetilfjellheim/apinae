@@ -10,7 +10,7 @@ use rustls::{
     RootCertStore, ServerConfig, SupportedProtocolVersion,
 };
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use testit_lib::{
+use apinae_lib::{
     config::{
         EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration,
         ServerConfiguration, TestConfiguration, TlsVersion,

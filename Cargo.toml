@@ -2,8 +2,8 @@
 resolver = "2"
 
 members = [ 
-    "testit-lib",
-    "testit-daemon"
+    "apinae-lib",
+    "apinae-daemon"
 ]
 
 [profile.release]

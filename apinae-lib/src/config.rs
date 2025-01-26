@@ -213,7 +213,7 @@ impl ServerConfiguration {
 pub struct EndpointConfiguration {
     // The ID of the test. This is a UUID automatically generated.
     pub id: String,
-    // Endpoint for the testit API. This is a regular expression.
+    // Endpoint for the apinae API. This is a regular expression.
     pub endpoint: String,
     // The HTTP method.
     pub method: String,
@@ -229,7 +229,7 @@ impl EndpointConfiguration {
     /**
      * Create a new endpoint configuration.
      *
-     * `endpoint` Endpoint for the testit API. This is a regular expression.
+     * `endpoint` Endpoint for the apinae API. This is a regular expression.
      * `method` The HTTP method.
      * `soap_action` The SOAP action. Should only be used for soap requests.
      * `mock_response` The mock response.

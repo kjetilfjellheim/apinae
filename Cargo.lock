@@ -309,6 +309,31 @@ dependencies = [
 ]
 
 [[package]]
+name = "apinae-daemon"
+version = "0.0.1"
+dependencies = [
+ "actix-web",
+ "apinae-lib",
+ "clap",
+ "regex",
+ "reqwest",
+ "rustls",
+ "rustls-pemfile",
+ "serde",
+ "serde_json",
+ "tokio",
+]
+
+[[package]]
+name = "apinae-lib"
+version = "0.0.1"
+dependencies = [
+ "serde",
+ "serde_json",
+ "uuid",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1952,31 +1977,6 @@ dependencies = [
  "once_cell",
  "rustix",
  "windows-sys 0.59.0",
-]
-
-[[package]]
-name = "testit-daemon"
-version = "0.0.1"
-dependencies = [
- "actix-web",
- "clap",
- "regex",
- "reqwest",
- "rustls",
- "rustls-pemfile",
- "serde",
- "serde_json",
- "testit-lib",
- "tokio",
-]
-
-[[package]]
-name = "testit-lib"
-version = "0.0.1"
-dependencies = [
- "serde",
- "serde_json",
- "uuid",
 ]
 
 [[package]]

@@ -1,17 +1,17 @@
 [package]
-name = "testit-daemon"
+name = "apinae-daemon"
 version = "0.0.1"
 edition = "2021"
 description = "An application for testing apis."
 license = "Apache 2.0"
-repository = "https://github.com/kjetilfjellheim/testit"
+repository = "https://github.com/kjetilfjellheim/apinae"
 readme = "README.md"
 keywords = ["monitoring", "agent", "health", "system"]
 authors = ["Kjetil Fjellheim <kjetil@forgottendonkey.net>"]
 categories = ["testing", "api"]
 
 [dependencies]
-testit-lib = { path = "../testit-lib" }
+apinae-lib = { path = "../apinae-lib" }
 clap = { version = "4.5.27", features = ["derive"] }
 serde = { version = "1.0.217", features = ["derive"] }
 serde_json = { version = "1.0.137" }

@@ -2,7 +2,7 @@ use std::process::{Child, Command};
 
 pub async fn start_server(config_file: &str, id: &str) -> Result<Child, Box<dyn std::error::Error>> {
     // Start the daemon with the specified id.
-    let server_command = Command::new("../target/debug/testit-daemon")
+    let server_command = Command::new("../target/debug/apinae-daemon")
         .args(["--file", config_file, "--id", id])    
         .spawn()?;
     // Wait until server is running.

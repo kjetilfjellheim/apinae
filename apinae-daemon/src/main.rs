@@ -5,13 +5,13 @@ use clap::Parser;
 
 use args::Args;
 use server::ServerSetup;
-use testit_lib::{
+use apinae_lib::{
     config::{AppConfiguration, TestConfiguration},
     error::ApplicationError,
 };
 
 /**
- * The main function for the testit-daemon application.
+ * The main function for the apinae-daemon application.
  *
  * This application is used to start a daemon.
  */
@@ -212,7 +212,7 @@ mod test {
 
     use super::*;
 
-    use testit_lib::config::AppConfiguration;
+    use apinae_lib::config::AppConfiguration;
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_get_test() {
