@@ -19,13 +19,13 @@ jobs:
       - name: Build binary
         run: cargo build --release 
       - name: Strip binary
-        run: strip target/release/apinae
+        run: strip target/release/apinae-daemon
       - name: Upload release binary
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ./target/release/apinae
+          asset_path: ./target/release/apinae-daemon
           asset_name: apinae
           asset_content_type: application/octet-stream 
