@@ -300,7 +300,7 @@ async fn get_response(response: reqwest::Response) -> Result<HttpResponse, Appli
             key.as_str(),
             value
                 .to_str()
-                .map_err(|err| ApplicationError::RoutingError(format!("Invalid header value for response {:?}: {err}", value)))?,
+                .map_err(|err| ApplicationError::RoutingError(format!("Invalid header value for response {value:?}: {err}")))?,
         ));
     }
     let body = response
