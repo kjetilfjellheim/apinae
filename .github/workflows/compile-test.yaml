@@ -18,7 +18,7 @@ jobs:
             - name: Install tinyproxy
               run: sudo apt install tinyproxy   
             - run: pwd
-            - run: tinyproxy -d -c ./apinae-daemon/tests/resources/test_http_mock_with_proxy.conf
+            - run: tinyproxy -d -c ${{ github.workspace }}/apinae-daemon/tests/resources/test_http_mock_with_proxy.conf &
             - name: Install dependencies
               run: cargo fetch
             - name: Compile
