@@ -14,7 +14,11 @@ jobs:
               uses: actions-rs/toolchain@v1
               with:
                   toolchain: stable
-                  override: true             
+                  override: true  
+            - name: Install tinyproxy
+              run: apt install tinyproxy   
+            - run: pwd
+            - run: tinyproxy -d -c ./apinae-daemon/tests/resources/test_http_mock_with_proxy.conf
             - name: Install dependencies
               run: cargo fetch
             - name: Compile
