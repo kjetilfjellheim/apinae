@@ -7,7 +7,13 @@ use std::process::Command;
  * Requests the server with curl and verifies the response.
  */
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
-async fn test_http_server() {
+async fn test_http_server_with_proxy() {
+    let mut tinyproxy_command = Command::new("tinyproxy")
+        .arg("-c")
+        .arg("./tests/resources/http_tinyproxy.conf")
+        .arg("-d")
+        .spawn()
+        .expect("Failed to start tinyproxy");
     // Start the server.
     let mut server_command = common::start_server("./tests/resources/test_http_mock_with_proxy.json", "1")
         .await
@@ -22,6 +28,7 @@ async fn test_http_server() {
             server_command
                 .kill()
                 .expect("Failed to kill server process");
+            tinyproxy_command.kill().expect("Failed to kill process");    
             panic!("Failed to execute curl command: {}", error);
         }
     };
@@ -29,6 +36,8 @@ async fn test_http_server() {
     let output_string = String::from_utf8_lossy(&curl_command.stdout).to_string();
     // Stop the server.
     server_command.kill().expect("Failed to kill process");
+    // Stop the proxy.
+    tinyproxy_command.kill().expect("Failed to kill process");    
     // Verify the output.
     assert_eq!(output_string, "{ \"test\": \"Success http\" }");
 }
