@@ -16,7 +16,7 @@ jobs:
                   toolchain: stable
                   override: true  
             - name: Install tinyproxy
-              run: apt install tinyproxy   
+              run: sudo apt install tinyproxy   
             - run: pwd
             - run: tinyproxy -d -c ./apinae-daemon/tests/resources/test_http_mock_with_proxy.conf
             - name: Install dependencies
