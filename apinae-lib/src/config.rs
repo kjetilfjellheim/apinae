@@ -223,8 +223,6 @@ pub struct EndpointConfiguration {
     pub endpoint: String,
     // The HTTP method.
     pub method: String,
-    // The SOAP action. Should only be used for soap requests.
-    pub soap_action: Option<String>,
     // The mock response.
     pub mock_response: Option<MockResponseConfiguration>,
     // The route configuration.
@@ -237,7 +235,6 @@ impl EndpointConfiguration {
      *
      * `endpoint` Endpoint for the apinae API. This is a regular expression.
      * `method` The HTTP method.
-     * `soap_action` The SOAP action. Should only be used for soap requests.
      * `mock_response` The mock response.
      * `route` The route configuration.
      *
@@ -247,7 +244,6 @@ impl EndpointConfiguration {
     pub fn new(
         endpoint: String,
         method: String,
-        soap_action: Option<String>,
         mock_response: Option<MockResponseConfiguration>,
         route: Option<RouteConfiguration>,
     ) -> Self {
@@ -255,7 +251,6 @@ impl EndpointConfiguration {
             id: Uuid::new_v4().to_string(),
             endpoint,
             method,
-            soap_action,
             mock_response,
             route,
         }
@@ -424,7 +419,6 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        None,
                         Some(MockResponseConfiguration::new(
                             Some("Test Response".to_string()),
                             200,
@@ -523,7 +517,6 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        None,
                         Some(MockResponseConfiguration::new(
                             Some("Test Response".to_string()),
                             200,
@@ -569,7 +562,6 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        None,
                         Some(MockResponseConfiguration::new(
                             Some("Test Response".to_string()),
                             200,

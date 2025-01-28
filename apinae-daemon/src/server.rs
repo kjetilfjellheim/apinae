@@ -640,7 +640,7 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_valid_endpoint() {
         let endpoint =
-            EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None, None, None);
+            EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None, None);
         assert!(is_valid_endpoint("/test", "GET", &endpoint).unwrap());
     }
 
