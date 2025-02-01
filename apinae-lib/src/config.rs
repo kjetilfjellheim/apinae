@@ -96,6 +96,8 @@ pub struct TestConfiguration {
     pub description: String,
     // The server configurations.
     pub servers: Vec<ServerConfiguration>,
+    // TCP listeners
+    pub listeners: Vec<TcpListenerData>
 }
 
 impl TestConfiguration {
@@ -109,12 +111,13 @@ impl TestConfiguration {
      * The test configuration.
      */
     #[must_use]
-    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>) -> Self {
+    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Self {
         TestConfiguration {
             id: Uuid::new_v4().to_string(),
             name,
             description,
             servers,
+            listeners,
         }
     }
 }
@@ -224,7 +227,7 @@ pub struct EndpointConfiguration {
     // The HTTP method.
     pub method: String,
     // The mock response.
-    pub mock_response: Option<MockResponseConfiguration>,
+    pub mock: Option<MockResponseConfiguration>,
     // The route configuration.
     pub route: Option<RouteConfiguration>,
 }
@@ -244,15 +247,57 @@ impl EndpointConfiguration {
     pub fn new(
         endpoint: String,
         method: String,
-        mock_response: Option<MockResponseConfiguration>,
-        route: Option<RouteConfiguration>,
+        mock: Option<MockResponseConfiguration>,
+        route: Option<RouteConfiguration>    
     ) -> Self {
         EndpointConfiguration {
             id: Uuid::new_v4().to_string(),
             endpoint,
             method,
-            mock_response,
+            mock,
             route,
+        }
+    }
+}
+
+/**
+ * Configuration for a tcp connection.
+ */
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct TcpListenerData {
+    // The file to read from. 
+    pub file: Option<String>,
+    // The data to return. If this is set, the file will be ignored.
+    pub data: Option<String>,
+    // Time to wait before writing the response. 
+    pub delay_write_ms: Option<u64>,
+    // The port to listen on.
+    pub port: u16,
+    // Do accept connections.
+    #[serde(default = "default_as_true")]
+    pub accept: bool,
+}
+
+impl TcpListenerData {
+    /**
+     * Create a new tcp configuration.
+     *
+     * The tcp configuration.
+     * `file` The file to read from.
+     * `data` The data to return. If this is set, the file will be ignored.
+     * `delay_write_ms` Time to wait before writing the response.
+     * `port` The port to listen on.
+     * `accept` Do accept connections.
+     */
+    #[must_use]
+    pub fn new(file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool) -> Self {
+        TcpListenerData {
+            file,
+            data,
+            delay_write_ms,
+            port,
+            accept,
         }
     }
 }
@@ -397,8 +442,14 @@ fn default_server_supported_tls_versions() -> Vec<TlsVersion> {
     vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3]
 }
 
+fn default_as_true() -> bool {
+    true
+}
+
 #[cfg(test)]
 mod test {
+
+    use std::vec;
 
     use super::*;
 
@@ -441,6 +492,7 @@ mod test {
                     )],
                     None,
                 )],
+                Vec::new(),
             )],
         );
 
@@ -459,7 +511,7 @@ mod test {
         );
         assert_eq!(
             configuration.tests[0].servers[0].endpoints[0]
-                .mock_response
+                .mock
                 .as_ref()
                 .unwrap()
                 .response,
@@ -467,7 +519,7 @@ mod test {
         );
         assert_eq!(
             configuration.tests[0].servers[0].endpoints[0]
-                .mock_response
+                .mock
                 .as_ref()
                 .unwrap()
                 .status,
@@ -475,7 +527,7 @@ mod test {
         );
         assert_eq!(
             configuration.tests[0].servers[0].endpoints[0]
-                .mock_response
+                .mock
                 .as_ref()
                 .unwrap()
                 .headers
@@ -484,7 +536,7 @@ mod test {
         );
         assert_eq!(
             configuration.tests[0].servers[0].endpoints[0]
-                .mock_response
+                .mock
                 .as_ref()
                 .unwrap()
                 .delay,
@@ -539,6 +591,7 @@ mod test {
                     )],
                     None,
                 )],
+                Vec::new(),
             )],
         );
 
@@ -580,10 +633,11 @@ mod test {
                             None,
                             None,
                             None,
-                        )),
+                        )),                        
                     )],
                     None,
                 )],
+                Vec::new(),
             )],
         );
 

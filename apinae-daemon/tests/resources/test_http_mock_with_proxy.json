@@ -35,7 +35,7 @@
                             "endpoint": "^\/test$",
                             "method": "GET",
                             "soapAction": null,
-                            "mockResponse": {
+                            "mock": {
                                 "response": "{ \"test\": \"Success http\" }",
                                 "status": 200,
                                 "headers": {
@@ -46,7 +46,8 @@
                         }
                     ]
                 }                
-            ]
+            ],
+            "listeners": []
         }
     ]
 }

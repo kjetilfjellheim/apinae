@@ -1,6 +1,6 @@
-mod common;
+use tokio::process::Command;
 
-use std::process::Command;
+mod common;
 
 /**
  * Initalizes the server for http with a mocked response.
@@ -16,6 +16,7 @@ async fn test_http_server() {
     let curl_command = match Command::new("curl")
         .arg("http://localhost:8080/test")
         .output()
+        .await
     {
         Ok(command) => command,
         Err(error) => {

@@ -110,6 +110,9 @@ async fn start_daemon(
     server_setup.start_servers().await.map_err(|err| {
         ApplicationError::ServerStartUpError(format!("Server startup failed: {err}"))
     })?;
+    server_setup.start_listeners().await.map_err(|err| {
+        ApplicationError::ServerStartUpError(format!("Listener startup failed: {err}"))
+    })?;    
     Ok(())
 }
 

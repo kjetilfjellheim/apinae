@@ -1,10 +1,10 @@
-use std::{fs::File, io::BufReader, sync::Arc, time::Duration};
+use std::{fs::File, io::{BufReader, Read}, sync::Arc, time::Duration};
 
 use actix_web::{http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
 use apinae_lib::{
     config::{
         EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration,
-        ServerConfiguration, TestConfiguration, TlsVersion,
+        ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion,
     },
     error::ApplicationError,
 };
@@ -17,7 +17,10 @@ use rustls::{
     RootCertStore, ServerConfig, SupportedProtocolVersion,
 };
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use tokio::sync::RwLock;
+use tokio::{
+    io::Interest,
+    sync::RwLock,
+};
 
 const QUERYPARAMSEPARATOR: char = '&';
 const KEYVALUESEPARATOR: char = '=';
@@ -27,6 +30,7 @@ const KEYVALUESEPARATOR: char = '=';
  */
 pub struct ServerSetup {
     servers: Arc<RwLock<Vec<AppServer>>>,
+    listeners: Arc<RwLock<Vec<AppListener>>>,
 }
 
 impl ServerSetup {
@@ -39,6 +43,7 @@ impl ServerSetup {
     pub fn new() -> Self {
         ServerSetup {
             servers: Arc::new(RwLock::new(vec![])),
+            listeners: Arc::new(RwLock::new(vec![])),
         }
     }
 
@@ -51,7 +56,13 @@ impl ServerSetup {
             .iter()
             .map(|server_configuration| AppServer::new(server_configuration.clone()))
             .collect();
+        let listeners: Vec<AppListener> = test_configuration
+            .listeners
+            .iter()
+            .map(AppListener::new)
+            .collect();
         self.servers.write().await.extend(servers);
+        self.listeners.write().await.extend(listeners);
     }
 
     /**
@@ -68,6 +79,23 @@ impl ServerSetup {
         for server in self.servers.write().await.iter_mut() {
             handles.push(server.start_server_http()?);
             handles.push(server.start_server_https()?);
+        }
+        Ok(())
+    }
+
+    /**
+     * Start the listeners.
+     *
+     * # Returns
+     * Ok if the listeners were started.
+     *
+     * # Errors
+     * An error if the servers could not be started.
+     */
+    pub async fn start_listeners(&mut self) -> Result<(), ApplicationError> {
+        let mut handles = vec![];
+        for server in self.listeners.write().await.iter_mut() {
+            handles.push(server.start_listener().await?);
         }
         Ok(())
     }
@@ -170,6 +198,204 @@ impl AppServer {
 }
 
 /**
+ * The `AppListener` struct is used to configure and start the listener.
+ */
+struct AppListener {
+    // Server configuration
+    tcp_listener: TcpListenerData,
+}
+
+impl AppListener {
+    /**
+     * Create a new `AppListener`.
+     *
+     * # Arguments
+     * `tcp_listener`: The TCP listener configuration.
+     *
+     * # Returns
+     * The created `AppListener`.
+     */
+    pub fn new(tcp_listener: &TcpListenerData) -> Self {
+        AppListener {
+            tcp_listener: tcp_listener.clone(),
+        }
+    }
+
+    /**
+     * Start the listener.
+     *
+     * # Returns
+     * Ok if the listener was started.
+     *
+     * # Errors
+     * An error if the listener could not be started.
+     *
+     */
+    async fn start_listener(&self) -> Result<(), ApplicationError> {
+        let server = self.bind_listener().await?;
+        let tcp_listener_data = self.tcp_listener.clone();
+        tokio::spawn(async move {
+            loop {
+                let Some(stream) = Self::wait_for_accept(&server, &tcp_listener_data).await else {
+                    continue;
+                };
+                let tcp_listener_data = tcp_listener_data.clone();
+                tokio::spawn(async move {
+                    let _ = Self::handle_tcp_stream(stream, tcp_listener_data).await.map_err(|err| {
+                        eprintln!("Error handling tcp connection: {err}");
+                    });
+                    println!("Connection closed");
+                });
+            }
+        });
+        Ok(())
+    }
+
+    /**
+     * Bind the listener.
+     *
+     * # Returns
+     * The bound listener.
+     *
+     * # Errors
+     *  An error if the listener could not be bound.
+     */
+    async fn bind_listener(&self) -> Result<tokio::net::TcpListener, ApplicationError> {
+        let server = tokio::net::TcpListener::bind(("127.0.0.1", self.tcp_listener.port))
+            .await
+            .map_err(|err| {
+                ApplicationError::ServerStartUpError(format!(
+                    "Failed to create tcp listener: {err}"
+                ))
+            })?;
+        Ok(server)
+    }
+
+    /**
+     * Write the data to the output stream.
+     *
+     * # Arguments
+     * `stream`: The output stream.
+     * `data`: The data to write.
+     *
+     */
+    fn output_string_data(stream: &mut tokio::net::TcpStream, data: &String) {
+        println!("Sending: {data}");
+        let _ = stream.try_write(data.as_bytes());
+    }
+
+    /**
+     * Write the file data to the output stream.
+     *
+     * # Arguments
+     * `stream`: The output stream.
+     * `file`: The file to write.
+     *
+     */
+    fn output_file_data(stream: &mut tokio::net::TcpStream, file: &String) {
+        match File::open(file) {
+            Ok(file) => {
+                let mut output = BufReader::new(file);
+                let mut buffer = Vec::new();
+                println!("Sending: {}", String::from_utf8_lossy(&buffer));
+                let _ = output.read_to_end(&mut buffer);
+                let _ = stream.try_write(buffer.as_mut());
+            }
+            Err(err) => {
+                eprintln!("Failed to open file: {err}");
+            }
+        }
+    }
+
+    /**
+     * Wait for the accept.
+     *
+     * # Arguments
+     * `server`: The server.
+     *
+     * # Returns
+     * The accepted stream.
+     *
+     */
+    async fn wait_for_accept(
+        tcp_listener: &tokio::net::TcpListener,
+        tcp_listener_data: &TcpListenerData,
+    ) -> Option<tokio::net::TcpStream> {
+        if !tcp_listener_data.accept {
+            tokio::time::sleep(Duration::from_secs(1)).await;
+            return None;
+        }
+        let (stream, _) = match tcp_listener.accept().await {
+            Ok(stream) => stream,
+            Err(err) => {
+                eprintln!("Failed to accept connection: {err}");
+                return None;
+            }
+        };
+        Some(stream)
+    }
+
+    /**
+     * Handle the TCP stream.
+     * 
+     * # Arguments
+     * `stream`: The TCP stream.
+     * `tcp_listener_data`: The TCP listener data.
+     * 
+     * # Returns
+     * Ok if the stream was handled.
+     * 
+     * # Errors
+     * An error if the stream could not be handled.
+     * 
+     */
+    async fn handle_tcp_stream(
+        mut stream: tokio::net::TcpStream,
+        tcp_listener_data: TcpListenerData,
+    ) -> Result<(), ApplicationError> {
+        loop {            
+            tokio::time::sleep(Duration::from_micros(10)).await;
+
+            let ready = stream
+                .ready(Interest::READABLE | Interest::WRITABLE)
+                .await
+                .map_err(|err| {
+                    ApplicationError::ServerStartUpError(format!("Failed to get ready: {err}"))
+                })?;
+
+            if !ready.is_readable() && !ready.is_writable() {            
+                return Ok(());
+            }
+
+            if ready.is_readable() {                
+                loop {
+                    let mut buffer = vec![];
+                    let _ = stream.try_read_buf(&mut buffer);                
+                    if !buffer.is_empty() {
+                        println!("Received: {:?}", String::from_utf8_lossy(&buffer));             
+                    }
+                    if buffer.is_empty() {
+                        break;                        
+                    }     
+                }           
+            }
+
+            if ready.is_writable() {     
+                if let Some(delay_write_ms) = tcp_listener_data.delay_write_ms {
+                    tokio::time::sleep(Duration::from_millis(delay_write_ms)).await;
+                }
+                if let Some(data) = tcp_listener_data.data.as_ref() {
+                    Self::output_string_data(&mut stream, data);
+                } else if let Some(file) = tcp_listener_data.file.as_ref() {
+                    Self::output_file_data(&mut stream, file);             
+                }
+                return Ok(());
+            }
+        }
+    }
+}
+
+/**
  * Handle the request.
  *
  * # Arguments
@@ -245,9 +471,9 @@ async fn handle_endpoint(
     req: HttpRequest,
     payload: Option<web::Payload>,
 ) -> Result<HttpResponse, ApplicationError> {
-    if let Some(mock_response) = &endpoint.mock_response {
-        std::thread::sleep(std::time::Duration::from_millis(mock_response.delay));
-        return generate_mock_response(mock_response);
+    if let Some(mock) = &endpoint.mock {
+        std::thread::sleep(std::time::Duration::from_millis(mock.delay));
+        return generate_mock_response(mock);
     }
     if let Some(route_configuration) = &endpoint.route {
         return route_request(route_configuration, req, payload).await;

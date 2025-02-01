@@ -1,6 +1,6 @@
-mod common;
+use tokio::process::Command;
 
-use std::process::Command;
+mod common;
 
 /**
  * Initalizes the server for http with a mocked response.
@@ -23,13 +23,14 @@ async fn test_http_server_with_proxy() {
     let curl_command: std::process::Output = match Command::new("curl")
         .arg("http://localhost:8080/test")
         .output()
+        .await
     {
         Ok(command) => command,
         Err(error) => {
             server_command
                 .kill()
                 .expect("Failed to kill server process");
-            tinyproxy_command.kill().expect("Failed to kill process");
+            tinyproxy_command.kill().await.expect("Failed to kill process");
             panic!("Failed to execute curl command: {}", error);
         }
     };
@@ -38,7 +39,7 @@ async fn test_http_server_with_proxy() {
     // Stop the server.
     server_command.kill().expect("Failed to kill process");
     // Stop the proxy.
-    tinyproxy_command.kill().expect("Failed to kill process");
+    tinyproxy_command.kill().await.expect("Failed to kill process");
     // Verify the output.
     assert_eq!(output_string, "{ \"test\": \"Success http\" }");
 }

@@ -1,6 +1,6 @@
-mod common;
+use tokio::process::Command;
 
-use std::process::Command;
+mod common;
 
 /**
  * Initalizes the server for http with a mocked response.
@@ -18,6 +18,7 @@ async fn test_https_server() {
         .arg("--insecure")
         .arg("https://localhost:8080/test")
         .output()
+        .await
     {
         Ok(command) => command,
         Err(error) => {
