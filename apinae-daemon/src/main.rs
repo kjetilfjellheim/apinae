@@ -17,6 +17,7 @@ use server::ServerSetup;
  */
 #[actix_web::main]
 async fn main() -> Result<(), ApplicationError> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
     let args = Args::parse();
     let config = read_input_file(&args)?;
     init(args, config).await?;
@@ -228,10 +229,7 @@ mod test {
     async fn test_start_daemon() {
         let config: AppConfiguration =
             AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
-        println!(
-            "{:?}",
-            start_daemon(Some(&"1".to_string()), &config).await.is_ok()
-        );
+        let _ = start_daemon(Some(&"1".to_string()), &config).await.is_ok();
         assert!(start_daemon(Some(&"2".to_string()), &config).await.is_err());
         assert!(start_daemon(None, &config).await.is_err());
     }

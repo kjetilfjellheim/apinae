@@ -1,4 +1,4 @@
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Command};
 
 mod common;
 
@@ -13,6 +13,7 @@ async fn test_tcp_listener() {
         .await
         .expect("Failed to start server");
 
+    tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     // Assert the server response.
     assert_command(&mut server_command, "8080", "Test").await;
     assert_command(&mut server_command, "8081", "Testing This File").await;
@@ -23,17 +24,19 @@ async fn test_tcp_listener() {
     server_command.kill().expect("Failed to kill process");    
 }
 
-async fn assert_command(server_command: &mut Child, port : &str, expected: &str) {        
-    let nc_command = match Command::new("nc")
-        .arg("-w")
+async fn assert_command(server_command: &mut Child, port : &str, expected: &str) {   
+    let connect = format!("http://localhost:{}", port);     
+    let nc_command = match Command::new("curl")
+        .arg("--http0.9")
+        .arg("-X")
+        .arg("GET")
+        .arg("--max-time")
         .arg("3")
-        .arg("localhost")
-        .arg(port)
+        .arg(connect)
         .output()                
     {        
         Ok(nc_command) => nc_command,
         Err(error) => {
-            println!("Failed to execute nc command: {}", error);
             server_command
                 .kill()
                 .expect("Failed to kill server process");
@@ -43,5 +46,10 @@ async fn assert_command(server_command: &mut Child, port : &str, expected: &str)
     // Read the output from the nc command.
     let output_string = String::from_utf8_lossy(&nc_command.stdout).to_string();   
     // Verify the output.
-    assert_eq!(output_string, expected);
+   if output_string.trim() != expected {
+        server_command
+            .kill()
+            .expect("Failed to kill server process");
+        panic!("Expected: {}, Got: {}", expected, output_string);
+    }
 }

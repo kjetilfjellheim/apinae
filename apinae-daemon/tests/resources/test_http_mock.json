@@ -25,7 +25,21 @@
                                 },
                                 "delay": 0
                             }
-                        }
+                        },
+                        {
+                            "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+                            "endpoint": "^\/test$",
+                            "method": "POST",
+                            "soapAction": null,
+                            "mock": {
+                                "response": "{ \"test\": \"Success http\" }",
+                                "status": 201,
+                                "headers": {
+                                    "Content-Type": "application/json"
+                                },
+                                "delay": 0
+                            }
+                        }                        
                     ]
                 }
             ],

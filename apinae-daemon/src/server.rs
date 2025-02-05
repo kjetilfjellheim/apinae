@@ -1,10 +1,9 @@
 use std::{fs::File, io::{BufReader, Read}, sync::Arc, time::Duration};
 
-use actix_web::{http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
+use actix_web::{middleware::Logger, http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
 use apinae_lib::{
     config::{
-        EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration,
-        ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion,
+        CloseConnectionWhen, EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion
     },
     error::ApplicationError,
 };
@@ -18,9 +17,9 @@ use rustls::{
 };
 use rustls_pemfile::{certs, pkcs8_private_keys};
 use tokio::{
-    io::Interest,
-    sync::RwLock,
+    io::Interest, sync::RwLock
 };
+use log::{error, info};
 
 const QUERYPARAMSEPARATOR: char = '&';
 const KEYVALUESEPARATOR: char = '=';
@@ -51,6 +50,7 @@ impl ServerSetup {
      * Setup the test with the specified configuration. This also initalizes the app servers.
      */
     pub async fn setup_test(&mut self, test_configuration: &TestConfiguration) {
+        log::info!("Setting up test with id {}", test_configuration.id);
         let servers: Vec<AppServer> = test_configuration
             .servers
             .iter()
@@ -136,9 +136,11 @@ impl AppServer {
      */
     fn start_server_http(&mut self) -> Result<(), ApplicationError> {
         if let Some(http_port) = self.server_configuration.http_port {
+            log::info!("Starting http server on port: {http_port}");
             let appstate = web::Data::new(self.server_configuration.clone());
             let server = HttpServer::new(move || {
                 App::new()
+                    .wrap(Logger::default())
                     .app_data(appstate.clone())
                     .default_service(web::to(request_handler))
             })
@@ -149,8 +151,8 @@ impl AppServer {
             let server = server.workers(2).run();
             tokio::spawn(async move {
                 match server.await {
-                    Ok(()) => {}
-                    Err(err) => eprintln!("{err}"),
+                    Ok(()) => { log::info!("Server started"); }
+                    Err(err) => error!("{err}"),
                 }
             });
         }
@@ -169,13 +171,15 @@ impl AppServer {
     fn start_server_https(&self) -> Result<(), ApplicationError> {
         let config = self.server_configuration.clone();
         if let Some(https_config) = config.https_config {
+            log::info!("Starting https server on port: {}", https_config.https_port);
             let ssl_builder = ssl_builder(&https_config)?;
             let appstate = web::Data::new(self.server_configuration.clone());
             let server = HttpServer::new(move || {
                 App::new()
+                    .wrap(Logger::default())
                     .app_data(appstate.clone())
                     .default_service(web::to(request_handler))
-            })
+            })            
             .bind_rustls_0_23(
                 "127.0.0.1:".to_owned() + https_config.https_port.to_string().as_str(),
                 ssl_builder,
@@ -189,7 +193,7 @@ impl AppServer {
             tokio::spawn(async move {
                 match server.await {
                     Ok(()) => {}
-                    Err(err) => eprintln!("{err}"),
+                    Err(err) => error!("Server error: {err}"),
                 }
             });
         }
@@ -234,18 +238,19 @@ impl AppListener {
     async fn start_listener(&self) -> Result<(), ApplicationError> {
         let server = self.bind_listener().await?;
         let tcp_listener_data = self.tcp_listener.clone();
+
         tokio::spawn(async move {
             loop {
                 let Some(stream) = Self::wait_for_accept(&server, &tcp_listener_data).await else {
                     continue;
                 };
                 let tcp_listener_data = tcp_listener_data.clone();
-                tokio::spawn(async move {
+                let _ = tokio::spawn(async move {
                     let _ = Self::handle_tcp_stream(stream, tcp_listener_data).await.map_err(|err| {
-                        eprintln!("Error handling tcp connection: {err}");
+                        error!("Error handling tcp connection: {err}");
                     });
-                    println!("Connection closed");
-                });
+                    info!("Connection closed");
+                }).await;
             }
         });
         Ok(())
@@ -268,6 +273,7 @@ impl AppListener {
                     "Failed to create tcp listener: {err}"
                 ))
             })?;
+        log::info!("Listening on: {}", self.tcp_listener.port);
         Ok(server)
     }
 
@@ -280,8 +286,10 @@ impl AppListener {
      *
      */
     fn output_string_data(stream: &mut tokio::net::TcpStream, data: &String) {
-        println!("Sending: {data}");
-        let _ = stream.try_write(data.as_bytes());
+        info!("Sending: {data}");
+        let _ = stream.try_write(data.as_bytes()).map_err(|err| {
+            error!("Failed to write data: {err}");
+        });
     }
 
     /**
@@ -297,12 +305,16 @@ impl AppListener {
             Ok(file) => {
                 let mut output = BufReader::new(file);
                 let mut buffer = Vec::new();
-                println!("Sending: {}", String::from_utf8_lossy(&buffer));
-                let _ = output.read_to_end(&mut buffer);
-                let _ = stream.try_write(buffer.as_mut());
+                info!("Sending: {}", String::from_utf8_lossy(&buffer));
+                let _ = output.read_to_end(&mut buffer).map_err(|err| {
+                    error!("Failed to read file: {err}");
+                });
+                let _ = stream.try_write(buffer.as_mut()).map_err(|err| {
+                    error!("Failed to write file: {err}");
+                });
             }
             Err(err) => {
-                eprintln!("Failed to open file: {err}");
+                error!("Failed to open file: {err}");
             }
         }
     }
@@ -328,10 +340,11 @@ impl AppListener {
         let (stream, _) = match tcp_listener.accept().await {
             Ok(stream) => stream,
             Err(err) => {
-                eprintln!("Failed to accept connection: {err}");
+                error!("Failed to accept connection: {err}");
                 return None;
             }
         };
+        log::debug!("Accepted connection");
         Some(stream)
     }
 
@@ -353,6 +366,8 @@ impl AppListener {
         mut stream: tokio::net::TcpStream,
         tcp_listener_data: TcpListenerData,
     ) -> Result<(), ApplicationError> {
+        let mut written = true;
+
         loop {            
             tokio::time::sleep(Duration::from_micros(10)).await;
 
@@ -362,8 +377,12 @@ impl AppListener {
                 .map_err(|err| {
                     ApplicationError::ServerStartUpError(format!("Failed to get ready: {err}"))
                 })?;
+            log::debug!("Ready: {:?}", ready);
+            if ready.is_read_closed() || ready.is_write_closed() {            
+                return Ok(());
+            }
 
-            if !ready.is_readable() && !ready.is_writable() {            
+            if tcp_listener_data.close_connection == CloseConnectionWhen::BeforeRead {
                 return Ok(());
             }
 
@@ -372,24 +391,33 @@ impl AppListener {
                     let mut buffer = vec![];
                     let _ = stream.try_read_buf(&mut buffer);                
                     if !buffer.is_empty() {
-                        println!("Received: {:?}", String::from_utf8_lossy(&buffer));             
+                        info!("Received: {:?}", String::from_utf8_lossy(&buffer));                                  
                     }
                     if buffer.is_empty() {
+                        written = false;
                         break;                        
                     }     
                 }           
             }
 
-            if ready.is_writable() {     
+            if tcp_listener_data.close_connection == CloseConnectionWhen::AfterRead {
+                return Ok(());
+            }
+
+            if ready.is_writable() && !written {     
                 if let Some(delay_write_ms) = tcp_listener_data.delay_write_ms {
                     tokio::time::sleep(Duration::from_millis(delay_write_ms)).await;
                 }
                 if let Some(data) = tcp_listener_data.data.as_ref() {
                     Self::output_string_data(&mut stream, data);
-                } else if let Some(file) = tcp_listener_data.file.as_ref() {
+                } else if let Some(file) = tcp_listener_data.file.as_ref() {                    
                     Self::output_file_data(&mut stream, file);             
                 }
-                return Ok(());
+                
+                if tcp_listener_data.close_connection == CloseConnectionWhen::AfterResponse {
+                    return Ok(());
+                }
+                written = true;
             }
         }
     }
@@ -415,14 +443,18 @@ async fn request_handler(
             Ok(true) => match handle_endpoint(endpoint, req, payload).await {
                 Ok(response) => return response,
                 Err(err) => {
-                    eprintln!("{err}");
+                    error!("Error handling request: {err}. Returning not implemented");
                     return HttpResponse::NotImplemented().body("Not implemented");
                 }
             },
-            Ok(false) => {}
-            Err(err) => return HttpResponse::ServiceUnavailable().body(err.to_string()),
+            Ok(false) => { }
+            Err(err) => {
+                error!("Error checking endpoint: {err}. Returning service unavailable");            
+                return HttpResponse::ServiceUnavailable().body(err.to_string()) 
+            },
         }
     }
+    info!("No endpoints found: Returning not implemented");
     HttpResponse::NotImplemented().body("Not implemented")
 }
 
@@ -496,6 +528,7 @@ async fn route_request(
     req: HttpRequest,
     payload: Option<web::Payload>,
 ) -> Result<HttpResponse, ApplicationError> {
+
     let mut url = route_configuration.endpoint.clone();
     url.push_str(req.path());
 
@@ -525,6 +558,7 @@ async fn route_request(
  * An error if the status code is invalid.
  */
 async fn get_response(response: reqwest::Response) -> Result<HttpResponse, ApplicationError> {
+    log::debug!("Creating response");
     let mut response_builder = HttpResponse::build(
         StatusCode::from_u16(response.status().as_u16()).map_err(|err| {
             ApplicationError::RoutingError(format!(
@@ -569,6 +603,7 @@ async fn get_response(response: reqwest::Response) -> Result<HttpResponse, Appli
 fn get_client(
     route_configuration: &RouteConfiguration,
 ) -> Result<reqwest::Client, ApplicationError> {
+    log::debug!("Creating client");
     let mut client_builder = reqwest::Client::builder();
     if let Some(connect_timeout) = route_configuration.connect_timeout {
         client_builder = client_builder.connect_timeout(Duration::from_millis(connect_timeout));
@@ -602,6 +637,7 @@ fn get_client(
 
     let client = match &route_configuration.proxy_url {
         Some(proxy) => {
+            log::debug!("Creating client with proxy: {proxy}");
             let reqwest_proxy = reqwest::Proxy::all(proxy.clone()).map_err(|err| {
                 ApplicationError::RoutingError(format!("Could not create proxy settings: {err}"))
             })?;
@@ -646,6 +682,7 @@ async fn get_request(
     payload: Option<web::Payload>,
     url: String,
 ) -> Result<reqwest::Request, ApplicationError> {
+    log::debug!("Creating request");
     let mut request_builder = reqwest::Client::new().request(
         Method::from_bytes(req.method().as_str().as_bytes()).map_err(|err| {
             ApplicationError::RoutingError(format!(
@@ -711,6 +748,7 @@ async fn get_request(
 fn generate_mock_response(
     mock_response: &MockResponseConfiguration,
 ) -> Result<HttpResponse, ApplicationError> {
+    log::debug!("Generating mock response");    
     let mut response_builder: actix_web::HttpResponseBuilder = HttpResponse::build(
         StatusCode::from_u16(mock_response.status)
             .map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?,
@@ -740,11 +778,15 @@ fn generate_mock_response(
  *
  */
 fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, ApplicationError> {
+    log::info!("Creating ssl builder");
     let config_builder = ServerConfig::builder_with_protocol_versions(&get_protocol_versions(
         &https_config.supported_tls_versions,
     ));
+    log::debug!("Supported TLS versions: {:?}", &https_config.supported_tls_versions);
+
     let config_builder = match https_config.clone().client_certificate {
         Some(client_certificate) => {
+            log::debug!("Require client certificate: {client_certificate}");
             let client_auth = get_client_verifier(client_certificate)?;
             config_builder.with_client_cert_verifier(client_auth)
         }
@@ -797,7 +839,7 @@ fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, Applic
  */
 fn get_protocol_versions(
     supported_tls_versions: &[TlsVersion],
-) -> Vec<&'static SupportedProtocolVersion> {
+) -> Vec<&'static SupportedProtocolVersion> {    
     supported_tls_versions
         .iter()
         .map(|version| match version {
@@ -823,6 +865,7 @@ fn get_protocol_versions(
 fn get_client_verifier(
     client_certificate: String,
 ) -> Result<Arc<dyn ClientCertVerifier>, ApplicationError> {
+    log::info!("Creating client verifier");
     let cert_file = &mut BufReader::new(File::open(client_certificate).map_err(|err| {
         ApplicationError::ConfigurationError(format!("Failed to read client certificate: {err}"))
     })?);

@@ -261,6 +261,17 @@ impl EndpointConfiguration {
 }
 
 /**
+ * When to close the connection.
+ */
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+pub enum CloseConnectionWhen {
+    BeforeRead,
+    AfterRead,
+    AfterResponse,
+    Never,
+}
+
+/**
  * Configuration for a tcp connection.
  */
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
@@ -274,9 +285,12 @@ pub struct TcpListenerData {
     pub delay_write_ms: Option<u64>,
     // The port to listen on.
     pub port: u16,
-    // Do accept connections.
+    // Do accept connections. Default is true.
     #[serde(default = "default_as_true")]
     pub accept: bool,
+    // When to close the connection. Default is AfterResponse.
+    #[serde(default = "default_close_connection_when")]
+    pub close_connection: CloseConnectionWhen,
 }
 
 impl TcpListenerData {
@@ -289,15 +303,17 @@ impl TcpListenerData {
      * `delay_write_ms` Time to wait before writing the response.
      * `port` The port to listen on.
      * `accept` Do accept connections.
+     * `close_connection` When to close the connection.
      */
     #[must_use]
-    pub fn new(file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool) -> Self {
+    pub fn new(file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool, close_connection: CloseConnectionWhen) -> Self {
         TcpListenerData {
             file,
             data,
             delay_write_ms,
             port,
             accept,
+            close_connection,
         }
     }
 }
@@ -444,6 +460,10 @@ fn default_server_supported_tls_versions() -> Vec<TlsVersion> {
 
 fn default_as_true() -> bool {
     true
+}
+
+fn default_close_connection_when() -> CloseConnectionWhen {
+    CloseConnectionWhen::AfterResponse
 }
 
 #[cfg(test)]

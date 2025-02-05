@@ -23,7 +23,12 @@
         {
           "port": 8083,
           "accept": false
-        }     
+        },
+        {
+          "port": 8084,
+          "closeConnection": "Never",
+          "data": "Test"
+        }       
       ]      
     }
   ]
