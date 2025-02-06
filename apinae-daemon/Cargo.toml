@@ -1,6 +1,6 @@
 [package]
 name = "apinae-daemon"
-version = "0.0.2"
+version = "0.0.3"
 edition = "2021"
 description = "An application for testing apis."
 license = "Apache 2.0"
@@ -12,13 +12,13 @@ categories = ["testing", "api"]
 
 [dependencies]
 apinae-lib = { path = "../apinae-lib" }
-clap = { version = "4.5.27", features = ["derive"] }
+clap = { version = "4.5.28", features = ["derive"] }
 serde = { version = "1.0.217", features = ["derive"] }
-serde_json = { version = "1.0.137" }
+serde_json = { version = "1.0.138" }
 tokio = { version = "1.43.0", features = ["full"] }
 regex = "1.11.1"
 actix-web = { version = "4.9.0", features = ["rustls-0_23"] }
-rustls = { version = "0.23.21", features = ["logging", "tls12"] }
+rustls = { version = "0.23.22", features = ["logging", "tls12"] }
 rustls-pemfile = "2.2.0"
 reqwest = { version = "0.12.12" }
 log = "0.4.25"
