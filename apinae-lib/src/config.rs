@@ -10,7 +10,7 @@ use crate::error::ApplicationError;
 /**
  * The configuration for the application.
  */
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfiguration {
     // The name of the configuration.
@@ -80,12 +80,23 @@ impl AppConfiguration {
             ))
         })
     }
+
+    /**
+     * Get a test by its ID.
+     *
+     * `id` The ID of the test.
+     *
+     * The test configuration.
+     */
+    pub fn get_test(&self, id: &str) -> Option<TestConfiguration> {
+        self.tests.iter().find(|test| test.id == id).cloned()
+    }
 }
 
 /**
  * Configuration for a test.
  */
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TestConfiguration {
     // The ID of the test. This is a UUID automatically generated.

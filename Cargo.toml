@@ -3,7 +3,8 @@ resolver = "2"
 
 members = [ 
     "apinae-lib",
-    "apinae-daemon"
+    "apinae-daemon",
+    "apinae-ui/src-tauri"
 ]
 
 [profile.release]

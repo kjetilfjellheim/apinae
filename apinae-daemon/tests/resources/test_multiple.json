@@ -1,0 +1,77 @@
+{
+  "name": "Test Configuration",
+  "description": "Test Configuration Description",
+  "tests": [
+    {
+      "id": "1",
+      "name": "Test",
+      "description": "Test Description",
+      "servers": [
+        {
+          "id": "2",
+          "name": "Test https",
+          "httpsConfig": {
+            "httpsPort": 8085,
+            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
+            "privateKey": "./apinae-daemon/tests/resources/server_key.pem"
+          },
+          "endpoints": [
+            {
+              "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+              "endpoint": "^\/test$",
+              "method": "GET",
+              "soapAction": null,
+              "mock": {
+                "response": "{ \"test\": \"Success https\" }",
+                "status": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "delay": 0
+              }
+            }
+          ]
+        },
+        {
+          "id": "3",
+          "name": "Test https",
+          "httpsConfig": {
+            "httpsPort": 8087,
+            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
+            "privateKey": "./apinae-daemon/tests/resources/server_key.pem"
+          },
+          "endpoints": [
+            {
+              "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+              "endpoint": "^\/test$",
+              "method": "GET",
+              "soapAction": null,
+              "mock": {
+                "response": "{ \"test\": \"Success https\" }",
+                "status": 200,
+                "headers": {
+                  "Content-Type": "application/json"
+                },
+                "delay": 0
+              }
+            }
+          ]
+        }  
+      ],
+      "listeners": [
+        {
+          "data": "Test",
+          "port": 8080
+        },
+        {
+          "file": "./tests/resources/test_listener_data.txt",
+          "port": 8081
+        },
+        {
+          "port": 8082,
+          "delayWriteMs": 1000
+        }
+      ]
+    }
+  ]
+}
