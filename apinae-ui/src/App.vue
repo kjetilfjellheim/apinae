@@ -34,7 +34,6 @@ async function clean() {
 </script>
 
 <style>
-
 .container-fluid {
   padding: 0px 0px 0px 0px;
 }
@@ -53,7 +52,7 @@ li.dropdown:last-child .dropdown-menu {
   position: absolute;
   bottom: 0;
   width: 100%;
-  height: 30px;
+  height: 32px;
   line-height: 30px;
   text-align: left;
   border-top: 1px solid #4b4b4b;
@@ -80,17 +79,22 @@ li.dropdown:last-child .dropdown-menu {
         <form class="d-flex">
           <ul class="navbar-nav">
             <li class="nav-item dropdown">
-              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown"
-                aria-expanded="false">
+              <a class="nav-link dropdown-toggle" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                 Actions
               </a>
               <ul class="dropdown-menu">
                 <li><a class="dropdown-item" v-on:click="load()"><i class="fas fa-upload"></i>&nbsp;Open</a></li>
                 <li><a class="dropdown-item" v-on:click="save()"><i class="fas fa-download"></i>&nbsp;Save</a></li>
-                <li><a class="dropdown-item" v-on:click="save_as()"><i class="fas fa-download"></i>&nbsp;Save as</a></li>
-                <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" v-on:click="clean()"><i class="fa-regular fa-square-caret-down"></i>&nbsp;New</a></li>
-                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item" v-on:click="save_as()"><i class="fas fa-download"></i>&nbsp;Save as</a>
+                </li>
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
+                <li><a class="dropdown-item" v-on:click="clean()"><i
+                      class="fa-regular fa-square-caret-down"></i>&nbsp;New</a></li>
+                <li>
+                  <hr class="dropdown-divider">
+                </li>
                 <li><a class="dropdown-item" v-on:click=""><i class="fa-solid fa-power-off"></i>&nbsp;Exit</a></li>
               </ul>
             </li>
@@ -98,9 +102,9 @@ li.dropdown:last-child .dropdown-menu {
         </form>
       </div>
     </nav>
-    <maincontent :tests="data.tests"/>
+    <maincontent :tests="data.tests" />
     <footer class="footer navbar-light bg-body-tertiary">
       <div class="container">File: {{ current_file_path }}</div>
-    </footer>      
+    </footer>
   </main>
 </template>

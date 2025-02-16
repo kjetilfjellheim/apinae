@@ -2,6 +2,10 @@ import { createApp } from "vue";
 import App from "./App.vue";
 import MainContent from "./MainContent.vue";
 import TestContent from "./TestContent.vue";
+import HttpServerContent from "./HttpServerContent.vue";
+import TcpListenerContent from "./TcpListenerContent.vue";
+
+
 
 import "bootstrap/dist/css/bootstrap.min.css"
 import "bootstrap"
@@ -16,4 +20,10 @@ dom.watch();
 
 const app = createApp(App);
 
-app.component('testcontent',TestContent).component('maincontent',MainContent).component("font-awesome-icon", FontAwesomeIcon).mount("#app");
+app
+.component('tcplistenercontent',TcpListenerContent)
+.component('httpservercontent',HttpServerContent)
+.component('testcontent',TestContent)
+.component('maincontent',MainContent)
+.component("font-awesome-icon", FontAwesomeIcon)
+.mount("#app");

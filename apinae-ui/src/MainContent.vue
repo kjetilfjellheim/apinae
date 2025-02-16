@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from "vue";
+import { ref, watch } from "vue";
 
 const props = defineProps(['tests'])
 
@@ -9,6 +9,10 @@ function set_selected_test(test_data) {
     selected_test.value = test_data;
 }
 
+watch(props, async (newTests, oldTests) => {
+    selected_test.value = "";
+});
+
 </script>
 <style>
 .sidebar {
@@ -16,7 +20,7 @@ function set_selected_test(test_data) {
     left: 0;
     background-color: #333333;
     border-left: 1px solid #4b4b4b;
-    min-height: calc(100vh - 60px);
+    min-height: calc(100vh - 50px);
     border-right: 1px solid #4b4b4b;
     border-bottom: 1px solid #4b4b4b;
     padding: 0px 0px 0px 0px;
