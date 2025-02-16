@@ -10,17 +10,12 @@
         {
           "id": "2",
           "name": "Test https",
-          "httpsConfig": {
-            "httpsPort": 8085,
-            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
-            "privateKey": "./apinae-daemon/tests/resources/server_key.pem"
-          },
+          "httpPort": null,
           "endpoints": [
             {
               "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-              "endpoint": "^\/test$",
+              "endpoint": "^/test$",
               "method": "GET",
-              "soapAction": null,
               "mock": {
                 "response": "{ \"test\": \"Success https\" }",
                 "status": 200,
@@ -28,24 +23,30 @@
                   "Content-Type": "application/json"
                 },
                 "delay": 0
-              }
+              },
+              "route": null
             }
-          ]
+          ],
+          "httpsConfig": {
+            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
+            "privateKey": "./apinae-daemon/tests/resources/server_key.pem",
+            "httpsPort": 8085,
+            "clientCertificate": null,
+            "supportedTlsVersions": [
+              "TLSv1_2",
+              "TLSv1_3"
+            ]
+          }
         },
         {
           "id": "3",
           "name": "Test https",
-          "httpsConfig": {
-            "httpsPort": 8087,
-            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
-            "privateKey": "./apinae-daemon/tests/resources/server_key.pem"
-          },
+          "httpPort": null,
           "endpoints": [
             {
               "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-              "endpoint": "^\/test$",
+              "endpoint": "^/test$",
               "method": "GET",
-              "soapAction": null,
               "mock": {
                 "response": "{ \"test\": \"Success https\" }",
                 "status": 200,
@@ -53,23 +54,46 @@
                   "Content-Type": "application/json"
                 },
                 "delay": 0
-              }
+              },
+              "route": null
             }
-          ]
-        }  
+          ],
+          "httpsConfig": {
+            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
+            "privateKey": "./apinae-daemon/tests/resources/server_key.pem",
+            "httpsPort": 8087,
+            "clientCertificate": null,
+            "supportedTlsVersions": [
+              "TLSv1_2",
+              "TLSv1_3"
+            ]
+          }
+        }
       ],
       "listeners": [
         {
+          "file": null,
           "data": "Test",
-          "port": 8080
+          "delayWriteMs": null,
+          "port": 8080,
+          "accept": true,
+          "closeConnection": "AfterResponse"
         },
         {
           "file": "./tests/resources/test_listener_data.txt",
-          "port": 8081
+          "data": null,
+          "delayWriteMs": null,
+          "port": 8081,
+          "accept": true,
+          "closeConnection": "AfterResponse"
         },
         {
+          "file": null,
+          "data": null,
+          "delayWriteMs": 1000,
           "port": 8082,
-          "delayWriteMs": 1000
+          "accept": true,
+          "closeConnection": "AfterResponse"
         }
       ]
     }

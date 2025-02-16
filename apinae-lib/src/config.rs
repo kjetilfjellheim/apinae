@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 /**
  * The configuration for the application. It contains all data that needs to be stored for the application.
  */
-use std::collections::HashMap;
-use uuid::Uuid;
+use std::{collections::HashMap, time::SystemTime};
 
 use crate::error::ApplicationError;
 
@@ -88,6 +87,7 @@ impl AppConfiguration {
      *
      * The test configuration.
      */
+    #[must_use]
     pub fn get_test(&self, id: &str) -> Option<TestConfiguration> {
         self.tests.iter().find(|test| test.id == id).cloned()
     }
@@ -122,14 +122,15 @@ impl TestConfiguration {
      * The test configuration.
      */
     #[must_use]
-    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Self {
-        TestConfiguration {
-            id: Uuid::new_v4().to_string(),
+    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+        Ok(TestConfiguration {
+            id,
             name,
             description,
             servers,
             listeners,
-        }
+        })
     }
 }
 
@@ -214,14 +215,15 @@ impl ServerConfiguration {
         http_port: Option<u16>,
         endpoints: Vec<EndpointConfiguration>,
         https_config: Option<HttpsConfiguration>,
-    ) -> Self {
-        ServerConfiguration {
-            id: Uuid::new_v4().to_string(),
+    ) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+        Ok(ServerConfiguration {
+            id,
             name,
             http_port,
             endpoints,
             https_config,
-        }
+        })
     }
 }
 
@@ -260,14 +262,16 @@ impl EndpointConfiguration {
         method: String,
         mock: Option<MockResponseConfiguration>,
         route: Option<RouteConfiguration>    
-    ) -> Self {
-        EndpointConfiguration {
-            id: Uuid::new_v4().to_string(),
+    ) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+
+        Ok(EndpointConfiguration {
+            id,
             endpoint,
             method,
             mock,
             route,
-        }
+        })
     }
 }
 
@@ -282,12 +286,37 @@ pub enum CloseConnectionWhen {
     Never,
 }
 
+impl From<CloseConnectionWhen> for String {
+    fn from(close_connection: CloseConnectionWhen) -> Self {
+        match close_connection {
+            CloseConnectionWhen::BeforeRead => "BeforeRead".to_string(),
+            CloseConnectionWhen::AfterRead => "AfterRead".to_string(),
+            CloseConnectionWhen::AfterResponse => "AfterResponse".to_string(),
+            CloseConnectionWhen::Never => "Never".to_string(),
+        }
+    }
+}
+
+impl From<&str> for CloseConnectionWhen {
+    fn from(close_connection: &str) -> Self {
+        match close_connection {
+            "BeforeRead" => CloseConnectionWhen::BeforeRead,
+            "AfterRead" => CloseConnectionWhen::AfterRead,
+            "AfterResponse" => CloseConnectionWhen::AfterResponse,
+            "Never" => CloseConnectionWhen::Never,
+            _ => CloseConnectionWhen::AfterResponse,
+        }
+    }
+}
+
 /**
  * Configuration for a tcp connection.
  */
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TcpListenerData {
+    // The id of the listener.
+    pub id: String,
     // The file to read from. 
     pub file: Option<String>,
     // The data to return. If this is set, the file will be ignored.
@@ -317,15 +346,17 @@ impl TcpListenerData {
      * `close_connection` When to close the connection.
      */
     #[must_use]
-    pub fn new(file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool, close_connection: CloseConnectionWhen) -> Self {
-        TcpListenerData {
+    pub fn new(file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool, close_connection: CloseConnectionWhen) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+        Ok(TcpListenerData {
+            id,
             file,
             data,
             delay_write_ms,
             port,
             accept,
             close_connection,
-        }
+        })
     }
 }
 
@@ -378,6 +409,29 @@ pub enum TlsVersion {
     TLSv1_1,
     TLSv1_2,
     TLSv1_3,
+}
+
+impl From<TlsVersion> for String {
+    fn from(version: TlsVersion) -> Self {
+        match version {
+            TlsVersion::TLSv1_0 => "TLSv1.0".to_string(),
+            TlsVersion::TLSv1_1 => "TLSv1.1".to_string(),
+            TlsVersion::TLSv1_2 => "TLSv1.2".to_string(),
+            TlsVersion::TLSv1_3 => "TLSv1.3".to_string(),
+        }
+    }
+}
+
+impl From<&str> for TlsVersion {
+    fn from(version: &str) -> Self {
+        match version {
+            "TLSv1.0" => TlsVersion::TLSv1_0,
+            "TLSv1.1" => TlsVersion::TLSv1_1,
+            "TLSv1.2" => TlsVersion::TLSv1_2,
+            "TLSv1.3" => TlsVersion::TLSv1_3,
+            _ => TlsVersion::TLSv1_2,
+        }
+    }
 }
 
 /**
@@ -465,6 +519,23 @@ impl RouteConfiguration {
     }
 }
 
+/**
+ * Get new identifier.
+ * 
+ * The identifier.
+ * 
+ * # Errors
+ * An error if the identifier could not be generated.
+ */
+fn get_identifier() -> Result<String, ApplicationError> {
+    let id = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_err(|err| {
+            ApplicationError::ConfigurationError(format!("Failed to generate identifier: {err}"))
+        })?;
+    Ok(id.as_millis().to_string())
+}
+
 fn default_server_supported_tls_versions() -> Vec<TlsVersion> {
     vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3]
 }
@@ -520,11 +591,11 @@ mod test {
                             None,
                             None,
                         )),
-                    )],
+                    ).unwrap()],
                     None,
-                )],
+                ).unwrap()],
                 Vec::new(),
-            )],
+            ).unwrap()],
         );
 
         assert_eq!(configuration.name, "Test Configuration");
@@ -619,11 +690,11 @@ mod test {
                             None,
                             None,
                         )),
-                    )],
+                    ).unwrap()],
                     None,
-                )],
+                ).unwrap()],
                 Vec::new(),
-            )],
+            ).unwrap()],
         );
 
         let serialized = serde_json::to_string(&configuration).unwrap();
@@ -665,11 +736,11 @@ mod test {
                             None,
                             None,
                         )),                        
-                    )],
+                    ).unwrap()],
                     None,
-                )],
+                ).unwrap()],
                 Vec::new(),
-            )],
+            ).unwrap()],
         );
 
         let path = "/tmp/test.json";
