@@ -3,13 +3,15 @@ import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
 const current_file_path = ref("");
-const data = ref("");
+
+const render_route_view = ref(false);
 
 async function load() {
+  render_route_view.value = false;
   await invoke("load", {})
-    .then((message) => {
-      current_file_path.value = message[0];
-      data.value = message[1];
+    .then((file_path) => {
+      current_file_path.value = file_path;
+      render_route_view.value = true;
     })
     .catch((error) => console.error(error));
 }
@@ -27,13 +29,28 @@ async function save_as() {
 }
 
 async function clean() {
+  render_route_view.value = false;
   let data = await invoke("clean", {})
-    .then((message) => console.log(message))
+    .then((message) => {render_route_view.value = true;})
     .catch((error) => console.error(error));
 } 
-</script>
 
+
+</script>
 <style>
+
+:root {
+  --popper-theme-background-color: #5c5c5c;
+    --popper-theme-background-color-hover: #999999;
+    --popper-theme-text-color: #fcfcfc;
+    --popper-theme-border-width: 1px;
+    --popper-theme-border-style: solid;
+    --popper-theme-border-color: #dadada;
+    --popper-theme-border-radius: 2px;
+    --popper-theme-padding: 2px;
+    --popper-theme-box-shadow: 0 2px 2px -2px rgba(0, 0, 0, 0.25);
+}
+
 .container-fluid {
   padding: 0px 0px 0px 0px;
 }
@@ -66,7 +83,6 @@ li.dropdown:last-child .dropdown-menu {
   padding: 0;
 }
 </style>
-
 <template>
   <main class="margin-0 padding-0">
     <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
@@ -102,7 +118,7 @@ li.dropdown:last-child .dropdown-menu {
         </form>
       </div>
     </nav>
-    <maincontent :tests="data.tests" />
+    <router-view v-if="render_route_view"/>
     <footer class="footer navbar-light bg-body-tertiary">
       <div class="container">File: {{ current_file_path }}</div>
     </footer>

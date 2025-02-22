@@ -160,8 +160,6 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
 
     use tokio::signal::unix::{signal, SignalKind};
 
-    // Infos here:
-    // https://www.gnu.org/software/libc/manual/html_node/Termination-Signals.html
     let mut signal_terminate = signal(SignalKind::terminate()).map_err(|err| {
         ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}"))
     })?;

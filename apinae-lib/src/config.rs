@@ -2,8 +2,7 @@ use serde::{Deserialize, Serialize};
 /**
  * The configuration for the application. It contains all data that needs to be stored for the application.
  */
-use std::collections::HashMap;
-use uuid::Uuid;
+use std::{collections::HashMap, time::SystemTime};
 
 use crate::error::ApplicationError;
 
@@ -88,6 +87,7 @@ impl AppConfiguration {
      *
      * The test configuration.
      */
+    #[must_use]
     pub fn get_test(&self, id: &str) -> Option<TestConfiguration> {
         self.tests.iter().find(|test| test.id == id).cloned()
     }
@@ -122,14 +122,15 @@ impl TestConfiguration {
      * The test configuration.
      */
     #[must_use]
-    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Self {
-        TestConfiguration {
-            id: Uuid::new_v4().to_string(),
+    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+        Ok(TestConfiguration {
+            id,
             name,
             description,
             servers,
             listeners,
-        }
+        })
     }
 }
 
@@ -214,14 +215,15 @@ impl ServerConfiguration {
         http_port: Option<u16>,
         endpoints: Vec<EndpointConfiguration>,
         https_config: Option<HttpsConfiguration>,
-    ) -> Self {
-        ServerConfiguration {
-            id: Uuid::new_v4().to_string(),
+    ) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+        Ok(ServerConfiguration {
+            id,
             name,
             http_port,
             endpoints,
             https_config,
-        }
+        })
     }
 }
 
@@ -260,14 +262,16 @@ impl EndpointConfiguration {
         method: String,
         mock: Option<MockResponseConfiguration>,
         route: Option<RouteConfiguration>    
-    ) -> Self {
-        EndpointConfiguration {
-            id: Uuid::new_v4().to_string(),
+    ) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+
+        Ok(EndpointConfiguration {
+            id,
             endpoint,
             method,
             mock,
             route,
-        }
+        })
     }
 }
 
@@ -465,6 +469,23 @@ impl RouteConfiguration {
     }
 }
 
+/**
+ * Get new identifier.
+ * 
+ * The identifier.
+ * 
+ * # Errors
+ * An error if the identifier could not be generated.
+ */
+fn get_identifier() -> Result<String, ApplicationError> {
+    let id = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .map_err(|err| {
+            ApplicationError::ConfigurationError(format!("Failed to generate identifier: {err}"))
+        })?;
+    Ok(id.as_millis().to_string())
+}
+
 fn default_server_supported_tls_versions() -> Vec<TlsVersion> {
     vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3]
 }
@@ -520,11 +541,11 @@ mod test {
                             None,
                             None,
                         )),
-                    )],
+                    ).unwrap()],
                     None,
-                )],
+                ).unwrap()],
                 Vec::new(),
-            )],
+            ).unwrap()],
         );
 
         assert_eq!(configuration.name, "Test Configuration");
@@ -619,11 +640,11 @@ mod test {
                             None,
                             None,
                         )),
-                    )],
+                    ).unwrap()],
                     None,
-                )],
+                ).unwrap()],
                 Vec::new(),
-            )],
+            ).unwrap()],
         );
 
         let serialized = serde_json::to_string(&configuration).unwrap();
@@ -665,11 +686,11 @@ mod test {
                             None,
                             None,
                         )),                        
-                    )],
+                    ).unwrap()],
                     None,
-                )],
+                ).unwrap()],
                 Vec::new(),
-            )],
+            ).unwrap()],
         );
 
         let path = "/tmp/test.json";
