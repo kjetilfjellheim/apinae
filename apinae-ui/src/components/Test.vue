@@ -29,7 +29,51 @@ const refresh = (test_id) => {
     .catch((error) => window.alert(error));
 }
 
+const addHttpServer = () => {
+  invoke("add_test_http_server", { testid: test.value.id })
+    .then((message) => {
+      refresh(test.value.id);
+    })
+    .catch((error) => window.alert(serverId));
+}
 
+const confirmDeleteHttpServer = (serverId) => {
+  invoke("confirm_dialog", {})
+    .then((confirm) => {
+      if (confirm) {
+        invoke("delete_test_http_server", { testid: test.value.id, serverid: serverId })
+          .then((message) => {
+            refresh(test.value.id);
+          })
+          .catch((error) => window.alert(error));
+      }
+    }
+    )
+    .catch((error) => console.error(error));
+}
+
+const addTcpListener = () => {
+  invoke("add_test_tcp_listener", { testid: test.value.id })
+    .then((message) => {
+      refresh(test.value.id);
+    })
+    .catch((error) => window.alert(error));
+}
+
+const confirmDeleteTcpListener = (port) => {
+  invoke("confirm_dialog", {})
+    .then((confirm) => {
+      if (confirm) {
+        invoke("delete_test_tcp_listener", { testid: test.value.id, port: port })
+          .then((message) => {
+            refresh(test.value.id);
+          })
+          .catch((error) => window.alert(error));
+      }
+    }
+    )
+    .catch((error) => console.error(error));
+}
 
 onMounted(() => {
   const test_id = route.params.test_id
@@ -116,7 +160,7 @@ onMounted(() => {
                   @click="editTcpListener(tcp_listener)" data-bs-toggle="modal" data-bs-target="#idEditTestModel"><i
                     class="fa-solid fa-file-pen"></i></button>
                 <button class="btn btn-sm btn-outline-danger align-middle"
-                  @click="confirmDeleteTcpListener(tcp_listener)"><i class="fa-solid fa-trash"></i></button>
+                  @click="confirmDeleteTcpListener(tcp_listener.port)"><i class="fa-solid fa-trash"></i></button>
               </div>
             </div>
             <dl class="row">
@@ -136,7 +180,7 @@ onMounted(() => {
         <div class="col-12">
           &nbsp;
         </div>
-        <div class="col-12" v-if="http_servers?.length > 0">
+        <div class="col-12">
           <h5>Http servers
             <div class="btn-group btn-group-sm align-middle small me-2" role="group">
               <button type="button" class="btn btn-sm btn-outline-primary" @click="addHttpServer()"><i
@@ -157,7 +201,7 @@ onMounted(() => {
                   @click="editHttpServer(http_server)" data-bs-toggle="modal" data-bs-target="#idEditTestModel"><i
                     class="fa-solid fa-file-pen"></i></button>
                 <button class="btn btn-sm btn-outline-danger align-middle"
-                  @click="confirmDeleteHttpServer(http_server)"><i class="fa-solid fa-trash"></i></button>
+                  @click="confirmDeleteHttpServer(http_server.id)"><i class="fa-solid fa-trash"></i></button>
               </div>
             </div>
             <div class="container-fluid padding-0 margin-0">

@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path, sync::Mutex};
 
-use apinae_lib::config::AppConfiguration;
+use apinae_lib::config::{AppConfiguration, CloseConnectionWhen, ServerConfiguration, TcpListenerData};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 use tauri::{AppHandle, State};
 
@@ -110,6 +110,26 @@ async fn get_test_http_servers(app_data: State<'_, AppData>, testid: &str) -> Re
 }
 
 #[tauri::command]
+async fn delete_test_http_server(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter_mut().find(|t| t.id == testid).ok_or("Test not found")?;
+    let server_index = test.servers.iter().position(|s| s.id == serverid).ok_or("Server not found")?;
+    test.servers.remove(server_index);
+    update_data(&app_data, Some(data))?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn add_test_http_server(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter_mut().find(|t| t.id == testid).ok_or("Test not found")?;
+    let new_server = ServerConfiguration::new("Untitled".to_owned(), None, Vec::new(), None).map_err(|err| err.to_string())?;
+    let _ = test.servers.push(new_server);
+    update_data(&app_data, Some(data))?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn get_test_tcp_listeners(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<TcpListenerRowResponse>, String> {
     let data = get_configuration_data(&app_data)?;
     let test = data.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
@@ -117,6 +137,26 @@ async fn get_test_tcp_listeners(app_data: State<'_, AppData>, testid: &str) -> R
         TcpListenerRowResponse::from(tcp_listener)
     }).collect();
     Ok(tcp_listeners)
+}
+
+#[tauri::command]
+async fn delete_test_tcp_listener(app_data: State<'_, AppData>, testid: &str, port: u16) -> Result<(), String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter_mut().find(|t| t.id == testid).ok_or("Test not found")?;
+    let listener_index = test.listeners.iter().position(|s| s.port == port).ok_or("Listener not found")?;
+    test.listeners.remove(listener_index);
+    update_data(&app_data, Some(data))?;
+    Ok(())
+}
+
+#[tauri::command]
+async fn add_test_tcp_listener(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter_mut().find(|t| t.id == testid).ok_or("Test not found")?;
+    let new_listener = TcpListenerData::new(None, None, None, 0, false, CloseConnectionWhen::AfterResponse);
+    let _ = test.listeners.push(new_listener);
+    update_data(&app_data, Some(data))?;
+    Ok(())
 }
 
 
@@ -241,7 +281,21 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppData::new())
-        .invoke_handler(tauri::generate_handler![load, save, save_as, clean, get_tests, get_test, get_test_http_servers, get_test_tcp_listeners, confirm_dialog, update_test, delete_test, add_test, start_test, stop_test])        
+        .invoke_handler(tauri::generate_handler![load, save, save_as, clean, 
+            get_tests, 
+            get_test, 
+            update_test, 
+            add_test,
+            delete_test,
+            get_test_http_servers, 
+            add_test_http_server,
+            delete_test_http_server,
+            get_test_tcp_listeners,
+            add_test_tcp_listener,
+            delete_test_tcp_listener, 
+            confirm_dialog, 
+            start_test, 
+            stop_test])        
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
