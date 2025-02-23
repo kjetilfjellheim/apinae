@@ -66,6 +66,13 @@ async fn get_tests(app_data: State<'_, AppData>) -> Result<Vec<TestRowResponse>,
 }
 
 #[tauri::command]
+async fn get_test(app_data: State<'_, AppData>, testid: &str) -> Result<TestRowResponse, String> {
+    let data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
+    Ok(test.into())
+}
+
+#[tauri::command]
 async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     data.tests.push(apinae_lib::config::TestConfiguration::new("Untitled".to_owned(), "".to_owned(), Vec::new(), Vec::new()).map_err(|err| err.to_string())?);
@@ -74,19 +81,9 @@ async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
 }
 
 #[tauri::command]
-async fn confirm_dialog(app: AppHandle) -> bool {
-    app.dialog()
-        .message("Are you sure?")
-        .title("Confirm")
-        .kind(tauri_plugin_dialog::MessageDialogKind::Warning)
-        .buttons(MessageDialogButtons::YesNo)                
-        .blocking_show()
-}
-
-#[tauri::command]
-async fn update_test_data(app_data: State<'_, AppData>, test: TestRowResponse) -> Result<(), String> {
+async fn update_test(app_data: State<'_, AppData>, testid: &str, test: TestRowResponse) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let index = data.tests.iter().position(|t| t.id == test.id).ok_or("Test not found")?;
+    let index = data.tests.iter().position(|t| t.id == testid).ok_or("Test not found")?;
     data.tests[index].name = test.name;
     data.tests[index].description = test.description;
     update_data(&app_data, Some(data))?;
@@ -100,6 +97,37 @@ async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(), S
     data.tests.remove(index);
     update_data(&app_data, Some(data))?;
     Ok(())
+}
+
+#[tauri::command]
+async fn get_test_http_servers(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<HttpServerRowResponse>, String> {
+    let data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
+    let http_servers = test.servers.iter().map(|http_server| {
+        HttpServerRowResponse::from(http_server)
+    }).collect();
+    Ok(http_servers)
+}
+
+#[tauri::command]
+async fn get_test_tcp_listeners(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<TcpListenerRowResponse>, String> {
+    let data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
+    let tcp_listeners = test.listeners.iter().map(|tcp_listener| {
+        TcpListenerRowResponse::from(tcp_listener)
+    }).collect();
+    Ok(tcp_listeners)
+}
+
+
+#[tauri::command]
+async fn confirm_dialog(app: AppHandle) -> bool {
+    app.dialog()
+        .message("Are you sure?")
+        .title("Confirm")
+        .kind(tauri_plugin_dialog::MessageDialogKind::Warning)
+        .buttons(MessageDialogButtons::YesNo)                
+        .blocking_show()
 }
 
 #[tauri::command]
@@ -213,7 +241,7 @@ pub fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppData::new())
-        .invoke_handler(tauri::generate_handler![load, save, save_as, clean, get_tests, confirm_dialog, update_test_data, delete_test, add_test, start_test, stop_test])        
+        .invoke_handler(tauri::generate_handler![load, save, save_as, clean, get_tests, get_test, get_test_http_servers, get_test_tcp_listeners, confirm_dialog, update_test, delete_test, add_test, start_test, stop_test])        
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
@@ -252,6 +280,143 @@ impl From<&apinae_lib::config::TestConfiguration> for TestRowResponse {
         }
     }
 }
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct HttpServerRowResponse {
+    pub id: String,
+    pub name: String,
+    pub http_port: Option<u16>,
+    pub https_config: Option<HttpsConfigurationResponse>,
+    pub endpoints: Vec<EndpointRowResponse>,
+}
+
+impl From<&apinae_lib::config::ServerConfiguration> for HttpServerRowResponse {
+    fn from(http_server: &apinae_lib::config::ServerConfiguration) -> Self {
+        Self {
+            id: http_server.id.clone(),
+            name: http_server.name.clone(),
+            http_port: http_server.http_port,
+            https_config: http_server.https_config.as_ref().map(|https_config| https_config.into()),
+            endpoints: http_server.endpoints.iter().map(|endpoint| endpoint.into()).collect(),
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct EndpointRowResponse {
+    pub id: String,
+    pub endpoint: String,
+    pub method: String,
+    pub mock: Option<MockRowResponse>,
+    pub route: Option<RouteRowResponse>,
+}
+
+impl From<&apinae_lib::config::EndpointConfiguration> for EndpointRowResponse {
+    fn from(endpoint: &apinae_lib::config::EndpointConfiguration) -> Self {
+        Self {
+            id: endpoint.id.clone(),
+            endpoint: endpoint.endpoint.clone(),
+            method: endpoint.method.clone(),
+            mock: endpoint.mock.as_ref().map(|mock| mock.into()),
+            route: endpoint.route.as_ref().map(|route| route.into()),
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct MockRowResponse {
+    pub response: Option<String>,
+    pub status: u16,
+    pub headers: HashMap<String, String>,
+    pub delay: u64,
+}
+
+impl From<&apinae_lib::config::MockResponseConfiguration> for MockRowResponse {
+    fn from(mock: &apinae_lib::config::MockResponseConfiguration) -> Self {
+        Self {
+            response: mock.response.clone(),
+            status: mock.status,
+            headers: mock.headers.clone(),
+            delay: mock.delay,
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct RouteRowResponse {
+    pub endpoint: String,
+    pub proxy_url: Option<String>,
+    pub verbose: bool,
+    pub http1_only: bool,
+    pub accept_invalid_certs: bool,
+    pub accept_invalid_hostnames: bool,
+    pub min_tls_version: Option<String>,
+    pub max_tls_version: Option<String>,
+    pub read_timeout: Option<u64>,
+    pub connect_timeout: Option<u64>,
+}
+
+impl From<&apinae_lib::config::RouteConfiguration> for RouteRowResponse {
+    fn from(route: &apinae_lib::config::RouteConfiguration) -> Self {        
+        Self {
+            endpoint: route.endpoint.clone(),
+            proxy_url: route.proxy_url.clone(),
+            verbose: route.verbose,
+            http1_only: route.http1_only,
+            accept_invalid_certs: route.accept_invalid_certs,
+            accept_invalid_hostnames: route.accept_invalid_hostnames,
+            min_tls_version: route.min_tls_version.clone().map(|value| String::from(value)),
+            max_tls_version: route.max_tls_version.clone().map(|value| String::from(value)),
+            read_timeout: route.read_timeout,
+            connect_timeout: route.connect_timeout,
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct HttpsConfigurationResponse {
+    pub server_certificate: String,
+    pub private_key: String,
+    pub https_port: u16,
+    pub client_certificate: Option<String>,
+    pub supported_tls_versions: Vec<String>,
+}
+
+impl From<&apinae_lib::config::HttpsConfiguration> for HttpsConfigurationResponse {
+    fn from(https_config: &apinae_lib::config::HttpsConfiguration) -> Self {
+        Self {
+            server_certificate: https_config.server_certificate.clone(),
+            private_key: https_config.private_key.clone(),
+            https_port: https_config.https_port,
+            client_certificate: https_config.client_certificate.clone(),
+            supported_tls_versions: https_config.clone().supported_tls_versions.into_iter().map(|value| String::from(value)).collect(),
+        }
+    }
+}
+
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+struct TcpListenerRowResponse {
+    pub file: Option<String>,
+    pub data: Option<String>,
+    pub delay_write_ms: Option<u64>,
+    pub port: u16,
+    pub accept: bool,
+    pub close_connection: String,
+}
+
+impl From<&apinae_lib::config::TcpListenerData> for TcpListenerRowResponse {
+    fn from(tcp_listener: &apinae_lib::config::TcpListenerData) -> Self {
+        Self {
+            file: tcp_listener.file.clone(),
+            data: tcp_listener.data.clone(),
+            delay_write_ms: tcp_listener.delay_write_ms,
+            port: tcp_listener.port,
+            accept: tcp_listener.accept,
+            close_connection: String::from(tcp_listener.clone().close_connection)
+        }
+    }
+}
+
 
 struct ProcessData {
     process_id: u32,

@@ -9,11 +9,8 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { fas } from '@fortawesome/free-solid-svg-icons'
 import { far } from '@fortawesome/free-regular-svg-icons';
 
-import Popper from "vue3-popper";
-
 import Tests from "./components/Tests.vue";
-import Servers from "./components/Servers.vue";
-import Endpoints from "./components/Endpoints.vue";
+import Test from "./components/Test.vue";
 
 library.add(fas, far)
 dom.watch();
@@ -29,21 +26,15 @@ const routes = [
         component: Tests
     },
     {
-        path: '/:test_id/connections',
-        name: 'Servers',
-        component: Servers
-    },
-    {
-        path: '/:test_id/connections/:server_id/endpoints',
-        name: 'Endpoints',
-        component: Endpoints
+        path: '/:test_id',
+        name: 'Test',
+        component: Test
     }
 ]
 
 const router = createRouter({ history: createWebHistory(), routes })
 
 app
-.component("Popper", Popper)
 .component("font-awesome-icon", FontAwesomeIcon)
 .use(router)
 .provide('bootstrap', bootstrap)

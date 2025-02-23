@@ -13,43 +13,30 @@ async function load() {
       current_file_path.value = file_path;
       render_route_view.value = true;
     })
-    .catch((error) => console.error(error));
+    .catch((error) => window.alert(error));
 }
 
 async function save() {
   await invoke("save", {})
     .then((message) => console.log(message))
-    .catch((error) => console.error(error));
+    .catch((error) => window.alert(error));
 }
 
 async function save_as() {
   await invoke("save_as", {})
     .then((message) => console.log(message))
-    .catch((error) => console.error(error));
+    .catch((error) => window.alert(error));
 }
 
 async function clean() {
   render_route_view.value = false;
   let data = await invoke("clean", {})
     .then((message) => {render_route_view.value = true;})
-    .catch((error) => console.error(error));
+    .catch((error) => window.alert(error));
 } 
-
 
 </script>
 <style>
-
-:root {
-  --popper-theme-background-color: #5c5c5c;
-    --popper-theme-background-color-hover: #999999;
-    --popper-theme-text-color: #fcfcfc;
-    --popper-theme-border-width: 1px;
-    --popper-theme-border-style: solid;
-    --popper-theme-border-color: #dadada;
-    --popper-theme-border-radius: 2px;
-    --popper-theme-padding: 2px;
-    --popper-theme-box-shadow: 0 2px 2px -2px rgba(0, 0, 0, 0.25);
-}
 
 .container-fluid {
   padding: 0px 0px 0px 0px;
@@ -66,11 +53,10 @@ li.dropdown:last-child .dropdown-menu {
 }
 
 .footer {
-  position: absolute;
-  bottom: 0;
+  position: absolute !important;
+  bottom: 0 !important;
   width: 100%;
   height: 32px;
-  line-height: 30px;
   text-align: left;
   border-top: 1px solid #4b4b4b;
 }
@@ -118,7 +104,7 @@ li.dropdown:last-child .dropdown-menu {
         </form>
       </div>
     </nav>
-    <router-view v-if="render_route_view"/>
+    <router-view v-if="render_route_view" />
     <footer class="footer navbar-light bg-body-tertiary">
       <div class="container">File: {{ current_file_path }}</div>
     </footer>

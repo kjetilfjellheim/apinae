@@ -1,5 +1,5 @@
 <script setup>
-import { ref, onMounted, watch } from "vue";
+import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
 const tests = ref([]);
@@ -11,7 +11,7 @@ const refresh = () => {
         .then((message) => {
             tests.value = message;
         })
-        .catch((error) => console.error(error));       
+        .catch((error) => window.alert(error));
 }
 
 const editTest = (test) => {
@@ -19,11 +19,11 @@ const editTest = (test) => {
 }
 
 const updateTest = (test) => {
-    invoke("update_test_data", { test: test })
+    invoke("update_test", { testid: test.id, test: test })
         .then((message) => {
             refresh();
         })
-        .catch((error) => console.error(error));
+        .catch((error) => window.alert(error));
 }
 
 const confirmDelete = (test) => {
@@ -34,7 +34,7 @@ const confirmDelete = (test) => {
                     .then((message) => {
                         refresh();
                     })
-                    .catch((error) => console.error(error));
+                    .catch((error) => window.alert(error));
             }
         })
         .catch((error) => console.error(error));
@@ -46,45 +46,31 @@ const addTest = () => {
             console.log("add_test", message);
             refresh();
         })
-        .catch((error) => console.error(error));
+        .catch((error) => window.alert(error));
 }
 
 const startTest = (test) => {
     invoke("start_test", { testid: test.id })
         .then((message) => {
-           test.process_id = message.process_id
+            test.process_id = message.process_id
         })
-        .catch((error) => console.error(error));
+        .catch((error) => window.alert(error));
 }
 
 const stopTest = (test) => {
     invoke("stop_test", { testid: test.id })
         .then((message) => {
-           test.process_id = message.process_id;
+            test.process_id = message.process_id;
         })
-        .catch((error) => console.error(error));
+        .catch((error) => window.alert(error));
 }
 
 onMounted(() => refresh());
 </script>
 <style>
-.sidebar {
-    top: 0;
-    left: 0;
-    background-color: #333333;
-    border-left: 1px solid #4b4b4b;
-    min-height: calc(100vh - 50px);
-    border-right: 1px solid #4b4b4b;
-    border-bottom: 1px solid #4b4b4b;
-    padding: 0px 0px 0px 0px;
-}
-
-.sidebar-content {
-    border-right: 1px solid #4b4b4b;
-}
-
 .main-content {
-    min-height: calc(100vh - 60px);
+  max-height: calc(100vh - 93px);
+  overflow-y: scroll;
 }
 
 .margin-0 {
@@ -95,9 +81,7 @@ onMounted(() => refresh());
     padding: 0px 0px 0px 0px !important;
 }
 
-.selected {
-    background-color: #0f0064 !important;
-}
+
 </style>
 <template>
     <nav class="navbar navbar-expand-sm bg-body-tertiary small">
@@ -127,10 +111,8 @@ onMounted(() => refresh());
                     <caption>
                         Tests
                         <div class="btn-group btn-group-sm align-middle small" role="group">
-                            <Popper content="Add test" hover="true" placement="right">
-                                <button type="button" class="btn btn-sm btn-outline-primary margin-0"
-                                    @click="addTest()"><i class="fa-solid fa-plus"></i></button>
-                            </Popper>
+                            <button type="button" class="btn btn-sm btn-outline-primary margin-0" @click="addTest()"><i
+                                    class="fa-solid fa-plus"></i></button>
                         </div>
                     </caption>
                     <thead>
@@ -152,38 +134,31 @@ onMounted(() => refresh());
                                 <span class="align-middle">
                                     <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
                                         <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-                                            <Popper content="Edit test" hover="true" placement="right">
-                                                <button type="button"
-                                                    class="btn btn-sm btn-outline-primary text-decoration-none"
-                                                    @click="editTest(test)" data-bs-toggle="modal"
-                                                    data-bs-target="#idEditTestModel"><i
-                                                        class="fa-solid fa-pen-to-square"></i></button>
-                                            </Popper>
-                                            <Popper content="Configure test" hover="true" placement="right">
-                                                <button type="button"
-                                                    class="btn btn-sm btn-outline-primary text-decoration-none"><router-link
-                                                        :to="{ name: 'Servers', params: { test_id: test.id } }"><i
-                                                            class="fa-solid fa-server"></i></router-link></button>
-                                            </Popper>
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-primary text-decoration-none"
+                                                @click="editTest(test)" data-bs-toggle="modal"
+                                                data-bs-target="#idEditTestModel"><i
+                                                    class="fa-solid fa-pen-to-square"></i></button>
+                                                    <router-link
+                                                    :to="{ name: 'Test', params: { test_id: test.id } }">
+                                            <button type="button"
+                                                class="btn btn-sm btn-outline-primary text-decoration-none"><i
+                                                        class="fa-solid fa-server"></i></button></router-link>
                                         </div>
                                         <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-                                            <Popper content="Delete test" hover="true" placement="right">
-                                                <button class="btn btn-sm btn-outline-danger text-decoration-none"
-                                                    @click="confirmDelete(test)"><i
-                                                        class="fa-solid fa-minus"></i></button>
-                                            </Popper>
+                                            <button class="btn btn-sm btn-outline-danger text-decoration-none"
+                                                @click="confirmDelete(test)"><i class="fa-solid fa-minus"></i></button>
                                         </div>
                                     </div>
                                 </span>
                             </td>
                             <td class="align-middle">
                                 <span class="align-middle">
-                                    <Popper content="Start/Stop test" hover="true" placement="right">
-                                        <button type="button" class="btn btn-sm btn-warning" @click="startTest(test)" v-if="test.process_id === null">
-                                            <i class="fa-solid fa-play"></i></button>
-                                        <button type="button" class="btn btn-sm btn-success" @click="stopTest(test)" v-else>
-                                            <i class="fa-solid fa-stop"></i></button>                                            
-                                    </Popper>
+                                    <button type="button" class="btn btn-sm btn-warning" @click="startTest(test)"
+                                        v-if="test.process_id === null">
+                                        <i class="fa-solid fa-play"></i></button>
+                                    <button type="button" class="btn btn-sm btn-success" @click="stopTest(test)" v-else>
+                                        <i class="fa-solid fa-stop"></i></button>
                                 </span>
                             </td>
                         </tr>
