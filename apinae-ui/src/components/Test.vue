@@ -1,23 +1,51 @@
 <script setup>
+//Required for showing editing modals.
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
-import { ref, onMounted, watch } from "vue";
+//Required for showing the test data and updating the test data.
+import { ref, onMounted } from "vue";
+//Required for getting the route parameters.
 import { useRoute } from 'vue-router'
+//Required for calling the rust code.
 import { invoke } from "@tauri-apps/api/core";
 
+// Required to get the route parameters
 const route = useRoute();
 
+// The test being displayed
 const test = ref([]);
+// Array of all tcp listeners for the test
 const tcp_listeners = ref([]);
+// Array of all http servers for the test
 const http_servers = ref([]);
+// Data for editing a tcp listener. Data is copied from the tcp_listener 
+// object to this object when the user clicks the edit button
 const editTcpListenerData = ref({});
+// Data for editing a http server. Data is copied from the http_server
+// object to this object when the user clicks the edit button
 const editHttpServerData = ref({});
+// Show or hide the https config for the http server. If the http server
+// has an https config, this is set to true, otherwise false
 const showEditHttpsConfig = ref({});
+// Data for editing the https config for the http server. Data is copied
+// from the https_config object to this object when the user clicks the edit button.
+// Null if the http server does not have an https config
 const editHttpsConfig = ref({});
+// Supported tls versions for the https config. This is an array of strings
+// with the supported tls versions and is updated in during editing of the https config.
 const editSupportedTlsVersions = ref([]);
+// Reference to the modal for editing the http server. Implemented as a ref rather than using
+// the modal directly in the button so that we can implement validation when
+// the user clicks the Ok button
 const editHttpServerModal = ref(null);
+// Reference to the modal for editing the tcp listener. Implemented as a ref rather than using
+// the modal directly in the button so that we can implement validation when
+// the user clicks the Ok button
 const editTcpListenerModal = ref(null);
 
-
+//Refreshes the test data, tcp listeners and http servers. This is called when the page is loaded
+//and when the user updates the data. This is because when updating the data we only update the
+//remote rust data, not the local data. This is so that we only have one source of truth for the data.
+//TODO: Only refresh required data, not all data.
 const refresh = (test_id) => {
   invoke("get_test", { testid: test_id })
     .then((message) => {
@@ -38,6 +66,8 @@ const refresh = (test_id) => {
     .catch((error) => window.alert(error));
 }
 
+//Add an http server to the test. This is called when the user clicks the add button.
+//The server is added to the test and the data is refreshed.
 const addHttpServer = () => {
   invoke("add_test_http_server", { testid: test.value.id })
     .then((message) => {
@@ -46,6 +76,9 @@ const addHttpServer = () => {
     .catch((error) => window.alert(serverId));
 }
 
+//Delete an http server from the test. This is called when the user clicks the delete button.
+//The server is deleted from the test and the data is refreshed. The user is asked to confirm
+//the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
 const confirmDeleteHttpServer = (serverId) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
@@ -61,6 +94,8 @@ const confirmDeleteHttpServer = (serverId) => {
     .catch((error) => window.error(error));
 }
 
+//Add a tcp listener to the test. This is called when the user clicks the add button.
+//The listener is added to the test and the data is refreshed.
 const addTcpListener = () => {
   invoke("add_test_tcp_listener", { testid: test.value.id })
     .then((message) => {
@@ -69,6 +104,8 @@ const addTcpListener = () => {
     .catch((error) => window.alert(error));
 }
 
+//Add an endpoint to the http server. This is called when the user clicks the add button.
+//The endpoint is added to the http server and the data is refreshed.
 const addEndpoint = (http_server) => {
   invoke("add_endpoint", { testid: test.value.id, serverid: http_server.id })
     .then((message) => {
@@ -77,6 +114,9 @@ const addEndpoint = (http_server) => {
     .catch((error) => window.alert(error));
 }
 
+//Delete an endpoint from the http server. This is called when the user clicks the delete button.
+//The endpoint is deleted from the htp server and the data is refreshed. The user is asked to confirm
+//the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
 const confirmDeleteEndpoint = (http_server, endpoint) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
@@ -92,6 +132,9 @@ const confirmDeleteEndpoint = (http_server, endpoint) => {
     .catch((error) => console.error(error));
 }
 
+//Delete a tcp listener from the test. This is called when the user clicks the delete button.
+//The listener is deleted from the test and the data is refreshed. The user is asked to confirm
+//the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
 const confirmDeleteTcpListener = (listenerid) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
@@ -107,22 +150,31 @@ const confirmDeleteTcpListener = (listenerid) => {
     .catch((error) => console.error(error));
 }
 
+//Initializes the data for editing a tcp listener. This is called when the user clicks the edit button.
+//The data is copied from the tcp_listener object to the editTcpListenerData object.
 const editTcpListener = (tcp_listener) => {
   editTcpListenerData.value = { ...tcp_listener };
 }
 
+//Initializes the data for editing a http server. This is called when the user clicks the edit button.
+//The data is copied from the http_server object to the editHttpServerData object. If the http server have
+//an https config, the data is copied from the https_config object to the editHttpsConfig object it also copies
+//the supported tls versions to the editSupportedTlsVersions object.
 const editHttpServer = (http_server) => {
   if (http_server?.https_config) {
     editHttpsConfig.value = { ...http_server?.https_config };
     editSupportedTlsVersions.value = http_server?.https_config?.supported_tls_versions ? [...http_server?.https_config?.supported_tls_versions] : [];
   } else {
-    editHttpsConfig.value = { };
+    editHttpsConfig.value = {};
     editSupportedTlsVersions.value = [];
   }
   editHttpServerData.value = { ...http_server };
-  showEditHttpsConfig.value = http_server.https_config ? true : false;  
+  showEditHttpsConfig.value = http_server.https_config ? true : false;
 }
 
+//Updates the tcp listener. This is called when the user clicks the Ok button in the edit modal.
+//The data on the editTcpListenerData object is sent to the rust code to update the tcp listener.
+//If successful the modal is hidden and the data is refreshed.
 const updateTcpListener = (tcp_listener) => {
   invoke("update_test_tcp_listener", { testid: test.value.id, listenerid: tcp_listener.id, tcplistener: convertTcpListenerToRequestObject(tcp_listener) })
     .then((message) => {
@@ -132,15 +184,22 @@ const updateTcpListener = (tcp_listener) => {
     .catch((error) => window.alert(error));
 }
 
+//Updates the http server. This is called when the user clicks the Ok button in the edit modal.
+//The data on the editHttpServerData, editHttpsConfig and editSupportedTlsVersions objects are sent 
+//to the rust code to update the http server.
+//If successful the modal is hidden and the data is refreshed.
 const updateHttpServer = (http_server, https_config, supported_tls_versions) => {
   invoke("update_test_http_server", { testid: test.value.id, serverid: http_server.id, httpserver: convertHttpServerToRequestObject(http_server, https_config, supported_tls_versions) })
-    .then((message) => {  
+    .then((message) => {
       editHttpServerModal.value.hide();
       refresh(test.value.id);
     })
-    .catch((error) => window.alert(error));  
+    .catch((error) => window.alert(error));
 }
 
+//Converts the http server object to a request object that can be sent to the rust code.
+//This is used when updating the http server.
+//TODO: Implement validation if the objects are not valid.
 const convertHttpServerToRequestObject = (http_server, https_config, supported_tls_versions) => {
   return {
     id: http_server.id,
@@ -152,6 +211,9 @@ const convertHttpServerToRequestObject = (http_server, https_config, supported_t
   }
 }
 
+//Converts the https config object to a request object that can be sent to the rust code.
+//This is used when updating the http server.
+//TODO: Implement validation if the objects are not valid.
 const convertHttpsConfigToRequestObject = (https_config, supported_tls_versions) => {
   return {
     https_port: https_config.https_port ? parseInt(https_config.https_port) : null,
@@ -162,6 +224,9 @@ const convertHttpsConfigToRequestObject = (https_config, supported_tls_versions)
   }
 }
 
+//Converts the tcp listener object to a request object that can be sent to the rust code.
+//This is used when updating the tcp listener.
+//TODO: Implement validation if the objects are not valid.
 const convertTcpListenerToRequestObject = (tcp_listener) => {
   return {
     id: tcp_listener.id,
@@ -174,6 +239,9 @@ const convertTcpListenerToRequestObject = (tcp_listener) => {
   }
 }
 
+//Initializes the data when the page is loaded.
+//Initializes the httpserver and tcplistener modals so that we can show and hide them 
+//in code rather than just in the button.
 onMounted(() => {
   editHttpServerModal.value = new Modal('#idEditHttpServerModel', { keyboard: false });
   editTcpListenerModal.value = new Modal('#idEditTcpListenerModel', { keyboard: false });
@@ -182,6 +250,7 @@ onMounted(() => {
 });
 </script>
 <style>
+/* The max height is full view height minus (top bar, menu bar and status bar + margins) */
 .main-content {
   max-height: calc(100vh - 93px);
   overflow-y: scroll;
@@ -208,6 +277,7 @@ onMounted(() => {
   right: 15px !important;
 }
 
+/* Keep the toolbar height always 90px */
 .toolbar-col {
   min-width: 90px;
   max-width: 90px;
@@ -215,6 +285,10 @@ onMounted(() => {
 }
 </style>
 <template>
+  <!--
+     Show navigation bar. 
+     TODO: Move this to a separate component.  
+  -->
   <nav class="navbar navbar-expand-sm bg-body-tertiary small">
     <div class="container-fluid">
       <ol class="breadcrumb  margin-0 padding-0 align-middle">
@@ -223,6 +297,9 @@ onMounted(() => {
       </ol>
     </div>
   </nav>
+  <!--
+    Show the test data.
+  -->
   <div class="container-fluid main-content padding-0 margin-0">
     <div class="row padding-0 margin-0">
       <div class="col-12">
@@ -238,6 +315,10 @@ onMounted(() => {
           <dd class="col-sm-9 small">{{ test?.description }}</dd>
         </dl>
       </div>
+      <!--
+        Show the tcp listeners
+        TODO: Move this to a separate component.
+      -->
       <div class="col-12">
         <h5>Tcp listeners
           <div class="btn-group btn-group-sm align-middle small me-2" role="group">
@@ -258,8 +339,8 @@ onMounted(() => {
               <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
                 role="group">
                 <button type="button" class="btn btn-sm btn-outline-primary align-middle"
-                  @click="editTcpListener(tcp_listener)" data-bs-toggle="modal" data-bs-target="#idEditTcpListenerModel"><i
-                    class="fa-solid fa-file-pen"></i></button>
+                  @click="editTcpListener(tcp_listener)" data-bs-toggle="modal"
+                  data-bs-target="#idEditTcpListenerModel"><i class="fa-solid fa-file-pen"></i></button>
                 <button class="btn btn-sm btn-outline-danger align-middle"
                   @click="confirmDeleteTcpListener(tcp_listener.id)"><i class="fa-solid fa-trash"></i></button>
               </div>
@@ -270,53 +351,66 @@ onMounted(() => {
                   <div class="mb-0 row">
                     <label for="idLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Id</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="idLabel" :value="tcp_listener.id">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="idLabel"
+                        :value="tcp_listener.id">
                     </div>
-                  </div> 
+                  </div>
                   <div class="mb-0 row">
                     <label for="portLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Port</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="portLabel" :value="tcp_listener.port">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="portLabel"
+                        :value="tcp_listener.port">
                     </div>
-                  </div> 
+                  </div>
                   <div class="mb-0 row">
-                    <label for="acceptLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Accept</label>
+                    <label for="acceptLabel"
+                      class="col-sm-6 col-form-label small text-truncate padding-0">Accept</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel" :value="tcp_listener.accept">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel"
+                        :value="tcp_listener.accept">
                     </div>
-                  </div>                                                                    
+                  </div>
                   <div class="mb-0 row">
-                    <label for="acceptLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Close connection</label>
+                    <label for="acceptLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Close
+                      connection</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel" :value="tcp_listener.close_connection">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel"
+                        :value="tcp_listener.close_connection">
                     </div>
-                  </div> 
+                  </div>
                   <div class="mb-0 row">
-                    <label for="acceptLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Delayed write response</label>
+                    <label for="acceptLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Delayed write
+                      response</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel" :value="tcp_listener.delay_write_ms">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel"
+                        :value="tcp_listener.delay_write_ms">
                     </div>
-                  </div>                   
+                  </div>
                 </div>
                 <div class="col-8" v-if="tcp_listener.file">
                   <div class="mb-0 row">
                     <label for="fileLabel" class="col-sm-3 col-form-label small text-truncate padding-0">File</label>
                     <div class="col-sm-9">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="fileLabel" :value="tcp_listener.data">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="fileLabel"
+                        :value="tcp_listener.data">
                     </div>
-                  </div>                                                                    
+                  </div>
                   <div class="mb-0 row" v-if="tcp_listener.data">
                     <label for="dataLabel" class="col-sm-3 col-form-label small text-truncate padding-0">Data</label>
                     <div class="col-sm-9 small">{{ tcp_listener.file }}</div>
-                  </div>                   
+                  </div>
                 </div>
-              </div>      
-            </div>  
+              </div>
+            </div>
           </div>
         </div>
         <div class="col-12">
           &nbsp;
         </div>
+        <!--
+          Show the http servers
+          TODO: Move this to a separate component.
+        -->
         <div class="col-12">
           <h5>Http servers
             <div class="btn-group btn-group-sm align-middle small me-2" role="group">
@@ -347,64 +441,84 @@ onMounted(() => {
                   <div class="mb-0 row">
                     <label for="idLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Id</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="idLabel" :value="http_server.id">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="idLabel"
+                        :value="http_server.id">
                     </div>
                   </div>
                   <div class="mb-0 row">
                     <label for="nameLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Name</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="nameLabel" :value="http_server.name">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="nameLabel"
+                        :value="http_server.name">
                     </div>
-                  </div>                   
+                  </div>
                   <div class="mb-0 row" v-if="http_server.http_port">
-                    <label for="httpPortLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Http port</label>
+                    <label for="httpPortLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Http
+                      port</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="httpPortLabel" :value="http_server.http_port">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="httpPortLabel"
+                        :value="http_server.http_port">
                     </div>
-                  </div>                                  
+                  </div>
                   <div class="mb-0 row">
-                    <label for="descriptionLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Description</label>
+                    <label for="descriptionLabel"
+                      class="col-sm-6 col-form-label small text-truncate padding-0">Description</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="descriptionLabel" :value="http_server.description">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="descriptionLabel"
+                        :value="http_server.description">
                     </div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="mb-0 row" v-if="http_server?.https_config?.https_port">
-                    <label for="httpsPortLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Https port</label>
+                    <label for="httpsPortLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Https
+                      port</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="httpsPortLabel" :value="http_server?.https_config.https_port">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="httpsPortLabel"
+                        :value="http_server?.https_config.https_port">
                     </div>
                   </div>
                   <div class="mb-0 row" v-if="http_server?.https_config?.server_certificate">
-                    <label for="serverCertLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Server certificate</label>
+                    <label for="serverCertLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Server
+                      certificate</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="serverCertLabel" :value="http_server?.https_config?.server_certificate">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="serverCertLabel"
+                        :value="http_server?.https_config?.server_certificate">
                     </div>
-                  </div> 
+                  </div>
                   <div class="mb-0 row" v-if="http_server?.https_config?.private_key">
-                    <label for="privateKeyLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Private key</label>
+                    <label for="privateKeyLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Private
+                      key</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="privateKeyLabel" :value="http_server?.https_config?.private_key">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="privateKeyLabel"
+                        :value="http_server?.https_config?.private_key">
                     </div>
                   </div>
                   <div class="mb-0 row" v-if="http_server?.https_config?.client_certificate">
-                    <label for="clientCertLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Client certificate</label>
+                    <label for="clientCertLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Client
+                      certificate</label>
                     <div class="col-sm-6">
-                      <input type="text" readonly class="form-control-plaintext small padding-0" id="clientCertLabel" :value="http_server?.https_config?.client_certificate">
+                      <input type="text" readonly class="form-control-plaintext small padding-0" id="clientCertLabel"
+                        :value="http_server?.https_config?.client_certificate">
                     </div>
                   </div>
                 </div>
                 <div class="col-4">
                   <div class="mb-0" v-if="http_server?.https_config?.supported_tls_versions">
-                    <label for="tlsVersionsLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Supported TLS versions</label>
+                    <label for="tlsVersionsLabel"
+                      class="col-sm-6 col-form-label small text-truncate padding-0">Supported TLS versions</label>
                     <div class="col-sm-6">
                       <ul class="list-unstyled">
-                        <li v-for="tls_version in http_server?.https_config?.supported_tls_versions" class="small">{{ tls_version }}</li>
-                      </ul>                      
+                        <li v-for="tls_version in http_server?.https_config?.supported_tls_versions" class="small">{{
+                          tls_version }}</li>
+                      </ul>
                     </div>
-                  </div>                                                                        
+                  </div>
                 </div>
+                <!--
+                Show the endpoints for the http server
+                TODO: Move this to a separate component.
+                -->
                 <div class="col-12">
                   <div class="container-fluid padding-0 margin-0">
                     <div class="row">
@@ -413,8 +527,8 @@ onMounted(() => {
                           <caption>
                             Endpoints
                             <div class="btn-group btn-group-sm align-middle small" role="group">
-                              <button type="button" class="btn btn-sm btn-outline-primary" @click="addEndpoint(http_server)"><i
-                                  class="fa-solid fa-plus"></i></button>
+                              <button type="button" class="btn btn-sm btn-outline-primary"
+                                @click="addEndpoint(http_server)"><i class="fa-solid fa-plus"></i></button>
                             </div>
                           </caption>
                           <thead>
@@ -504,7 +618,12 @@ onMounted(() => {
       </div>
     </div>
   </div>
-  <div class="modal fade" id="idEditTcpListenerModel" tabindex="-1" aria-labelledby="editTcpListenerLabel" aria-hidden="true">
+  <!--
+    Edit modals for editing the tcp listener.
+    TODO: Move this to a separate component.
+  -->  
+  <div class="modal fade" id="idEditTcpListenerModel" tabindex="-1" aria-labelledby="editTcpListenerLabel"
+    aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -514,46 +633,58 @@ onMounted(() => {
           <form class="row g-3">
             <div class="col-md-4">
               <label for="idEditTcpListenerId" class="form-label small">Id</label>
-              <label class="form-control form-control-sm" id="idEditTcpListenerId" readonly>{{ editTcpListenerData.id }}</label>
+              <label class="form-control form-control-sm" id="idEditTcpListenerId" readonly>{{ editTcpListenerData.id
+                }}</label>
             </div>
             <div class="col-md-4">
               <label for="idEditPort" class="form-label small">Port</label>
-              <input type="text" class="form-control form-control-sm" id="idEditPort" v-model="editTcpListenerData.port">
-            </div>  
+              <input type="text" class="form-control form-control-sm" id="idEditPort"
+                v-model="editTcpListenerData.port">
+            </div>
             <div class="col-md-4">
               <label for="idEditAccept" class="form-label small">Accept</label>
               <div class="form-check">
-                <input type="checkbox" class="form-check-input" id="idEditAccept" v-model="editTcpListenerData.accept" />
-              </div>                
-            </div>  
+                <input type="checkbox" class="form-check-input" id="idEditAccept"
+                  v-model="editTcpListenerData.accept" />
+              </div>
+            </div>
             <div class="col-md-6">
               <label for="idEditDelayedWrite" class="form-label small">Delayed write ms</label>
-              <input type="text" class="form-control form-control-sm" id="idEditDelayedWrite" v-model="editTcpListenerData.delay_write_ms">
-            </div>    
+              <input type="text" class="form-control form-control-sm" id="idEditDelayedWrite"
+                v-model="editTcpListenerData.delay_write_ms">
+            </div>
             <div class="col-md-6">
               <label for="idEditCloseConnection" class="form-label small">Close connection</label>
-              <input type="text" class="form-control form-control-sm" id="idEditCloseConnection" v-model="editTcpListenerData.close_connection">
-            </div>                           
+              <input type="text" class="form-control form-control-sm" id="idEditCloseConnection"
+                v-model="editTcpListenerData.close_connection">
+            </div>
             <div class="col-md-12">
               <label for="idEditFile" class="form-label small">File</label>
-              <input type="text" class="form-control form-control-sm" id="idEditFile" v-model="editTcpListenerData.file">
-            </div>   
+              <input type="text" class="form-control form-control-sm" id="idEditFile"
+                v-model="editTcpListenerData.file">
+            </div>
             <div class="col-md-12">
               <label for="idEditData" class="form-label small">Response</label>
-              <textarea class="form-control form-control-sm" id="idEditData" rows="6" v-model="editTcpListenerData.data"></textarea>
-            </div>                            
-          </form>         
+              <textarea class="form-control form-control-sm" id="idEditData" rows="6"
+                v-model="editTcpListenerData.data"></textarea>
+            </div>
+          </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" data-bs-target="#idEditTcpListenerModel">Cancel</button>
-          <button type="button" class="btn btn-sm btn-primary" 
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
+            data-bs-target="#idEditTcpListenerModel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary"
             @click="updateTcpListener(editTcpListenerData)">Ok</button>
         </div>
       </div>
     </div>
   </div>
-
-  <div class="modal fade" id="idEditHttpServerModel" tabindex="-1" aria-labelledby="editHttpServerLabel" aria-hidden="true">
+  <!--
+    Edit modals for editing the http server.
+    TODO: Move this to a separate component.
+  -->  
+  <div class="modal fade" id="idEditHttpServerModel" tabindex="-1" aria-labelledby="editHttpServerLabel"
+    aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header">
@@ -563,16 +694,18 @@ onMounted(() => {
           <form class="row g-3">
             <div class="col-md-6">
               <label for="idEditHttpServerId" class="form-label small">Id</label>
-              <label class="form-control form-control-sm" id="idEditHttpServerId" readonly>{{ editHttpServerData.id }}</label>
+              <label class="form-control form-control-sm" id="idEditHttpServerId" readonly>{{ editHttpServerData.id
+                }}</label>
             </div>
             <div class="col-md-6">
               <label for="idEditName" class="form-label small">Name</label>
               <input type="text" class="form-control form-control-sm" id="idEditName" v-model="editHttpServerData.name">
-            </div>  
+            </div>
             <div class="col-md-12">
               <label for="idEditHttpPort" class="form-label small">Http port</label>
-              <input type="text" class="form-control form-control-sm" id="idEditHttpPort" v-model="editHttpServerData.http_port">
-            </div>    
+              <input type="text" class="form-control form-control-sm" id="idEditHttpPort"
+                v-model="editHttpServerData.http_port">
+            </div>
             <div class="col-md-6">
               <div class="form-check">
                 <input type="checkbox" class="form-check-input" id="idEditHttpsConfig" v-model="showEditHttpsConfig" />
@@ -582,25 +715,29 @@ onMounted(() => {
             <div class="col-md-6" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditHttpsPort" class="form-label small">Https port</label>
-                <input type="text" class="form-control form-control-sm" id="idEditHttpsPort" v-model="editHttpsConfig.https_port">
+                <input type="text" class="form-control form-control-sm" id="idEditHttpsPort"
+                  v-model="editHttpsConfig.https_port">
               </div>
-            </div>            
+            </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditServerCertificate" class="form-label small">Server certificate</label>
-                <input type="text" class="form-control form-control-sm" id="idEditServerCertificate" v-model="editHttpsConfig.server_certificate">
+                <input type="text" class="form-control form-control-sm" id="idEditServerCertificate"
+                  v-model="editHttpsConfig.server_certificate">
               </div>
-            </div>                        
+            </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditPrivateKey" class="form-label small">Private key</label>
-                <input type="text" class="form-control form-control-sm" id="idEditPrivateKey" v-model="editHttpsConfig.private_key">
+                <input type="text" class="form-control form-control-sm" id="idEditPrivateKey"
+                  v-model="editHttpsConfig.private_key">
               </div>
-            </div>                        
+            </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditClientCertificate" class="form-label small">Private key</label>
-                <input type="text" class="form-control form-control-sm" id="idEditClientCertificate" v-model="editHttpsConfig.client_certificate">
+                <input type="text" class="form-control form-control-sm" id="idEditClientCertificate"
+                  v-model="editHttpsConfig.client_certificate">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
@@ -612,13 +749,14 @@ onMounted(() => {
                 <input type="checkbox" id="idTLSv1_2" value="TLSv1.2" v-model="editSupportedTlsVersions" />
                 <label for="idTLSv1_2">&nbsp;TLSv1_2</label>
                 <input type="checkbox" id="idTLSv1_3" value="TLSv1.3" v-model="editSupportedTlsVersions" />
-                <label for="idTLSv1_3">&nbsp;TLSv1_3</label>                
+                <label for="idTLSv1_3">&nbsp;TLSv1_3</label>
               </div>
-            </div>                  
-          </form>         
+            </div>
+          </form>
         </div>
         <div class="modal-footer">
-          <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal" data-bs-target="#idEditHttpServerModel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal"
+            data-bs-target="#idEditHttpServerModel">Cancel</button>
           <button type="button" class="btn btn-sm btn-primary"
             @click="updateHttpServer(editHttpServerData, editHttpsConfig, editSupportedTlsVersions)">Ok</button>
         </div>

@@ -1,11 +1,18 @@
 <script setup>
+//Required for showing the test data and updating the test data.
 import { ref, onMounted } from "vue";
+//Required for calling the rust code.
 import { invoke } from "@tauri-apps/api/core";
 
+//Array of tests to display. 
 const tests = ref([]);
 
+//Initializes the data for editing a test. This is called when the user clicks the edit button.
+//The data is copied from the tests object to the editTestData object.
 const editTestData = ref({});
 
+//Refreshes the tests array by calling the get_tests function in the backend.
+//This is called when the component is mounted and when a test is added, updated, or deleted.
 const refresh = () => {
     invoke("get_tests", {})
         .then((message) => {
@@ -14,10 +21,16 @@ const refresh = () => {
         .catch((error) => window.alert(error));
 }
 
+//Initializes the data for editing a test. This is called when the user clicks the edit button.
+//The data is copied from the tests object to the editTestData object.
 const editTest = (test) => {
     editTestData.value = { ...test };
 }
 
+//Updates the test by calling the update_test function in the backend.
+//This is called when the user clicks the Ok button in the edit test modal.
+//The editTestData object is passed to the backend to update the test. The 
+//refresh function is called to update the tests array.
 const updateTest = (test) => {
     invoke("update_test", { testid: test.id, test: test })
         .then((message) => {
@@ -26,6 +39,10 @@ const updateTest = (test) => {
         .catch((error) => window.alert(error));
 }
 
+//Deletes the test by calling the delete_test function in the backend. 
+//This is called when the user clicks the delete button. A confirmation dialog is displayed
+//before the test is deleted. If the user confirms the deletion, the test is deleted and the
+//refresh function is called to update the tests array.
 const confirmDelete = (test) => {
     invoke("confirm_dialog", {})
         .then((confirm) => {
@@ -40,6 +57,8 @@ const confirmDelete = (test) => {
         .catch((error) => console.error(error));
 }
 
+//Adds a test by calling the add_test function in the backend.
+//This is called when the user clicks the add button. The refresh function is called.
 const addTest = () => {
     invoke("add_test", {})
         .then((message) => {
@@ -49,6 +68,9 @@ const addTest = () => {
         .catch((error) => window.alert(error));
 }
 
+//Starts the test by calling the start_test function in the backend.
+//This is called when the user clicks the play button. The process_id is set to the
+//process_id returned by the backend.
 const startTest = (test) => {
     invoke("start_test", { testid: test.id })
         .then((message) => {
@@ -57,6 +79,8 @@ const startTest = (test) => {
         .catch((error) => window.alert(error));
 }
 
+//Stops the test by calling the stop_test function in the backend.
+//This is called when the user clicks the stop button. The process_id is set to null.
 const stopTest = (test) => {
     invoke("stop_test", { testid: test.id })
         .then((message) => {
@@ -65,9 +89,11 @@ const stopTest = (test) => {
         .catch((error) => window.alert(error));
 }
 
+//Refreshes the tests array when the component is mounted.
 onMounted(() => refresh());
 </script>
 <style>
+/* The max height is full view height minus (top bar, menu bar and status bar + margins) */
 .main-content {
   max-height: calc(100vh - 93px);
   overflow-y: scroll;
@@ -80,10 +106,12 @@ onMounted(() => refresh());
 .padding-0 {
     padding: 0px 0px 0px 0px !important;
 }
-
-
 </style>
 <template>
+    <!-- 
+     Show navigation bar. 
+     TODO: Move this to a separate component.
+     -->
     <nav class="navbar navbar-expand-sm bg-body-tertiary small">
         <div class="container-fluid">
             <ol class="breadcrumb margin-0 padding-0 align-middle">
@@ -91,6 +119,10 @@ onMounted(() => refresh());
             </ol>
         </div>
     </nav>
+    <!-- 
+     Show main content. 
+     TODO: Move this to a separate component.
+    -->
     <div class="container-fluid main-content padding-0 margin-0">
         <div class="row padding-0 margin-0">
             <div class="col-12">&nbsp;</div>
@@ -167,6 +199,10 @@ onMounted(() => refresh());
             </div>
         </div>
     </div>
+    <!-- 
+     Edit test modal.
+     TODO: Move this to a separate component.
+    -->
     <div class="modal fade" id="idEditTestModel" tabindex="-1" aria-labelledby="editTestLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">

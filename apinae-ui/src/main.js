@@ -12,13 +12,18 @@ import { far } from '@fortawesome/free-regular-svg-icons';
 import Tests from "./components/Tests.vue";
 import Test from "./components/Test.vue";
 
+//Add the required icons to the library. This allows you to 
+//use them in your components without having to import them
+//in each component.
 library.add(fas, far)
 dom.watch();
 
+// Create the app instance
 const app = createApp(App);
 
 import { createRouter, createWebHistory } from 'vue-router'
 
+//Define the routes for the application.
 const routes = [
     {
         path: '/',
@@ -32,8 +37,11 @@ const routes = [
     }
 ]
 
+//Create the router instance and pass the routes to it.
 const router = createRouter({ history: createWebHistory(), routes })
 
+//Mount the app to the #app element in the DOM.
+//This is defined in the index.html file.
 app
 .component("font-awesome-icon", FontAwesomeIcon)
 .use(router)
