@@ -1,6 +1,6 @@
 use std::{collections::HashMap, path::Path, sync::Mutex};
 
-use apinae_lib::config::{AppConfiguration, CloseConnectionWhen, ServerConfiguration, TcpListenerData, TlsVersion};
+use apinae_lib::config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, ServerConfiguration, TcpListenerData, TlsVersion};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 use tauri::{AppHandle, State};
 
@@ -218,6 +218,18 @@ async fn delete_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &
 }
 
 #[tauri::command]
+async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRowResponse) -> Result<(), String> {
+    println!("{:?}", endpoint);
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.tests.iter_mut().find(|t| t.id == testid).ok_or("Test not found")?;
+    let server = test.servers.iter_mut().find(|s| s.id == serverid).ok_or("Server not found")?;
+    let endpoint_index = server.endpoints.iter_mut().position(|e| e.id == endpointid).ok_or("Endpoint not found")?;
+    server.endpoints[endpoint_index] = endpoint.into();
+    update_data(&app_data, Some(data))?;
+    Ok(())
+}
+
+#[tauri::command]
 async fn confirm_dialog(app: AppHandle) -> bool {
     app.dialog()
         .message("Are you sure?")
@@ -342,7 +354,7 @@ pub fn run() {
             get_tests, get_test, update_test, add_test, delete_test,
             get_test_http_servers, update_test_http_server, add_test_http_server, delete_test_http_server,
             get_test_tcp_listeners, update_test_tcp_listener, add_test_tcp_listener, delete_test_tcp_listener, 
-            add_endpoint, delete_endpoint, 
+            add_endpoint, delete_endpoint, update_endpoint,
             confirm_dialog, 
             start_test, 
             stop_test])        
@@ -427,6 +439,18 @@ impl From<&apinae_lib::config::EndpointConfiguration> for EndpointRowResponse {
     }
 }
 
+impl Into<apinae_lib::config::EndpointConfiguration> for EndpointRowResponse {
+    fn into(self) -> apinae_lib::config::EndpointConfiguration {
+        EndpointConfiguration {
+            id: self.id,
+            endpoint: self.endpoint,
+            method: self.method,
+            mock: self.mock.map(|mock| mock.into()),
+            route: self.route.map(|route| route.into()),
+        }
+    }
+}
+
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 struct MockRowResponse {
     pub response: Option<String>,
@@ -443,6 +467,12 @@ impl From<&apinae_lib::config::MockResponseConfiguration> for MockRowResponse {
             headers: mock.headers.clone(),
             delay: mock.delay,
         }
+    }
+}
+
+impl Into<apinae_lib::config::MockResponseConfiguration> for MockRowResponse {
+    fn into(self) -> apinae_lib::config::MockResponseConfiguration {
+        apinae_lib::config::MockResponseConfiguration::new(self.response, self.status, self.headers, self.delay)
     }
 }
 
@@ -474,6 +504,23 @@ impl From<&apinae_lib::config::RouteConfiguration> for RouteRowResponse {
             read_timeout: route.read_timeout,
             connect_timeout: route.connect_timeout,
         }
+    }
+}
+
+impl Into<apinae_lib::config::RouteConfiguration> for RouteRowResponse {
+    fn into(self) -> apinae_lib::config::RouteConfiguration {
+        apinae_lib::config::RouteConfiguration::new(
+            self.endpoint, 
+            self.proxy_url, 
+            None,
+            self.verbose, 
+            self.http1_only, 
+            self.accept_invalid_certs, 
+            self.accept_invalid_hostnames, 
+            self.min_tls_version.map(|value| TlsVersion::from(value.as_str())), 
+            self.max_tls_version.map(|value| TlsVersion::from(value.as_str())), 
+            self.read_timeout, 
+            self.connect_timeout)
     }
 }
 

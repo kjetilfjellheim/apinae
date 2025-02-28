@@ -23,13 +23,27 @@ const editTcpListenerData = ref({});
 // Data for editing a http server. Data is copied from the http_server
 // object to this object when the user clicks the edit button
 const editHttpServerData = ref({});
+// Data for editing an endpoint. Data is copied from the endpoint object
+// to this object when the user clicks the edit button
+const editEndpointData = ref({});
 // Show or hide the https config for the http server. If the http server
 // has an https config, this is set to true, otherwise false
 const showEditHttpsConfig = ref({});
+// Show or hide the mock data for the endpoint when editing. If the endpoint
+// has mock data, this is set to true, otherwise false.
+const showEditMockData = ref(true);
 // Data for editing the https config for the http server. Data is copied
 // from the https_config object to this object when the user clicks the edit button.
 // Null if the http server does not have an https config
 const editHttpsConfig = ref({});
+// Data for editing the endpoint mock data. Data is copied from the endpoint mock object
+// to this object when the user clicks the edit button. Empty if the endpoint does not have
+// mock data.
+const editMockData = ref({});
+// Data for editing the endpoint route data. Data is copied from the endpoint route object
+// to this object when the user clicks the edit button. Empty if the endpoint does not have
+// route data.
+const editRouteData = ref({});
 // Supported tls versions for the https config. This is an array of strings
 // with the supported tls versions and is updated in during editing of the https config.
 const editSupportedTlsVersions = ref([]);
@@ -41,6 +55,13 @@ const editHttpServerModal = ref(null);
 // the modal directly in the button so that we can implement validation when
 // the user clicks the Ok button
 const editTcpListenerModal = ref(null);
+// Reference to the modal for editing the endpoint. Implemented as a ref rather than using
+// the modal directly in the button so that we can implement validation when
+// the user clicks the Ok button
+const editEndpointModal = ref(null);
+// Reference to the server id for the endpoint being edited. This is used to send the server id
+// to the rust code when updating the endpoint.
+const serverIdEditEndpoint = ref(null);
 
 //Refreshes the test data, tcp listeners and http servers. This is called when the page is loaded
 //and when the user updates the data. This is because when updating the data we only update the
@@ -156,6 +177,22 @@ const editTcpListener = (tcp_listener) => {
   editTcpListenerData.value = { ...tcp_listener };
 }
 
+//Initializes the data for editing an endpoint. This is called when the user clicks the edit button.
+//The data is copied from the endpoint object to the editEndpointData object.
+const editEndpoint = (http_server, endpoint) => {
+  if (endpoint.mock) {
+    editMockData.value = { ...endpoint.mock };
+    editRouteData.value = {};
+    showEditMockData.value = true;
+  } else {
+    editMockData.value = {};
+    editRouteData.value = { ...endpoint.route };
+    showEditMockData.value = false;
+  }
+  serverIdEditEndpoint.value = http_server.id;
+  editEndpointData.value = { ...endpoint };
+}
+
 //Initializes the data for editing a http server. This is called when the user clicks the edit button.
 //The data is copied from the http_server object to the editHttpServerData object. If the http server have
 //an https config, the data is copied from the https_config object to the editHttpsConfig object it also copies
@@ -195,6 +232,53 @@ const updateHttpServer = (http_server, https_config, supported_tls_versions) => 
       refresh(test.value.id);
     })
     .catch((error) => window.alert(error));
+}
+
+//Updates the endpoint. This is called when the user clicks the Ok button in the edit modal.
+//The data on the editEndpointData object is sent to the rust code to update the endpoint.
+//If successful the modal is hidden and the data is refreshed.
+const updateEndpoint = (endpoint) => {
+  invoke("update_endpoint", { testid: test.value.id, serverid: serverIdEditEndpoint.value, endpointid: endpoint.id, endpoint: convertEndpointToRequestObject(editEndpointData, editMockData, editRouteData) })
+    .then((message) => {
+      editEndpointModal.value.hide();
+      refresh(test.value.id);
+    })
+    .catch((error) => window.alert(error));
+}
+
+const convertEndpointToRequestObject = (editEndpointData, editMockData, editRouteData) => {
+  console.log("showEditMockData:" +showEditMockData.value);
+  return {
+    id: editEndpointData.value.id,
+    endpoint: editEndpointData.value.endpoint,
+    method: editEndpointData.value.method,
+    mock: showEditMockData.value ? convertMockToRequestObject(editMockData) : null,
+    route: !showEditMockData.value ? convertRouteToRequestObject(editRouteData) : null,
+  }
+}
+
+const convertMockToRequestObject = (mock_data) => {
+  return {
+    status: mock_data.value.status ? parseInt(mock_data.value.status) : null,
+    headers: mock_data.value.headers,
+    delay: parseInt(mock_data.value.delay),
+    response: mock_data.value.response
+  }
+}
+
+const convertRouteToRequestObject = (route_data) => {
+  return {
+    endpoint: route_data.value.endpoint,
+    proxy_url: route_data.value.proxy_url,
+    verbose: route_data.value.verbose ? true : false,
+    http1_only: route_data.value.http1_only ? true : false,
+    accept_invalid_certs: route_data.value.accept_invalid_certs ? true : false,
+    accept_invalid_hostnames: route_data.value.accept_invalid_hostnames ? true : false,
+    min_tls_version: route_data.value.min_tls_version,
+    max_tls_version: route_data.value.max_tls_version,
+    read_timeout: route_data.value.read_timeout ? parseInt(route_data.value.read_timeout) : null,
+    connect_timeout: route_data.value.connect_timeout ? parseInt(route_data.value.connect_timeout) : null
+  }
 }
 
 //Converts the http server object to a request object that can be sent to the rust code.
@@ -243,6 +327,7 @@ const convertTcpListenerToRequestObject = (tcp_listener) => {
 //Initializes the httpserver and tcplistener modals so that we can show and hide them 
 //in code rather than just in the button.
 onMounted(() => {
+  editEndpointModal.value = new Modal('#idEditEndpointModel', { keyboard: false });
   editHttpServerModal.value = new Modal('#idEditHttpServerModel', { keyboard: false });
   editTcpListenerModal.value = new Modal('#idEditTcpListenerModel', { keyboard: false });
   const test_id = route.params.test_id
@@ -592,8 +677,8 @@ onMounted(() => {
                                   <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
                                     <div class="btn-group btn-group-sm align-middle small me-2" role="group">
                                       <button type="button" class="btn btn-sm btn-outline-primary text-decoration-none"
-                                        @click="editEndpoint(endpoint)" data-bs-toggle="modal"
-                                        data-bs-target="#idEditTestModel"><i
+                                        @click="editEndpoint(http_server, endpoint)" data-bs-toggle="modal"
+                                        data-bs-target="#idEditEndpointModel"><i
                                           class="fa-solid fa-pen-to-square"></i></button>
                                     </div>
                                     <div class="btn-group btn-group-sm align-middle small me-2" role="group">
@@ -763,5 +848,112 @@ onMounted(() => {
       </div>
     </div>
   </div>
+  <!--
+    Edit modals for editing the endpoint.
+    TODO: Move this to a separate component.
+  -->  
+  <div class="modal modal-lg fade" id="idEditEndpointModel" tabindex="-1" aria-labelledby="editEndpointLabel"
+    aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h6 class="modal-title fs-5 small" id="editEndpointLabel">Edit endpoint</h6>
+        </div>
+        <div class="modal-body">
+          <form class="row g-3">
+            <div class="col-md-6">
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="idEditShowEditMockData" v-model="showEditMockData">
+                <label class="form-check-label" for="idEditShowEditMockData">Mock</label>
+              </div>              
+            </div>
+            <div class="col-md-6">
+              <label for="idEditEndpoint" class="form-label small">Endpoint</label>
+              <input type="text" class="form-control form-control-sm" id="idEditEndpoint"
+                v-model="editEndpointData.endpoint">
+            </div>
+            <div class="col-md-6">
+              <label for="idEditMethod" class="form-label small">Method</label>
+              <input type="text" class="form-control form-control-sm" id="idEditMethod"
+                v-model="editEndpointData.method">
+            </div>    
+            <div class="col-md-6" v-if="showEditMockData">
+              <label for="idEditResponse" class="form-label small">Response</label>
+              <input type="text" class="form-control form-control-sm" id="idEditResponse"
+                v-model="editMockData.response">
+            </div>  
+            <div class="col-md-6" v-if="showEditMockData">
+              <label for="idEditStatus" class="form-label small">Status</label>
+              <input type="text" class="form-control form-control-sm" id="idEditStatus"
+                v-model="editMockData.status">
+            </div> 
+            <div class="col-md-6" v-if="showEditMockData">
+              <label for="idEditStatus" class="form-label small">Status</label>
+              <input type="text" class="form-control form-control-sm" id="idEditStatus"
+                v-model="editMockData.status">
+            </div>                                                       
+            <div class="col-md-6" v-if="showEditMockData">              
+              <label for="idEditDelay" class="form-label small">Delay</label>
+                <input type="text" class="form-control form-control-sm" id="idEditDelay"
+                  v-model="editMockData.delay">
+            </div>
+            <div class="col-md-6" v-if="!showEditMockData">              
+              <label for="idEditEndpoint" class="form-label small">Path</label>
+                <input type="text" class="form-control form-control-sm" id="idEditEndpoint"
+                  v-model="editRouteData.endpoint">
+            </div>
+            <div class="col-md-6" v-if="!showEditMockData">              
+              <label for="idEditProxyUrl" class="form-label small">Proxy url</label>
+                <input type="text" class="form-control form-control-sm" id="idEditProxyUrl"
+                  v-model="editRouteData.proxy_url">
+            </div>
+            <div class="col-md-6" v-if="!showEditMockData">  
+                <label class="form-label small" for="idEditVerbose">Verbose</label><br>
+                <input class="form-check-input" type="checkbox" id="idEditVerbose" v-model="editRouteData.verbose">
+            </div>             
+            <div class="col-md-6" v-if="!showEditMockData">  
+                <label class="form-label small" for="idEditHttp1Only">Http1 only</label><br>
+                <input class="form-check-input" type="checkbox" id="idEditHttp1Only" v-model="editRouteData.http1_only">
+            </div>   
+            <div class="col-md-6" v-if="!showEditMockData">  
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidCerts" v-model="editRouteData.accept_invalid_certs">
+                <label class="form-check-label" for="idEditAcceptInvalidCerts">Accept invalid certs</label>
+              </div>
+            </div>   
+            <div class="col-md-6" v-if="!showEditMockData">  
+              <div class="form-check">
+                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidHostnames" v-model="editRouteData.accept_invalid_hostnames">
+                <label class="form-check-label" for="idEditAcceptInvalidHostnames">Accept invalid hostnames</label>
+              </div>
+            </div>  
+            <div class="col-md-6" v-if="!showEditMockData">                
+              <label class="form-label small" for="idEditMinTlsVersion">Min Tls version</label>             
+              <input class="form-control form-control-sm" type="text" id="idEditMinTlsVersion" v-model="editRouteData.min_tls_version">
+            </div> 
+            <div class="col-md-6" v-if="!showEditMockData">                
+              <label class="form-label small" for="idEditMaxTlsVersion">Max Tls version</label>              
+              <input class="form-control form-control-sm" type="text" id="idEditMaxTlsVersion" v-model="editRouteData.max_tls_version">
+            </div>  
+            <div class="col-md-6" v-if="!showEditMockData">  
+              <label class="form-label small" for="idEditReadTimeout">Read timeout</label>
+              <input class="form-control form-control-sm" type="text" id="idEditReadTimeout" v-model="editRouteData.read_timeout">
+            </div>  
+            <div class="col-md-6" v-if="!showEditMockData">  
+              <label class="form-label small" for="idEditConnectTimeout">Connect timeout</label>
+              <input class="form-control form-control-sm" type="test" id="idEditConnectTimeout" v-model="editRouteData.connect_timeout">
+            </div>                                                
 
+
+          </form>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-toggle="modal"
+            data-bs-target="#idEditEndpointModel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary"
+            @click="updateEndpoint(editEndpointData)">Ok</button>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
