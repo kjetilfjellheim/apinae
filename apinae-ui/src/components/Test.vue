@@ -250,7 +250,7 @@ const convertEndpointToRequestObject = (editEndpointData, editMockData, editRout
   console.log("showEditMockData:" +showEditMockData.value);
   return {
     id: editEndpointData.value.id,
-    endpoint: editEndpointData.value.endpoint,
+    pathExpression: editEndpointData.value.pathExpression,
     method: editEndpointData.value.method,
     mock: showEditMockData.value ? convertMockToRequestObject(editMockData) : null,
     route: !showEditMockData.value ? convertRouteToRequestObject(editRouteData) : null,
@@ -260,7 +260,7 @@ const convertEndpointToRequestObject = (editEndpointData, editMockData, editRout
 const convertMockToRequestObject = (mockData) => {
   return {
     status: mockData.value.status ? parseInt(mockData.value.status) : null,
-    headers: mockData.value.headers,
+    headers: {},
     delay: parseInt(mockData.value.delay),
     response: mockData.value.response
   }
@@ -268,9 +268,8 @@ const convertMockToRequestObject = (mockData) => {
 
 const convertRouteToRequestObject = (routeData) => {
   return {
-    endpoint: routeData.value.endpoint,
+    url: routeData.value.url,
     proxyUrl: routeData.value.proxyUrl,
-    verbose: routeData.value.verbose ? true : false,
     http1Only: routeData.value.http1Only ? true : false,
     acceptInvalidCerts: routeData.value.acceptInvalidCerts ? true : false,
     acceptInvalidHostnames: routeData.value.acceptInvalidHostnames ? true : false,
@@ -626,7 +625,7 @@ onMounted(() => {
                           </thead>
                           <tbody>
                             <tr v-for="endpoint in httpServer.endpoints" :key="endpoint.id">
-                              <td class="align-middle"><label class="align-middle small">{{ endpoint.endpoint }}</label>
+                              <td class="align-middle"><label class="align-middle small">{{ endpoint.pathExpression }}</label>
                               </td>
                               <td class="align-middle"><label class="align-middle small">{{ endpoint.method }}</label>
                               </td>
@@ -634,33 +633,33 @@ onMounted(() => {
                                 <div v-if="endpoint?.mock">
                                   <dl class="row">
                                     <dt class="col-3 small">Status</dt>
-                                    <dd class="col-9 small">{{ endpoint.mock?.status }}</dd>
+                                    <dd class="col-3 small">{{ endpoint.mock?.status }}</dd>
+                                    <dt class="col-3 small">Delay</dt>
+                                    <dd class="col-3 small">{{ endpoint.mock?.delay }}</dd>
                                     <dt class="col-3 small">Headers</dt>
-                                    <dd class="col-9 small">
+                                    <dd class="col-3 small">
                                       <ul class="list-unstyled">
                                         <li v-for="(value, key) in endpoint.mock?.headers">{{ key }}: {{ value }}</li>
                                       </ul>
-                                    </dd>
-                                    <dt class="col-3 small">Delay</dt>
-                                    <dd class="col-9 small">{{ endpoint.mock?.delay }}</dd>
+                                    </dd>                                    
                                     <dt class="col-3 small">Body</dt>
-                                    <dd class="col-9 small">{{ endpoint.mock?.response }}</dd>
+                                    <dd class="col-3 small">{{ endpoint.mock?.response }}</dd>
                                   </dl>
                                 </div>
                                 <div v-if="endpoint?.route">
                                   <dl class="row">
-                                    <dt class="col-3 small">&nbsp;Endpoint</dt>
-                                    <dd class="col-9 small">{{ endpoint.route?.endpoint }}</dd>
+                                    <dt class="col-3 small">&nbsp;Url</dt>
+                                    <dd class="col-9 small">{{ endpoint.route?.url }}</dd>
                                     <dt class="col-3 small">Proxy url</dt>
                                     <dd class="col-9 small">&nbsp;{{ endpoint.route?.proxyUrl }}</dd>
-                                    <dt class="col-3 small">Verbose</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.verbose }}</dd>
                                     <dt class="col-3 small">Http1 only</dt>
                                     <dd class="col-3 small">&nbsp;{{ endpoint.route?.http1Only }}</dd>
                                     <dt class="col-3 small">Accept invalid certs</dt>
                                     <dd class="col-3 small">&nbsp;{{ endpoint.route?.acceptInvalidCerts }}</dd>
                                     <dt class="col-3 small">Accept invalid hostnames</dt>
                                     <dd class="col-3 small">&nbsp;{{ endpoint.route?.acceptInvalidHostnames }}</dd>
+                                    <dt class="col-3 small"></dt>
+                                    <dd class="col-3 small"></dd>
                                     <dt class="col-3 small">Min TLS version</dt>
                                     <dd class="col-3 small">&nbsp;{{ endpoint.route?.minTlsVersion }}</dd>
                                     <dt class="col-3 small">Max TLS version</dt>
@@ -739,9 +738,14 @@ onMounted(() => {
                 v-model="editTcpListenerData.delayWriteMs">
             </div>
             <div class="col-md-6">
-              <label for="idEditCloseConnection" class="form-label small">Close connection</label>
-              <input type="text" class="form-control form-control-sm" id="idEditCloseConnection"
+              <label for="idEditCloseConnection" class="form-label small">Close connection&nbsp;</label>              
+              <select id="idEditCloseConnection" class="form-select form-select-sm"
                 v-model="editTcpListenerData.closeConnection">
+                <option value="AfterRead">AfterRead</option>
+                <option value="AfterResponse">AfterResponse</option>               
+                <option value="BeforeRead">BeforeRead</option>>
+                <option value="Never">Never</option>
+              </select>                            
             </div>
             <div class="col-md-12">
               <label for="idEditFile" class="form-label small">File</label>
@@ -820,7 +824,7 @@ onMounted(() => {
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
-                <label for="idEditClientCertificate" class="form-label small">Private key</label>
+                <label for="idEditClientCertificate" class="form-label small">Client certificate</label>
                 <input type="text" class="form-control form-control-sm" id="idEditClientCertificate"
                   v-model="editHttpsConfig.clientCertificate">
               </div>
@@ -861,59 +865,59 @@ onMounted(() => {
         </div>
         <div class="modal-body">
           <form class="row g-3">
-            <div class="col-md-6">
+            <div class="col-md-2">
               <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="idEditShowEditMockData" v-model="showEditMockData">
                 <label class="form-check-label" for="idEditShowEditMockData">Mock</label>
               </div>              
             </div>
-            <div class="col-md-6">
-              <label for="idEditEndpoint" class="form-label small">Endpoint</label>
-              <input type="text" class="form-control form-control-sm" id="idEditEndpoint"
-                v-model="editEndpointData.endpoint">
-            </div>
-            <div class="col-md-6">
-              <label for="idEditMethod" class="form-label small">Method</label>
-              <input type="text" class="form-control form-control-sm" id="idEditMethod"
+            <div class="col-md-4">
+              <label for="idEditMethod" class="form-label small">Method&nbsp;</label>              
+              <select id="idEditMethod" class="form-select form-select-sm"
                 v-model="editEndpointData.method">
-            </div>    
-            <div class="col-md-6" v-if="showEditMockData">
-              <label for="idEditResponse" class="form-label small">Response</label>
-              <input type="text" class="form-control form-control-sm" id="idEditResponse"
-                v-model="editMockData.response">
-            </div>  
+                <option value="DELETE">Delete</option>
+                <option value="GET">Get</option>
+                <option value="HEAD">Head</option>
+                <option value="POST">Post</option>
+                <option value="PUT">Put</option>
+                <option value="OPTION">Option</option>
+              </select>                            
+            </div>             
+            <div class="col-md-6">
+              <label for="idEditPathExpression" class="form-label small">Path expression</label>
+              <input type="text" class="form-control form-control-sm" id="idEditPathExpression"
+                v-model="editEndpointData.pathExpression">
+            </div>
             <div class="col-md-6" v-if="showEditMockData">
               <label for="idEditStatus" class="form-label small">Status</label>
               <input type="text" class="form-control form-control-sm" id="idEditStatus"
                 v-model="editMockData.status">
-            </div> 
-            <div class="col-md-6" v-if="showEditMockData">
-              <label for="idEditStatus" class="form-label small">Status</label>
-              <input type="text" class="form-control form-control-sm" id="idEditStatus"
-                v-model="editMockData.status">
-            </div>                                                       
+            </div>                                                     
             <div class="col-md-6" v-if="showEditMockData">              
               <label for="idEditDelay" class="form-label small">Delay</label>
                 <input type="text" class="form-control form-control-sm" id="idEditDelay"
                   v-model="editMockData.delay">
             </div>
+            <div class="col-md-12" v-if="showEditMockData">
+              <label for="idEditResponse" class="form-label small">Response</label>
+              <textarea type="text" class="form-control form-control-sm" id="idEditResponse"
+                v-model="editMockData.response"></textarea>
+            </div>  
             <div class="col-md-6" v-if="!showEditMockData">              
-              <label for="idEditEndpoint" class="form-label small">Path</label>
-                <input type="text" class="form-control form-control-sm" id="idEditEndpoint"
-                  v-model="editRouteData.endpoint">
+              <label for="idEditUrl" class="form-label small">Url</label>
+                <input type="text" class="form-control form-control-sm" id="idEditUrl"
+                  v-model="editRouteData.url">
             </div>
             <div class="col-md-6" v-if="!showEditMockData">              
               <label for="idEditProxyUrl" class="form-label small">Proxy url</label>
                 <input type="text" class="form-control form-control-sm" id="idEditProxyUrl"
                   v-model="editRouteData.proxyUrl">
-            </div>
+            </div>           
             <div class="col-md-6" v-if="!showEditMockData">  
-                <label class="form-label small" for="idEditVerbose">Verbose</label><br>
-                <input class="form-check-input" type="checkbox" id="idEditVerbose" v-model="editRouteData.verbose">
-            </div>             
-            <div class="col-md-6" v-if="!showEditMockData">  
-                <label class="form-label small" for="idEditHttp1Only">Http1 only</label><br>
+              <div class="form-check">
                 <input class="form-check-input" type="checkbox" id="idEditHttp1Only" v-model="editRouteData.http1Only">
+                <label class="form-check-label" for="idEditHttp1Only">Http1 only</label><br>                
+              </div>
             </div>   
             <div class="col-md-6" v-if="!showEditMockData">  
               <div class="form-check">
@@ -927,14 +931,28 @@ onMounted(() => {
                 <label class="form-check-label" for="idEditAcceptInvalidHostnames">Accept invalid hostnames</label>
               </div>
             </div>  
-            <div class="col-md-6" v-if="!showEditMockData">                
-              <label class="form-label small" for="idEditMinTlsVersion">Min Tls version</label>             
-              <input class="form-control form-control-sm" type="text" id="idEditMinTlsVersion" v-model="editRouteData.minTlsVersion">
-            </div> 
-            <div class="col-md-6" v-if="!showEditMockData">                
-              <label class="form-label small" for="idEditMaxTlsVersion">Max Tls version</label>              
-              <input class="form-control form-control-sm" type="text" id="idEditMaxTlsVersion" v-model="editRouteData.maxTlsVersion">
-            </div>  
+            <div class="col-md-6" v-if="!showEditMockData">  
+            </div>
+            <div class="col-md-6" v-if="!showEditMockData">
+              <label for="idEditMinTlsVersion" class="form-label small">Min Tls version&nbsp;</label>              
+              <select id="idEditMinTlsVersion" class="form-select form-select-sm"
+                v-model="editRouteData.minTlsVersion">
+                <option value="TLSv1.0">TLSv1.0</option>
+                <option value="TLSv1.1">TLSv1.1</option>            
+                <option value="TLSv1.2">TLSv1.2</option>
+                <option value="TLSv1.3">TLSv1.3</option>
+              </select>                            
+            </div>
+            <div class="col-md-6" v-if="!showEditMockData">
+              <label for="idEditMaxTlsVersion" class="form-label small">Max Tls version&nbsp;</label>              
+              <select id="idEditMaxTlsVersion" class="form-select form-select-sm"
+                v-model="editRouteData.maxTlsVersion">
+                <option value="TLSv1.0">TLSv1.0</option>
+                <option value="TLSv1.1">TLSv1.1</option>            
+                <option value="TLSv1.2">TLSv1.2</option>
+                <option value="TLSv1.3">TLSv1.3</option>
+              </select>                            
+            </div>                           
             <div class="col-md-6" v-if="!showEditMockData">  
               <label class="form-label small" for="idEditReadTimeout">Read timeout</label>
               <input class="form-control form-control-sm" type="text" id="idEditReadTimeout" v-model="editRouteData.readTimeout">
@@ -943,8 +961,6 @@ onMounted(() => {
               <label class="form-label small" for="idEditConnectTimeout">Connect timeout</label>
               <input class="form-control form-control-sm" type="test" id="idEditConnectTimeout" v-model="editRouteData.connectTimeout">
             </div>                                                
-
-
           </form>
         </div>
         <div class="modal-footer">

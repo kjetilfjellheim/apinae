@@ -174,7 +174,7 @@ pub async fn delete_listener(app_data: State<'_, AppData>, testid: &str, listene
 pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let test = data.get_test(testid).ok_or("Test not found")?;
-    let _ = test.listeners.push(TcpListenerData::new(None, None, None, 0, false, CloseConnectionWhen::AfterResponse).map_err(|err| err.to_string())?);
+    let _ = test.listeners.push(TcpListenerData::new(None, None, None, 8000, false, CloseConnectionWhen::AfterResponse).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }

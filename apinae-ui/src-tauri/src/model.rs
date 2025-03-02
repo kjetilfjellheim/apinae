@@ -148,8 +148,6 @@ pub struct RouteRow {
     pub url: String,
     // The proxy to use.
     pub proxy_url: Option<String>,
-    // The verbosity of the route.
-    pub verbose: bool,
     // The flag to use only http1.
     pub http1_only: bool,
     // The flag to accept invalid certificates.
@@ -174,7 +172,6 @@ impl From<&RouteConfiguration> for RouteRow {
         Self {
             url: route.url.clone(),
             proxy_url: route.proxy_url.clone(),
-            verbose: route.verbose,
             http1_only: route.http1_only,
             accept_invalid_certs: route.accept_invalid_certs,
             accept_invalid_hostnames: route.accept_invalid_hostnames,
@@ -191,7 +188,7 @@ impl Into<RouteConfiguration> for RouteRow {
      * Convert a route row to a route configuration.
      */
     fn into(self) -> RouteConfiguration {
-        RouteConfiguration::new(self.url, self.proxy_url, None, self.verbose, self.http1_only, self.accept_invalid_certs, self.accept_invalid_hostnames, self.min_tls_version.map(|value| TlsVersion::from(value)), self.max_tls_version.map(|value| TlsVersion::from(value)), self.read_timeout, self.connect_timeout)
+        RouteConfiguration::new(self.url, self.proxy_url, None, self.http1_only, self.accept_invalid_certs, self.accept_invalid_hostnames, self.min_tls_version.map(|value| TlsVersion::from(value)), self.max_tls_version.map(|value| TlsVersion::from(value)), self.read_timeout, self.connect_timeout)
     }
 }
 
@@ -327,13 +324,12 @@ mod  test {
 
     #[test]
     fn test_route_row_from_route_configuration() {
-        let route_config = RouteConfiguration::new("url".to_owned(), None, None, false, false, false, false, None, None, None, None);
+        let route_config = RouteConfiguration::new("url".to_owned(), None, None, false, false, false, None, None, None, None);
 
         let route_row = RouteRow::from(&route_config);
 
         assert_eq!(route_row.url, "url");
         assert_eq!(route_row.proxy_url, None);
-        assert_eq!(route_row.verbose, false);
         assert_eq!(route_row.http1_only, false);
         assert_eq!(route_row.accept_invalid_certs, false);
         assert_eq!(route_row.accept_invalid_hostnames, false);
