@@ -281,7 +281,7 @@ mod  test {
     fn test_test_row_from_test_configuration() {
         let test_config = TestConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new()).unwrap();
 
-        let test_row = TestRow::from(&test_config);
+        let test_row = TestRow::from(test_config);
 
         assert_eq!(test_row.name, "name");
         assert_eq!(test_row.description, "description");

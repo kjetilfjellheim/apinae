@@ -219,8 +219,8 @@ impl AppConfiguration {
      *
      * The endpoint configuration.
      */
-    pub fn get_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Option<EndpointConfiguration> {
-        self.get_server(test_id, server_id).and_then(|server| server.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id).cloned())
+    pub fn get_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Option<&mut EndpointConfiguration> {
+        self.get_server(test_id, server_id).and_then(|server| server.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id))
     }
 
     /**
@@ -251,7 +251,7 @@ impl AppConfiguration {
      * Ok if the server was updated successfully.
      */
     pub fn update_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str, path_expression: &str, method: &str, mock_response: Option<MockResponseConfiguration>, route: Option<RouteConfiguration>) -> Result<(), ApplicationError> {
-        let mut endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
+        let endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
         endpoint.path_expression = path_expression.to_string();
         endpoint.method = method.to_string();
         endpoint.mock = mock_response;
@@ -677,9 +677,6 @@ pub struct RouteConfiguration {
     // The log file where the requests and responses are stored.
     //TODO: Unimplemented
     pub log: Option<String>,
-    // Verbose
-    #[serde(default)]
-    pub verbose: bool,
     // HTTP/1 only
     #[serde(default)]
     pub http1_only: bool,
@@ -706,7 +703,6 @@ impl RouteConfiguration {
      * `url` The URL of the endpoint. Example `<http://localhost:8080>`
      * `proxy_url` Proxy to use.
      * `log` The log file where the requests and responses are stored.
-     * `verbose` Verbose
      * `http1_only` HTTP/1 only
      * `accept_invalid_certs` Accept invalid certificates
      * `accept_invalid_hostnames` Accept invalid hostnames
@@ -723,7 +719,6 @@ impl RouteConfiguration {
         url: String,
         proxy_url: Option<String>,
         log: Option<String>,
-        verbose: bool,
         http1_only: bool,
         accept_invalid_certs: bool,
         accept_invalid_hostnames: bool,
@@ -736,7 +731,6 @@ impl RouteConfiguration {
             url,
             proxy_url,
             log,
-            verbose,
             http1_only,
             accept_invalid_certs,
             accept_invalid_hostnames,
