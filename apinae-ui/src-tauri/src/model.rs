@@ -60,8 +60,8 @@ impl From<&ServerConfiguration> for HttpServerRow {
             id: http_server.id.clone(),
             name: http_server.name.clone(),
             http_port: http_server.http_port,
-            https_config: http_server.https_config.as_ref().map(|https_config| https_config.into()),
-            endpoints: http_server.endpoints.iter().map(|endpoint| endpoint.into()).collect(),
+            https_config: http_server.https_config.as_ref().map(std::convert::Into::into),
+            endpoints: http_server.endpoints.iter().map(std::convert::Into::into).collect(),
         }
     }
 }
@@ -93,8 +93,8 @@ impl From<&EndpointConfiguration> for EndpointRow {
             id: endpoint_config.id.clone(),
             path_expression: endpoint_config.path_expression.clone(),
             method: endpoint_config.method.clone(),
-            mock: endpoint_config.mock.as_ref().map(|mock| mock.into()),
-            route: endpoint_config.route.as_ref().map(|route| route.into()),
+            mock: endpoint_config.mock.as_ref().map(std::convert::Into::into),
+            route: endpoint_config.route.as_ref().map(std::convert::Into::into),
         }
     }
 }
@@ -129,12 +129,12 @@ impl From<&MockResponseConfiguration> for MockRow {
     }
 }
 
-impl Into<MockResponseConfiguration> for MockRow {
+impl From<MockRow> for MockResponseConfiguration {
     /**
      * Convert a mock row to a mock response configuration.
      */
-    fn into(self) -> MockResponseConfiguration {
-        MockResponseConfiguration::new(self.response, self.status, self.headers, self.delay)
+    fn from(mock: MockRow) -> Self {
+        MockResponseConfiguration::new(mock.response.clone(), mock.status, mock.headers.clone(), mock.delay)
     }
 }
 
@@ -175,22 +175,23 @@ impl From<&RouteConfiguration> for RouteRow {
             http1_only: route.http1_only,
             accept_invalid_certs: route.accept_invalid_certs,
             accept_invalid_hostnames: route.accept_invalid_hostnames,
-            min_tls_version: route.min_tls_version.clone().map(|value| String::from(value)),
-            max_tls_version: route.max_tls_version.clone().map(|value| String::from(value)),
+            min_tls_version: route.min_tls_version.clone().map(String::from),
+            max_tls_version: route.max_tls_version.clone().map(String::from),
             read_timeout: route.read_timeout,
             connect_timeout: route.connect_timeout,
         }
     }
 }
 
-impl Into<RouteConfiguration> for RouteRow {
+impl From<RouteRow> for RouteConfiguration {
     /**
      * Convert a route row to a route configuration.
      */
-    fn into(self) -> RouteConfiguration {
-        RouteConfiguration::new(self.url, self.proxy_url, None, self.http1_only, self.accept_invalid_certs, self.accept_invalid_hostnames, self.min_tls_version.map(|value| TlsVersion::from(value)), self.max_tls_version.map(|value| TlsVersion::from(value)), self.read_timeout, self.connect_timeout)
+    fn from(route: RouteRow) -> Self {
+        RouteConfiguration::new(route.url, route.proxy_url, None, route.http1_only, route.accept_invalid_certs, route.accept_invalid_hostnames, route.min_tls_version.map(TlsVersion::from), route.max_tls_version.map(TlsVersion::from), route.read_timeout, route.connect_timeout)
     }
 }
+
 
 /**
  * This struct represents a https configuration.
@@ -220,17 +221,17 @@ impl From<&HttpsConfiguration> for HttpsRow {
             private_key: https_config.private_key.clone(),
             https_port: https_config.https_port,
             client_certificate: https_config.client_certificate.clone(),
-            supported_tls_versions: https_config.clone().supported_tls_versions.into_iter().map(|value| String::from(value)).collect(),
+            supported_tls_versions: https_config.clone().supported_tls_versions.into_iter().map(String::from).collect(),
         }
     }
 }
 
-impl Into<HttpsConfiguration> for HttpsRow {
+impl From<HttpsRow> for HttpsConfiguration {
     /**
      * Convert a https row to a https configuration.
      */
-    fn into(self) -> HttpsConfiguration {
-        HttpsConfiguration::new(self.server_certificate, self.private_key, self.https_port, self.client_certificate, self.supported_tls_versions.into_iter().map(TlsVersion::from).collect())
+    fn from(https_row: HttpsRow) -> Self {
+        HttpsConfiguration::new(https_row.server_certificate, https_row.private_key, https_row.https_port, https_row.client_certificate, https_row.supported_tls_versions.into_iter().map(TlsVersion::from).collect())
     }
 }
 
@@ -275,6 +276,7 @@ impl From<&TcpListenerData> for TcpListenerRow {
 
 mod  test {
 
+    #[allow(unused_imports)]
     use super::*;
 
     #[test]

@@ -17,10 +17,10 @@ pub struct AppData {
 
 impl AppData {
     /**
-     * Creates a new instance of the AppData struct.
+     * Creates a new instance of the `AppData` struct.
      * 
      * # Returns
-     * The new instance of the AppData struct.
+     * The new instance of the `AppData` struct.
      */
     pub fn new() -> Self {
         Self {
@@ -44,14 +44,14 @@ pub struct ProcessData {
 
 impl ProcessData {
     /**
-     * Creates a new instance of the ProcessData struct.
+     * Creates a new instance of the `ProcessData` struct.
      * 
      * # Arguments
-     * process_id - The process ID.
-     * process - The process.
+     * `process_id` - The process ID.
+     * `process` - The process.
      * 
      * # Returns
-     * The new instance of the ProcessData struct.
+     * The new instance of the `ProcessData` struct.
      */
     pub fn new(process_id: u32, process: std::process::Child) -> Self {
         Self {

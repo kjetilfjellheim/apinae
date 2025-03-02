@@ -4,24 +4,40 @@ mod state;
 
 use state::AppData;
 
-use crate::api::{add_endpoint, add_test, add_server, add_listener, clean, confirm_dialog, delete_endpoint, delete_test, delete_server, delete_listener, get_test, get_servers, get_listeners, get_tests, load, save, save_as, start_test, stop_test, update_endpoint, update_test, update_server, update_listener};
+use crate::api::{add_endpoint, add_test, add_server, add_listener, clean, confirm_dialog, delete_endpoint, delete_test, delete_server, delete_listener, get_test, get_servers, get_listeners, get_tests, load, save, save_as, stop_test, start_test, update_endpoint, update_test, update_server, update_listener};
 
 /**
  * This function is the entry point of the Tauri application.
+ * 
+ * # Panics
+ * If the Tauri application fails to run, this function will panic.
  */
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
 
-    #[cfg(debug_assertions)] // only enable instrumentation in development builds
+    /*
+     * Initialize the devtools plugin if the application is running in debug mode.
+     */
+    #[cfg(debug_assertions)] 
     let devtools = tauri_plugin_devtools::init();
 
+    /*
+     * Initialize the Tauri application.
+     */
     let mut builder = tauri::Builder::default();
 
+    /*
+     * Add the devtools plugin to the Tauri application if the application is running in debug mode.
+     */
     #[cfg(debug_assertions)]
     {
         builder = builder.plugin(devtools);
     }
 
+    /*
+     * Start the Tauri application.
+     */
+    #[allow(clippy::items_after_statements)]
     builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
@@ -35,5 +51,5 @@ pub fn run() {
             start_test, 
             stop_test])        
         .run(tauri::generate_context!())
-        .expect("error while running tauri application");
+        .expect("Error while running tauri application");
 }

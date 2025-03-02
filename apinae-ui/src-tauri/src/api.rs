@@ -3,9 +3,27 @@ use std::path::Path;
 use crate::{model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow}, state::ProcessData};
 use tauri::{AppHandle, State};
 use crate::AppData;
-use apinae_lib::config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, HttpsConfiguration, ServerConfiguration, TcpListenerData};
+use apinae_lib::config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
+/**
+ * Default name for new tests, servers, listeners and endpoints.
+ */
+const DEFAULT_NAME: &str = "Untitled";
+
+/**
+ * Loads the configuration from a file.
+ * 
+ * `app` The Tauri application handle.
+ * `app_data` The application data.
+ * 
+ * Returns:
+ * The file path of the loaded configuration.
+ * 
+ * # Errors
+ * If no file is selected.
+ * If the configuration file could not be loaded.
+ */
 #[tauri::command]
 pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<String, String> {
     let file_path = app.dialog().file().blocking_pick_file();
@@ -18,6 +36,15 @@ pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<String
     Err("No file selected".to_string())
 }
 
+/**
+ * Saves the configuration to a file.
+ * 
+ * `app` The Tauri application handle.
+ * `app_data` The application data.
+ * 
+ * # Errors
+ * If the configuration file could not be saved.
+ */
 #[tauri::command]
 pub async fn save(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), String> {
     let current_file_path = get_current_file_path(&app_data);
@@ -30,6 +57,16 @@ pub async fn save(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), St
     }
 }
 
+/**
+ * Saves the configuration to a new file.
+ * 
+ * `app` The Tauri application handle.
+ * `app_data` The application data.
+ * 
+ * # Errors
+ * If no file is selected.
+ * If the configuration file could not be saved.
+ */
 #[tauri::command]
 pub async fn save_as(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), String> {
     let file_path = app.dialog().file().blocking_save_file();
@@ -44,16 +81,39 @@ pub async fn save_as(app: AppHandle, app_data: State<'_, AppData>) -> Result<(),
     }
 }
 
+/**
+ * Cleans the configuration.
+ * 
+ * `app` The Tauri application handle.
+ * `app_data` The application data.
+ * 
+ * Returns:
+ * The cleaned configuration.
+ * 
+ * # Errors
+ * If the user cancels the operation.
+ */
 #[tauri::command]
 pub async fn clean(app: AppHandle, app_data: State<'_, AppData>) -> Result<AppConfiguration, String> {
     if confirm_dialog(app).await {
-        let new_data = AppConfiguration::new(String::from("Untitled"), String::new(), Vec::new());
+        let new_data = AppConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new());
         update_data(&app_data, Some(new_data))?;
         update_file_path(&app_data, None)?;        
     }
-    Ok(get_configuration_data(&app_data)?)
+    get_configuration_data(&app_data)
 }
 
+/**
+ * Gets the tests.
+ * 
+ * `app_data` The application data.
+ * 
+ * Returns:
+ * The tests.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ */
 #[tauri::command]
 pub async fn get_tests(app_data: State<'_, AppData>) -> Result<Vec<TestRow>, String> {
     let data = get_configuration_data(&app_data)?;
@@ -67,6 +127,18 @@ pub async fn get_tests(app_data: State<'_, AppData>) -> Result<Vec<TestRow>, Str
     Ok(tests)
 }
 
+/**
+ * Gets a test.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * Returns:
+ * The test.
+ * 
+ * # Errors
+ * If the test could not be found.
+ */
 #[tauri::command]
 pub async fn get_test(app_data: State<'_, AppData>, testid: &str) -> Result<TestRow, String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -74,14 +146,34 @@ pub async fn get_test(app_data: State<'_, AppData>, testid: &str) -> Result<Test
     Ok(TestRow::from(test.clone()))
 }
 
+/**
+ * Adds a test.
+ * 
+ * `app_data` The application data.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be added.
+ */
 #[tauri::command]
 pub async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.tests.push(apinae_lib::config::TestConfiguration::new("Untitled".to_owned(), "".to_owned(), Vec::new(), Vec::new()).map_err(|err| err.to_string())?);
+    data.tests.push(TestConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new(), Vec::new()).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
+/**
+ * Updates a test.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `test` The test.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be updated.
+ */
 #[tauri::command]
 pub async fn update_test(app_data: State<'_, AppData>, testid: &str, test: TestRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -90,6 +182,16 @@ pub async fn update_test(app_data: State<'_, AppData>, testid: &str, test: TestR
     Ok(())
 }
 
+/**
+ * Deletes a test.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be deleted.
+ */
 #[tauri::command]
 pub async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -98,6 +200,19 @@ pub async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(
     Ok(())
 }
 
+/**
+ * Gets the servers.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * Returns:
+ * The servers.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ */ 
 #[tauri::command]
 pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<HttpServerRow>, String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -108,6 +223,19 @@ pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<V
     Ok(http_servers)
 }
 
+/**
+ * Updates a server.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `serverid` The server id.
+ * `httpserver` The server.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the server could not be updated.
+ */
 #[tauri::command]
 pub async fn update_server(app_data: State<'_, AppData>, testid: &str, serverid: &str, httpserver: HttpServerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -120,6 +248,18 @@ pub async fn update_server(app_data: State<'_, AppData>, testid: &str, serverid:
     Ok(())
 }
 
+/**
+ * Deletes a server.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `serverid` The server id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the server could not be deleted.
+ */
 #[tauri::command]
 pub async fn delete_server(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -128,15 +268,39 @@ pub async fn delete_server(app_data: State<'_, AppData>, testid: &str, serverid:
     Ok(())
 }
 
+/**
+ * Adds a server.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the server could not be added.
+ */
 #[tauri::command]
 pub async fn add_server(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let test = data.get_test(testid).ok_or("Test not found")?;
-    test.servers.push(ServerConfiguration::new("Untitled".to_owned(), None, Vec::new(), None).map_err(|err| err.to_string())?);
+    test.servers.push(ServerConfiguration::new(DEFAULT_NAME.to_owned(), None, Vec::new(), None).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
+/**
+ * Gets the listeners.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * Returns:
+ * The listeners.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ */
 #[tauri::command]
 pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<TcpListenerRow>, String> {
     let data = get_configuration_data(&app_data)?;
@@ -147,6 +311,19 @@ pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result
     Ok(tcp_listeners)
 }
 
+/**
+ * Updates a listener.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `listenerid` The listener id.
+ * `tcplistener` The listener.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the listener could not be updated.
+ */
 #[tauri::command]
 pub async fn update_listener(app_data: State<'_, AppData>, testid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -162,6 +339,18 @@ pub async fn update_listener(app_data: State<'_, AppData>, testid: &str, listene
     Ok(())
 }
 
+/**
+ * Deletes a listener.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `listenerid` The listener id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the listener could not be deleted.
+ */
 #[tauri::command]
 pub async fn delete_listener(app_data: State<'_, AppData>, testid: &str, listenerid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -170,24 +359,62 @@ pub async fn delete_listener(app_data: State<'_, AppData>, testid: &str, listene
     Ok(())
 }
 
+/**
+ * Adds a listener.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the listener could not be added.
+ */
 #[tauri::command]
 pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let test = data.get_test(testid).ok_or("Test not found")?;
-    let _ = test.listeners.push(TcpListenerData::new(None, None, None, 8000, false, CloseConnectionWhen::AfterResponse).map_err(|err| err.to_string())?);
+    let () = test.listeners.push(TcpListenerData::new(None, None, None, 8000, false, CloseConnectionWhen::AfterResponse).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
+/**
+ * Adds an endpoint.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `serverid` The server id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be added.
+ */
 #[tauri::command]
 pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let server = data.get_server(testid, serverid).ok_or("Server not found")?;
-    server.endpoints.push(EndpointConfiguration::new("Untitled".to_owned(), "".to_owned(), None, None).map_err(|err| err.to_string())?);
+    server.endpoints.push(EndpointConfiguration::new("/".to_owned(), String::new(), None, None).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
+/**
+ * Deletes an endpoint.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `serverid` The server id.
+ * `endpointid` The endpoint id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be deleted.
+ */
 #[tauri::command]
 pub async fn delete_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str, endpointid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
@@ -196,20 +423,39 @@ pub async fn delete_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
     Ok(())  
 }
 
+/**
+ * Updates an endpoint.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `serverid` The server id.
+ * `endpointid` The endpoint id.
+ * `endpoint` The endpoint.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be updated.
+ */
 #[tauri::command]
 pub async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let mock_response = endpoint.mock.map(|mock_response| {
-        mock_response.into()
-    });
-    let route_response = endpoint.route.map(|route_response| {
-        route_response.into()
-    });
+    let mock_response = endpoint.mock.map(MockResponseConfiguration::from);
+    let route_response = endpoint.route.map(RouteConfiguration::from);
     data.update_endpoint(testid, serverid, endpointid, endpoint.path_expression.as_str(), endpoint.method.as_str(), mock_response, route_response).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
+/**
+ * Shows a confirmation dialog.
+ * 
+ * `app` The Tauri application handle.
+ * 
+ * Returns:
+ * True if the user confirms the dialog, false otherwise.
+ */
 #[tauri::command]
 pub async fn confirm_dialog(app: AppHandle) -> bool {
     app.dialog()
@@ -220,43 +466,69 @@ pub async fn confirm_dialog(app: AppHandle) -> bool {
         .blocking_show()
 }
 
+/**
+ * Starts a test.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * Returns:
+ * The test.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the test could not be started.
+ */
 #[tauri::command]
 pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<TestRow, String> {
     let app_config = get_configuration_data(&app_data)?;
     let test = app_config.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
     let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    match process_data.get(testid) {
-        Some(process_data) => {            
-            Ok(TestRow {
-                id: test.id.clone(),
-                name: test.name.clone(),
-                description: test.description.clone(),
-                process_id: Some(process_data.process_id),
-            })            
-        },
-        None => {
-            let file_path = get_current_file_path(&app_data)?;
-            let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
-            let process = std::process::Command::new("apinae")        
-                .arg("--file")
-                .arg(get_current_file_path(&app_data)?)
-                .arg("--id")
-                .arg(testid)
-                .current_dir(path.as_os_str())
-                .spawn()
-                .map_err(|err| err.to_string())?;
-            let process_id = process.id();
-            process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
-            Ok(TestRow {
-                id: test.id.clone(),
-                name: test.name.clone(),
-                description: test.description.clone(),
-                process_id: Some(process_id),
-            })
-        }
+    if let Some(process_data) = process_data.get(testid) {            
+        Ok(TestRow {
+            id: test.id.clone(),
+            name: test.name.clone(),
+            description: test.description.clone(),
+            process_id: Some(process_data.process_id),
+        })            
+    } else {
+        let file_path = get_current_file_path(&app_data)?;
+        let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
+        let process = std::process::Command::new("apinae")        
+            .arg("--file")
+            .arg(get_current_file_path(&app_data)?)
+            .arg("--id")
+            .arg(testid)
+            .current_dir(path.as_os_str())
+            .spawn()
+            .map_err(|err| err.to_string())?;
+        let process_id = process.id();
+        process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
+        Ok(TestRow {
+            id: test.id.clone(),
+        name: test.name.clone(),
+            description: test.description.clone(),
+            process_id: Some(process_id),
+        })
     }
 }
 
+/**
+ * Stops a test.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * Returns:
+ * The test.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the test could not be stopped.
+ */
+#[allow(clippy::all)]
 #[tauri::command]
 pub async fn stop_test(app_data: State<'_, AppData>, testid: &str) -> Result<TestRow, String> {
     let app_config = get_configuration_data(&app_data)?;
@@ -284,16 +556,50 @@ pub async fn stop_test(app_data: State<'_, AppData>, testid: &str) -> Result<Tes
     }
 }
 
+/**
+ * Gets the configuration data.
+ * 
+ * `app_data` The application data.
+ * 
+ * Returns:
+ * The configuration data.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ */
 fn get_configuration_data(app_data: &State<'_, AppData>) -> Result<AppConfiguration, String> {
     let lock = app_data.data.lock().map_err(|err| err.to_string())?;
     lock.clone().ok_or("No data".to_string())
 }
 
+/**
+ * Gets the current file path.
+ * 
+ * `app_data` The application data.
+ * 
+ * Returns:
+ * The current file path.
+ * 
+ * # Errors
+ * If the file path could not be locked.
+ * If there is no file path.
+ */
 fn get_current_file_path(app_data: &State<'_, AppData>) -> Result<String, String> {
     let lock = app_data.file_path.lock().map_err(|err| err.to_string())?;
     lock.clone().ok_or("No file path".to_string())
 }
 
+/**
+ * Gets the file path.
+ * 
+ * `file_path` The file path.
+ * 
+ * Returns:
+ * The file path.
+ * 
+ * # Errors
+ * If the file path is invalid.
+ */
 fn get_file_path(file_path: FilePath) -> Result<String, String> {
     if let FilePath::Path(path) = file_path {
         Ok(path.to_string_lossy().to_string())
@@ -302,12 +608,30 @@ fn get_file_path(file_path: FilePath) -> Result<String, String> {
     }
 }
 
+/**
+ * Updates the data.
+ * 
+ * `app_data` The application data.
+ * `new_data` The new data.
+ * 
+ * # Errors
+ * If the data could not be locked.
+ */
 fn update_data(app_data: &State<'_, AppData>, new_data: Option<AppConfiguration>) -> Result<(), String> {
     let mut lock = app_data.data.try_lock().map_err(|err| err.to_string())?;
     *lock = new_data;
     Ok(())
 }
 
+/**
+ * Updates the file path.
+ * 
+ * `app_data` The application data.
+ * `new_file_path` The new file path.
+ * 
+ * # Errors
+ * If the file path could not be locked.
+ */
 fn update_file_path(app_data: &State<'_, AppData>, new_file_path: Option<String>) -> Result<(), String> {
     let mut lock = app_data.file_path.try_lock().map_err(|err| err.to_string())?;
     *lock = new_file_path;

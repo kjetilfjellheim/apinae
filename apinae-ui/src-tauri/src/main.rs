@@ -5,5 +5,8 @@
  * This is the main entry point for the Tauri application.
  */
 fn main() {
+    /*
+     * Run the Tauri application.
+     */
     apinae_ui_lib::run()
 }
