@@ -5,7 +5,7 @@
 pub enum ApplicationError {
     FileError(String),
     MissingId(String),
-    CouldNotFindTest(String),
+    CouldNotFind(String),
     ConfigurationError(String),
     ServerStartUpError(String),
     RoutingError(String),
@@ -19,7 +19,7 @@ impl std::fmt::Display for ApplicationError {
         match self {
             ApplicationError::FileError(err) => write!(f, "File error: {err}"),
             ApplicationError::MissingId(err) => write!(f, "Missing id: {err}"),
-            ApplicationError::CouldNotFindTest(err) => write!(f, "Could not find test: {err}"),
+            ApplicationError::CouldNotFind(err) => write!(f, "Could not find: {err}"),
             ApplicationError::ConfigurationError(err) => write!(f, "Configuration error: {err}"),
             ApplicationError::ServerStartUpError(err) => {
                 write!(f, "Server start up error: {err}")

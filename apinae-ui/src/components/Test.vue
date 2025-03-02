@@ -14,13 +14,13 @@ const route = useRoute();
 // The test being displayed
 const test = ref([]);
 // Array of all tcp listeners for the test
-const tcp_listeners = ref([]);
+const tcpListeners = ref([]);
 // Array of all http servers for the test
-const http_servers = ref([]);
-// Data for editing a tcp listener. Data is copied from the tcp_listener 
+const httpServers = ref([]);
+// Data for editing a tcp listener. Data is copied from the tcpListener 
 // object to this object when the user clicks the edit button
 const editTcpListenerData = ref({});
-// Data for editing a http server. Data is copied from the http_server
+// Data for editing a http server. Data is copied from the httpServer
 // object to this object when the user clicks the edit button
 const editHttpServerData = ref({});
 // Data for editing an endpoint. Data is copied from the endpoint object
@@ -67,22 +67,22 @@ const serverIdEditEndpoint = ref(null);
 //and when the user updates the data. This is because when updating the data we only update the
 //remote rust data, not the local data. This is so that we only have one source of truth for the data.
 //TODO: Only refresh required data, not all data.
-const refresh = (test_id) => {
-  invoke("get_test", { testid: test_id })
+const refresh = (testId) => {
+  invoke("get_test", { testid: testId })
     .then((message) => {
       test.value = message;
     })
     .catch((error) => window.alert(error));
 
-  invoke("get_test_http_servers", { testid: test_id })
+  invoke("get_servers", { testid: testId })
     .then((message) => {
-      http_servers.value = message;
+      httpServers.value = message;
     })
     .catch((error) => window.alert(error));
 
-  invoke("get_test_tcp_listeners", { testid: test_id })
+  invoke("get_listeners", { testid: testId })
     .then((message) => {
-      tcp_listeners.value = message;
+      tcpListeners.value = message;
     })
     .catch((error) => window.alert(error));
 }
@@ -90,11 +90,11 @@ const refresh = (test_id) => {
 //Add an http server to the test. This is called when the user clicks the add button.
 //The server is added to the test and the data is refreshed.
 const addHttpServer = () => {
-  invoke("add_test_http_server", { testid: test.value.id })
+  invoke("add_server", { testid: test.value.id })
     .then((message) => {
       refresh(test.value.id);
     })
-    .catch((error) => window.alert(serverId));
+    .catch((error) => window.alert(error));
 }
 
 //Delete an http server from the test. This is called when the user clicks the delete button.
@@ -104,7 +104,7 @@ const confirmDeleteHttpServer = (serverId) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
       if (confirm) {
-        invoke("delete_test_http_server", { testid: test.value.id, serverid: serverId })
+        invoke("delete_server", { testid: test.value.id, serverid: serverId })
           .then((message) => {
             refresh(test.value.id);
           })
@@ -118,7 +118,7 @@ const confirmDeleteHttpServer = (serverId) => {
 //Add a tcp listener to the test. This is called when the user clicks the add button.
 //The listener is added to the test and the data is refreshed.
 const addTcpListener = () => {
-  invoke("add_test_tcp_listener", { testid: test.value.id })
+  invoke("add_listener", { testid: test.value.id })
     .then((message) => {
       refresh(test.value.id);
     })
@@ -127,8 +127,8 @@ const addTcpListener = () => {
 
 //Add an endpoint to the http server. This is called when the user clicks the add button.
 //The endpoint is added to the http server and the data is refreshed.
-const addEndpoint = (http_server) => {
-  invoke("add_endpoint", { testid: test.value.id, serverid: http_server.id })
+const addEndpoint = (httpServer) => {
+  invoke("add_endpoint", { testid: test.value.id, serverid: httpServer.id })
     .then((message) => {
       refresh(test.value.id);
     })
@@ -138,11 +138,11 @@ const addEndpoint = (http_server) => {
 //Delete an endpoint from the http server. This is called when the user clicks the delete button.
 //The endpoint is deleted from the htp server and the data is refreshed. The user is asked to confirm
 //the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
-const confirmDeleteEndpoint = (http_server, endpoint) => {
+const confirmDeleteEndpoint = (httpServer, endpoint) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
       if (confirm) {
-        invoke("delete_endpoint", { testid: test.value.id, serverid: http_server.id, endpointid: endpoint.id })
+        invoke("delete_endpoint", { testid: test.value.id, serverid: httpServer.id, endpointid: endpoint.id })
           .then((message) => {
             refresh(test.value.id);
           })
@@ -160,7 +160,7 @@ const confirmDeleteTcpListener = (listenerid) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
       if (confirm) {
-        invoke("delete_test_tcp_listener", { testid: test.value.id, listenerid: listenerid })
+        invoke("delete_listener", { testid: test.value.id, listenerid: listenerid })
           .then((message) => {
             refresh(test.value.id);
           })
@@ -172,14 +172,14 @@ const confirmDeleteTcpListener = (listenerid) => {
 }
 
 //Initializes the data for editing a tcp listener. This is called when the user clicks the edit button.
-//The data is copied from the tcp_listener object to the editTcpListenerData object.
-const editTcpListener = (tcp_listener) => {
-  editTcpListenerData.value = { ...tcp_listener };
+//The data is copied from the tcpListener object to the editTcpListenerData object.
+const editTcpListener = (tcpListener) => {
+  editTcpListenerData.value = { ...tcpListener };
 }
 
 //Initializes the data for editing an endpoint. This is called when the user clicks the edit button.
 //The data is copied from the endpoint object to the editEndpointData object.
-const editEndpoint = (http_server, endpoint) => {
+const editEndpoint = (httpServer, endpoint) => {
   if (endpoint.mock) {
     editMockData.value = { ...endpoint.mock };
     editRouteData.value = {};
@@ -189,31 +189,31 @@ const editEndpoint = (http_server, endpoint) => {
     editRouteData.value = { ...endpoint.route };
     showEditMockData.value = false;
   }
-  serverIdEditEndpoint.value = http_server.id;
+  serverIdEditEndpoint.value = httpServer.id;
   editEndpointData.value = { ...endpoint };
 }
 
 //Initializes the data for editing a http server. This is called when the user clicks the edit button.
-//The data is copied from the http_server object to the editHttpServerData object. If the http server have
-//an https config, the data is copied from the https_config object to the editHttpsConfig object it also copies
+//The data is copied from the httpServer object to the editHttpServerData object. If the http server have
+//an https config, the data is copied from the httpsConfig object to the editHttpsConfig object it also copies
 //the supported tls versions to the editSupportedTlsVersions object.
-const editHttpServer = (http_server) => {
-  if (http_server?.https_config) {
-    editHttpsConfig.value = { ...http_server?.https_config };
-    editSupportedTlsVersions.value = http_server?.https_config?.supported_tls_versions ? [...http_server?.https_config?.supported_tls_versions] : [];
+const editHttpServer = (httpServer) => {
+  if (httpServer?.httpsConfig) {
+    editHttpsConfig.value = { ...httpServer?.httpsConfig };
+    editSupportedTlsVersions.value = httpServer?.httpsConfig?.supportedTlsVersions ? [...httpServer?.httpsConfig?.supportedTlsVersions] : [];
   } else {
     editHttpsConfig.value = {};
     editSupportedTlsVersions.value = [];
   }
-  editHttpServerData.value = { ...http_server };
-  showEditHttpsConfig.value = http_server.https_config ? true : false;
+  editHttpServerData.value = { ...httpServer };
+  showEditHttpsConfig.value = httpServer.httpsConfig ? true : false;
 }
 
 //Updates the tcp listener. This is called when the user clicks the Ok button in the edit modal.
 //The data on the editTcpListenerData object is sent to the rust code to update the tcp listener.
 //If successful the modal is hidden and the data is refreshed.
-const updateTcpListener = (tcp_listener) => {
-  invoke("update_test_tcp_listener", { testid: test.value.id, listenerid: tcp_listener.id, tcplistener: convertTcpListenerToRequestObject(tcp_listener) })
+const updateTcpListener = (tcpListener) => {
+  invoke("update_listener", { testid: test.value.id, listenerid: tcpListener.id, tcplistener: convertTcpListenerToRequestObject(tcpListener) })
     .then((message) => {
       editTcpListenerModal.value.hide();
       refresh(test.value.id);
@@ -225,8 +225,8 @@ const updateTcpListener = (tcp_listener) => {
 //The data on the editHttpServerData, editHttpsConfig and editSupportedTlsVersions objects are sent 
 //to the rust code to update the http server.
 //If successful the modal is hidden and the data is refreshed.
-const updateHttpServer = (http_server, https_config, supported_tls_versions) => {
-  invoke("update_test_http_server", { testid: test.value.id, serverid: http_server.id, httpserver: convertHttpServerToRequestObject(http_server, https_config, supported_tls_versions) })
+const updateHttpServer = (httpServer, httpsConfig, supportedTlsVersions) => {
+  invoke("update_server", { testid: test.value.id, serverid: httpServer.id, httpserver: convertHttpServerToRequestObject(httpServer, httpsConfig, supportedTlsVersions) })
     .then((message) => {
       editHttpServerModal.value.hide();
       refresh(test.value.id);
@@ -257,40 +257,40 @@ const convertEndpointToRequestObject = (editEndpointData, editMockData, editRout
   }
 }
 
-const convertMockToRequestObject = (mock_data) => {
+const convertMockToRequestObject = (mockData) => {
   return {
-    status: mock_data.value.status ? parseInt(mock_data.value.status) : null,
-    headers: mock_data.value.headers,
-    delay: parseInt(mock_data.value.delay),
-    response: mock_data.value.response
+    status: mockData.value.status ? parseInt(mockData.value.status) : null,
+    headers: mockData.value.headers,
+    delay: parseInt(mockData.value.delay),
+    response: mockData.value.response
   }
 }
 
-const convertRouteToRequestObject = (route_data) => {
+const convertRouteToRequestObject = (routeData) => {
   return {
-    endpoint: route_data.value.endpoint,
-    proxy_url: route_data.value.proxy_url,
-    verbose: route_data.value.verbose ? true : false,
-    http1_only: route_data.value.http1_only ? true : false,
-    accept_invalid_certs: route_data.value.accept_invalid_certs ? true : false,
-    accept_invalid_hostnames: route_data.value.accept_invalid_hostnames ? true : false,
-    min_tls_version: route_data.value.min_tls_version,
-    max_tls_version: route_data.value.max_tls_version,
-    read_timeout: route_data.value.read_timeout ? parseInt(route_data.value.read_timeout) : null,
-    connect_timeout: route_data.value.connect_timeout ? parseInt(route_data.value.connect_timeout) : null
+    endpoint: routeData.value.endpoint,
+    proxyUrl: routeData.value.proxyUrl,
+    verbose: routeData.value.verbose ? true : false,
+    http1Only: routeData.value.http1Only ? true : false,
+    acceptInvalidCerts: routeData.value.acceptInvalidCerts ? true : false,
+    acceptInvalidHostnames: routeData.value.acceptInvalidHostnames ? true : false,
+    minTlsVersion: routeData.value.minTlsVersion,
+    maxTlsVersion: routeData.value.maxTlsVersion,
+    readTimeout: routeData.value.readTimeout ? parseInt(routeData.value.readTimeout) : null,
+    connectTimeout: routeData.value.connectTimeout ? parseInt(routeData.value.connectTimeout) : null
   }
 }
 
 //Converts the http server object to a request object that can be sent to the rust code.
 //This is used when updating the http server.
 //TODO: Implement validation if the objects are not valid.
-const convertHttpServerToRequestObject = (http_server, https_config, supported_tls_versions) => {
+const convertHttpServerToRequestObject = (httpServer, httpsConfig, supportedTlsVersions) => {
   return {
-    id: http_server.id,
-    name: http_server.name,
-    description: http_server.description,
-    http_port: http_server.http_port ? parseInt(http_server.http_port) : null,
-    https_config: showEditHttpsConfig.value ? convertHttpsConfigToRequestObject(https_config, supported_tls_versions) : null,
+    id: httpServer.id,
+    name: httpServer.name,
+    description: httpServer.description,
+    httpPort: httpServer.httpPort ? parseInt(httpServer.httpPort) : null,
+    httpsConfig: showEditHttpsConfig.value ? convertHttpsConfigToRequestObject(httpsConfig, supportedTlsVersions) : null,
     endpoints: []
   }
 }
@@ -298,28 +298,28 @@ const convertHttpServerToRequestObject = (http_server, https_config, supported_t
 //Converts the https config object to a request object that can be sent to the rust code.
 //This is used when updating the http server.
 //TODO: Implement validation if the objects are not valid.
-const convertHttpsConfigToRequestObject = (https_config, supported_tls_versions) => {
+const convertHttpsConfigToRequestObject = (httpsConfig, supportedTlsVersions) => {
   return {
-    https_port: https_config.https_port ? parseInt(https_config.https_port) : null,
-    server_certificate: https_config.server_certificate,
-    private_key: https_config.private_key,
-    client_certificate: https_config.client_certificate,
-    supported_tls_versions: supported_tls_versions
+    httpsPort: httpsConfig.httpsPort ? parseInt(httpsConfig.httpsPort) : null,
+    serverCertificate: httpsConfig.serverCertificate,
+    privateKey: httpsConfig.privateKey,
+    clientCertificate: httpsConfig.clientCertificate,
+    supportedTlsVersions: supportedTlsVersions
   }
 }
 
 //Converts the tcp listener object to a request object that can be sent to the rust code.
 //This is used when updating the tcp listener.
 //TODO: Implement validation if the objects are not valid.
-const convertTcpListenerToRequestObject = (tcp_listener) => {
+const convertTcpListenerToRequestObject = (tcpListener) => {
   return {
-    id: tcp_listener.id,
-    port: tcp_listener.port ? parseInt(tcp_listener.port) : null,
-    accept: tcp_listener.accept,
-    close_connection: tcp_listener.close_connection,
-    delay_write_ms: tcp_listener.delay_write_ms ? parseInt(tcp_listener.delay_write_ms) : null,
-    file: tcp_listener.file,
-    data: tcp_listener.data
+    id: tcpListener.id,
+    port: tcpListener.port ? parseInt(tcpListener.port) : null,
+    accept: tcpListener.accept,
+    closeConnection: tcpListener.closeConnection,
+    delayWriteMs: tcpListener.delayWriteMs ? parseInt(tcpListener.delayWriteMs) : null,
+    file: tcpListener.file,
+    data: tcpListener.data
   }
 }
 
@@ -330,8 +330,8 @@ onMounted(() => {
   editEndpointModal.value = new Modal('#idEditEndpointModel', { keyboard: false });
   editHttpServerModal.value = new Modal('#idEditHttpServerModel', { keyboard: false });
   editTcpListenerModal.value = new Modal('#idEditTcpListenerModel', { keyboard: false });
-  const test_id = route.params.test_id
-  refresh(test_id)
+  const testId = route.params.testid
+  refresh(testId)
 });
 </script>
 <style>
@@ -413,10 +413,10 @@ onMounted(() => {
         </h5>
       </div>
       <div class="col-12">
-        <div class="card" v-for="tcp_listener in tcp_listeners" :key="tcp_listener.port"
-          v-if="tcp_listeners?.length > 0">
+        <div class="card" v-for="tcpListener in tcpListeners" :key="tcpListener.port"
+          v-if="tcpListeners?.length > 0">
           <div class="card-header">
-            Tcp listener for port {{ tcp_listener.port }}
+            Tcp listener for port {{ tcpListener.port }}
           </div>
           <div class="card-body">
             <div class="btn-toolbar" role="toolbar"
@@ -424,10 +424,10 @@ onMounted(() => {
               <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
                 role="group">
                 <button type="button" class="btn btn-sm btn-outline-primary align-middle"
-                  @click="editTcpListener(tcp_listener)" data-bs-toggle="modal"
+                  @click="editTcpListener(tcpListener)" data-bs-toggle="modal"
                   data-bs-target="#idEditTcpListenerModel"><i class="fa-solid fa-file-pen"></i></button>
                 <button class="btn btn-sm btn-outline-danger align-middle"
-                  @click="confirmDeleteTcpListener(tcp_listener.id)"><i class="fa-solid fa-trash"></i></button>
+                  @click="confirmDeleteTcpListener(tcpListener.id)"><i class="fa-solid fa-trash"></i></button>
               </div>
             </div>
             <div class="container-fluid">
@@ -437,14 +437,14 @@ onMounted(() => {
                     <label for="idLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Id</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="idLabel"
-                        :value="tcp_listener.id">
+                        :value="tcpListener.id">
                     </div>
                   </div>
                   <div class="mb-0 row">
                     <label for="portLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Port</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="portLabel"
-                        :value="tcp_listener.port">
+                        :value="tcpListener.port">
                     </div>
                   </div>
                   <div class="mb-0 row">
@@ -452,7 +452,7 @@ onMounted(() => {
                       class="col-sm-6 col-form-label small text-truncate padding-0">Accept</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel"
-                        :value="tcp_listener.accept">
+                        :value="tcpListener.accept">
                     </div>
                   </div>
                   <div class="mb-0 row">
@@ -460,7 +460,7 @@ onMounted(() => {
                       connection</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel"
-                        :value="tcp_listener.close_connection">
+                        :value="tcpListener.closeConnection">
                     </div>
                   </div>
                   <div class="mb-0 row">
@@ -468,21 +468,21 @@ onMounted(() => {
                       response</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="acceptLabel"
-                        :value="tcp_listener.delay_write_ms">
+                        :value="tcpListener.delayWriteMs">
                     </div>
                   </div>
                 </div>
-                <div class="col-8" v-if="tcp_listener.file">
+                <div class="col-8" v-if="tcpListener.file">
                   <div class="mb-0 row">
                     <label for="fileLabel" class="col-sm-3 col-form-label small text-truncate padding-0">File</label>
                     <div class="col-sm-9">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="fileLabel"
-                        :value="tcp_listener.data">
+                        :value="tcpListener.data">
                     </div>
                   </div>
-                  <div class="mb-0 row" v-if="tcp_listener.data">
+                  <div class="mb-0 row" v-if="tcpListener.data">
                     <label for="dataLabel" class="col-sm-3 col-form-label small text-truncate padding-0">Data</label>
-                    <div class="col-sm-9 small">{{ tcp_listener.file }}</div>
+                    <div class="col-sm-9 small">{{ tcpListener.file }}</div>
                   </div>
                 </div>
               </div>
@@ -504,9 +504,9 @@ onMounted(() => {
             </div>
           </h5>
         </div>
-        <div class="card" v-for="http_server in http_servers" :key="http_server.port">
+        <div class="card" v-for="httpServer in httpServers" :key="httpServer.port">
           <div class="card-header">
-            Http server: {{ http_server.name }}
+            Http server: {{ httpServer.name }}
           </div>
           <div class="card-body">
             <div class="btn-toolbar" role="toolbar"
@@ -514,10 +514,10 @@ onMounted(() => {
               <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
                 role="group">
                 <button type="button" class="btn btn-sm btn-outline-primary align-middle"
-                  @click="editHttpServer(http_server)" data-bs-toggle="modal" data-bs-target="#idEditHttpServerModel"><i
+                  @click="editHttpServer(httpServer)" data-bs-toggle="modal" data-bs-target="#idEditHttpServerModel"><i
                     class="fa-solid fa-file-pen"></i></button>
                 <button class="btn btn-sm btn-outline-danger align-middle"
-                  @click="confirmDeleteHttpServer(http_server.id)"><i class="fa-solid fa-trash"></i></button>
+                  @click="confirmDeleteHttpServer(httpServer.id)"><i class="fa-solid fa-trash"></i></button>
               </div>
             </div>
             <div class="container-fluid">
@@ -527,22 +527,22 @@ onMounted(() => {
                     <label for="idLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Id</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="idLabel"
-                        :value="http_server.id">
+                        :value="httpServer.id">
                     </div>
                   </div>
                   <div class="mb-0 row">
                     <label for="nameLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Name</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="nameLabel"
-                        :value="http_server.name">
+                        :value="httpServer.name">
                     </div>
                   </div>
-                  <div class="mb-0 row" v-if="http_server.http_port">
+                  <div class="mb-0 row" v-if="httpServer.httpPort">
                     <label for="httpPortLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Http
                       port</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="httpPortLabel"
-                        :value="http_server.http_port">
+                        :value="httpServer.httpPort">
                     </div>
                   </div>
                   <div class="mb-0 row">
@@ -550,52 +550,52 @@ onMounted(() => {
                       class="col-sm-6 col-form-label small text-truncate padding-0">Description</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="descriptionLabel"
-                        :value="http_server.description">
+                        :value="httpServer.description">
                     </div>
                   </div>
                 </div>
                 <div class="col-4">
-                  <div class="mb-0 row" v-if="http_server?.https_config?.https_port">
+                  <div class="mb-0 row" v-if="httpServer?.httpsConfig?.httpsPort">
                     <label for="httpsPortLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Https
                       port</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="httpsPortLabel"
-                        :value="http_server?.https_config.https_port">
+                        :value="httpServer?.httpsConfig?.httpsPort">
                     </div>
                   </div>
-                  <div class="mb-0 row" v-if="http_server?.https_config?.server_certificate">
+                  <div class="mb-0 row" v-if="httpServer?.httpsConfig?.serverCertificate">
                     <label for="serverCertLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Server
                       certificate</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="serverCertLabel"
-                        :value="http_server?.https_config?.server_certificate">
+                        :value="httpServer?.httpsConfig?.serverCertificate">
                     </div>
                   </div>
-                  <div class="mb-0 row" v-if="http_server?.https_config?.private_key">
+                  <div class="mb-0 row" v-if="httpServer?.httpsConfig?.privateKey">
                     <label for="privateKeyLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Private
                       key</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="privateKeyLabel"
-                        :value="http_server?.https_config?.private_key">
+                        :value="httpServer?.httpsConfig?.privateKey">
                     </div>
                   </div>
-                  <div class="mb-0 row" v-if="http_server?.https_config?.client_certificate">
+                  <div class="mb-0 row" v-if="httpServer?.httpsConfig?.clientCertificate">
                     <label for="clientCertLabel" class="col-sm-6 col-form-label small text-truncate padding-0">Client
                       certificate</label>
                     <div class="col-sm-6">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="clientCertLabel"
-                        :value="http_server?.https_config?.client_certificate">
+                        :value="httpServer?.httpsConfig?.clientCertificate">
                     </div>
                   </div>
                 </div>
                 <div class="col-4">
-                  <div class="mb-0" v-if="http_server?.https_config?.supported_tls_versions">
+                  <div class="mb-0" v-if="httpServer?.httpsConfig?.supportedTlsVersions">
                     <label for="tlsVersionsLabel"
                       class="col-sm-6 col-form-label small text-truncate padding-0">Supported TLS versions</label>
                     <div class="col-sm-6">
                       <ul class="list-unstyled">
-                        <li v-for="tls_version in http_server?.https_config?.supported_tls_versions" class="small">{{
-                          tls_version }}</li>
+                        <li v-for="tlsVersion in httpServer?.httpsConfig?.supportedTlsVersions" class="small">{{
+                          tlsVersion }}</li>
                       </ul>
                     </div>
                   </div>
@@ -613,7 +613,7 @@ onMounted(() => {
                             Endpoints
                             <div class="btn-group btn-group-sm align-middle small" role="group">
                               <button type="button" class="btn btn-sm btn-outline-primary"
-                                @click="addEndpoint(http_server)"><i class="fa-solid fa-plus"></i></button>
+                                @click="addEndpoint(httpServer)"><i class="fa-solid fa-plus"></i></button>
                             </div>
                           </caption>
                           <thead>
@@ -625,7 +625,7 @@ onMounted(() => {
                             </tr>
                           </thead>
                           <tbody>
-                            <tr v-for="endpoint in http_server.endpoints" :key="endpoint.id">
+                            <tr v-for="endpoint in httpServer.endpoints" :key="endpoint.id">
                               <td class="align-middle"><label class="align-middle small">{{ endpoint.endpoint }}</label>
                               </td>
                               <td class="align-middle"><label class="align-middle small">{{ endpoint.method }}</label>
@@ -652,23 +652,23 @@ onMounted(() => {
                                     <dt class="col-3 small">&nbsp;Endpoint</dt>
                                     <dd class="col-9 small">{{ endpoint.route?.endpoint }}</dd>
                                     <dt class="col-3 small">Proxy url</dt>
-                                    <dd class="col-9 small">&nbsp;{{ endpoint.route?.proxy_url }}</dd>
+                                    <dd class="col-9 small">&nbsp;{{ endpoint.route?.proxyUrl }}</dd>
                                     <dt class="col-3 small">Verbose</dt>
                                     <dd class="col-3 small">&nbsp;{{ endpoint.route?.verbose }}</dd>
                                     <dt class="col-3 small">Http1 only</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.http1_only }}</dd>
+                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.http1Only }}</dd>
                                     <dt class="col-3 small">Accept invalid certs</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.accept_invalid_certs }}</dd>
+                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.acceptInvalidCerts }}</dd>
                                     <dt class="col-3 small">Accept invalid hostnames</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.accept_invalid_hostnames }}</dd>
+                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.acceptInvalidHostnames }}</dd>
                                     <dt class="col-3 small">Min TLS version</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.min_tls_version }}</dd>
+                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.minTlsVersion }}</dd>
                                     <dt class="col-3 small">Max TLS version</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.max_tls_version }}</dd>
+                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.maxTlsVersion }}</dd>
                                     <dt class="col-3 small">Read timeout</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.read_timeout }}</dd>
+                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.readTimeout }}</dd>
                                     <dt class="col-3 small">Connect timeout</dt>
-                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.connect_timeout }}</dd>
+                                    <dd class="col-3 small">&nbsp;{{ endpoint.route?.connectTimeout }}</dd>
                                   </dl>
                                 </div>
                               </td>
@@ -677,13 +677,13 @@ onMounted(() => {
                                   <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
                                     <div class="btn-group btn-group-sm align-middle small me-2" role="group">
                                       <button type="button" class="btn btn-sm btn-outline-primary text-decoration-none"
-                                        @click="editEndpoint(http_server, endpoint)" data-bs-toggle="modal"
+                                        @click="editEndpoint(httpServer, endpoint)" data-bs-toggle="modal"
                                         data-bs-target="#idEditEndpointModel"><i
                                           class="fa-solid fa-pen-to-square"></i></button>
                                     </div>
                                     <div class="btn-group btn-group-sm align-middle small me-2" role="group">
                                       <button class="btn btn-sm btn-outline-danger text-decoration-none"
-                                        @click="confirmDeleteEndpoint(http_server, endpoint)"><i
+                                        @click="confirmDeleteEndpoint(httpServer, endpoint)"><i
                                           class="fa-solid fa-minus"></i></button>
                                     </div>
                                   </div>
@@ -736,12 +736,12 @@ onMounted(() => {
             <div class="col-md-6">
               <label for="idEditDelayedWrite" class="form-label small">Delayed write ms</label>
               <input type="text" class="form-control form-control-sm" id="idEditDelayedWrite"
-                v-model="editTcpListenerData.delay_write_ms">
+                v-model="editTcpListenerData.delayWriteMs">
             </div>
             <div class="col-md-6">
               <label for="idEditCloseConnection" class="form-label small">Close connection</label>
               <input type="text" class="form-control form-control-sm" id="idEditCloseConnection"
-                v-model="editTcpListenerData.close_connection">
+                v-model="editTcpListenerData.closeConnection">
             </div>
             <div class="col-md-12">
               <label for="idEditFile" class="form-label small">File</label>
@@ -789,7 +789,7 @@ onMounted(() => {
             <div class="col-md-12">
               <label for="idEditHttpPort" class="form-label small">Http port</label>
               <input type="text" class="form-control form-control-sm" id="idEditHttpPort"
-                v-model="editHttpServerData.http_port">
+                v-model="editHttpServerData.httpPort">
             </div>
             <div class="col-md-6">
               <div class="form-check">
@@ -801,28 +801,28 @@ onMounted(() => {
               <div class="form-check">
                 <label for="idEditHttpsPort" class="form-label small">Https port</label>
                 <input type="text" class="form-control form-control-sm" id="idEditHttpsPort"
-                  v-model="editHttpsConfig.https_port">
+                  v-model="editHttpsConfig.httpsPort">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditServerCertificate" class="form-label small">Server certificate</label>
                 <input type="text" class="form-control form-control-sm" id="idEditServerCertificate"
-                  v-model="editHttpsConfig.server_certificate">
+                  v-model="editHttpsConfig.serverCertificate">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditPrivateKey" class="form-label small">Private key</label>
                 <input type="text" class="form-control form-control-sm" id="idEditPrivateKey"
-                  v-model="editHttpsConfig.private_key">
+                  v-model="editHttpsConfig.privateKey">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditClientCertificate" class="form-label small">Private key</label>
                 <input type="text" class="form-control form-control-sm" id="idEditClientCertificate"
-                  v-model="editHttpsConfig.client_certificate">
+                  v-model="editHttpsConfig.clientCertificate">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
@@ -905,7 +905,7 @@ onMounted(() => {
             <div class="col-md-6" v-if="!showEditMockData">              
               <label for="idEditProxyUrl" class="form-label small">Proxy url</label>
                 <input type="text" class="form-control form-control-sm" id="idEditProxyUrl"
-                  v-model="editRouteData.proxy_url">
+                  v-model="editRouteData.proxyUrl">
             </div>
             <div class="col-md-6" v-if="!showEditMockData">  
                 <label class="form-label small" for="idEditVerbose">Verbose</label><br>
@@ -913,35 +913,35 @@ onMounted(() => {
             </div>             
             <div class="col-md-6" v-if="!showEditMockData">  
                 <label class="form-label small" for="idEditHttp1Only">Http1 only</label><br>
-                <input class="form-check-input" type="checkbox" id="idEditHttp1Only" v-model="editRouteData.http1_only">
+                <input class="form-check-input" type="checkbox" id="idEditHttp1Only" v-model="editRouteData.http1Only">
             </div>   
             <div class="col-md-6" v-if="!showEditMockData">  
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidCerts" v-model="editRouteData.accept_invalid_certs">
+                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidCerts" v-model="editRouteData.acceptInvalidCerts">
                 <label class="form-check-label" for="idEditAcceptInvalidCerts">Accept invalid certs</label>
               </div>
             </div>   
             <div class="col-md-6" v-if="!showEditMockData">  
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidHostnames" v-model="editRouteData.accept_invalid_hostnames">
+                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidHostnames" v-model="editRouteData.acceptInvalidHostnames">
                 <label class="form-check-label" for="idEditAcceptInvalidHostnames">Accept invalid hostnames</label>
               </div>
             </div>  
             <div class="col-md-6" v-if="!showEditMockData">                
               <label class="form-label small" for="idEditMinTlsVersion">Min Tls version</label>             
-              <input class="form-control form-control-sm" type="text" id="idEditMinTlsVersion" v-model="editRouteData.min_tls_version">
+              <input class="form-control form-control-sm" type="text" id="idEditMinTlsVersion" v-model="editRouteData.minTlsVersion">
             </div> 
             <div class="col-md-6" v-if="!showEditMockData">                
               <label class="form-label small" for="idEditMaxTlsVersion">Max Tls version</label>              
-              <input class="form-control form-control-sm" type="text" id="idEditMaxTlsVersion" v-model="editRouteData.max_tls_version">
+              <input class="form-control form-control-sm" type="text" id="idEditMaxTlsVersion" v-model="editRouteData.maxTlsVersion">
             </div>  
             <div class="col-md-6" v-if="!showEditMockData">  
               <label class="form-label small" for="idEditReadTimeout">Read timeout</label>
-              <input class="form-control form-control-sm" type="text" id="idEditReadTimeout" v-model="editRouteData.read_timeout">
+              <input class="form-control form-control-sm" type="text" id="idEditReadTimeout" v-model="editRouteData.readTimeout">
             </div>  
             <div class="col-md-6" v-if="!showEditMockData">  
               <label class="form-label small" for="idEditConnectTimeout">Connect timeout</label>
-              <input class="form-control form-control-sm" type="test" id="idEditConnectTimeout" v-model="editRouteData.connect_timeout">
+              <input class="form-control form-control-sm" type="test" id="idEditConnectTimeout" v-model="editRouteData.connectTimeout">
             </div>                                                
 
 

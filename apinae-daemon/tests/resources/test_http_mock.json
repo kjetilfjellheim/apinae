@@ -14,7 +14,7 @@
                     "endpoints": [
                         {
                             "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-                            "endpoint": "^\/test$",
+                            "pathExpression": "^\/test$",
                             "method": "GET",
                             "soapAction": null,
                             "mock": {
@@ -28,7 +28,7 @@
                         },
                         {
                             "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-                            "endpoint": "^\/test$",
+                            "pathExpression": "^\/test$",
                             "method": "POST",
                             "soapAction": null,
                             "mock": {

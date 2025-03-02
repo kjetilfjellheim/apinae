@@ -9,22 +9,27 @@
       "servers": [],
       "listeners": [
         {
+          "id": "1",
           "data": "Test",
           "port": 8080
         },
         {
+          "id": "2",
           "file": "./tests/resources/test_listener_data.txt",
           "port": 8081
         },
         {
+          "id": "3",
           "port": 8082,
           "delayWriteMs": 1000
         },
         {
+          "id": "4",
           "port": 8083,
           "accept": false
         },
         {
+          "id": "5",
           "port": 8084,
           "closeConnection": "Never",
           "data": "Test"

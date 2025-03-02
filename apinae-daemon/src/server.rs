@@ -477,10 +477,10 @@ fn is_valid_endpoint(
     request_method: &str,
     endpoint: &EndpointConfiguration,
 ) -> Result<bool, ApplicationError> {
-    let regexp = Regex::new(&endpoint.endpoint).map_err(|err| {
+    let regexp = Regex::new(&endpoint.path_expression).map_err(|err| {
         ApplicationError::ConfigurationError(format!(
             "Error in regular expression {}: {err}",
-            endpoint.endpoint
+            endpoint.path_expression
         ))
     })?;
     Ok(regexp.is_match(request_path) && request_method == endpoint.method.as_str())
@@ -529,7 +529,7 @@ async fn route_request(
     payload: Option<web::Payload>,
 ) -> Result<HttpResponse, ApplicationError> {
 
-    let mut url = route_configuration.endpoint.clone();
+    let mut url = route_configuration.url.clone();
     url.push_str(req.path());
 
     let request = get_request(req, payload, url).await?;

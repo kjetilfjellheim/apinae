@@ -40,6 +40,33 @@ impl AppConfiguration {
     }
 
     /**
+     * Update the configuration.
+     *
+     * `name` The name of the configuration.
+     * `description` The description of the configuration.
+     */
+    pub fn update(&mut self, name: String, description: String) {
+        self.name = name;
+        self.description = description;
+    }
+
+    /**
+     * Update test.
+     * 
+     * `test_id` The id of the test.
+     * `name` The name of the test.
+     * `description` The description of the test.
+     * 
+     * Ok if the test was updated successfully.
+     */
+    pub fn update_test(&mut self, test_id: &str, name: &str, description: &str) -> Result<(), ApplicationError> {
+        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        test.name = name.to_string();
+        test.description = description.to_string();
+        Ok(())
+    }
+
+    /**
      * Save the configuration to a file.
      *
      * `path` The path to save the configuration to.
@@ -88,8 +115,148 @@ impl AppConfiguration {
      * The test configuration.
      */
     #[must_use]
-    pub fn get_test(&self, id: &str) -> Option<TestConfiguration> {
-        self.tests.iter().find(|test| test.id == id).cloned()
+    pub fn get_test(&mut self, test_id: &str) -> Option<&mut TestConfiguration> {
+        self.tests.iter_mut().find(|test| test.id == test_id)
+    }
+
+    /**
+     * Delete test by id.
+     * 
+     * `test_id` The id of the test.
+     * 
+     * Ok if the test was deleted successfully.
+     */
+    pub fn delete_test(&mut self, test_id: &str) -> Result<(), ApplicationError> {
+        let index = self.tests.iter().position(|test| test.id == test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        self.tests.remove(index);
+        Ok(())
+    }
+
+    /**
+     * Get a new listener.
+     * 
+     * `test_id` The id of the test.
+     * `listener_id` The id of the listener.
+     * 
+     * The listener configuration.
+     */
+    pub fn get_listener(&mut self, test_id: &str, listener_id: &str) -> Option<TcpListenerData> {
+        self.get_test(test_id).and_then(|test| test.listeners.iter_mut().find(|listener| listener.id == listener_id).cloned())
+    }
+
+    /**
+     * Delete listener by id.
+     * 
+     * `test_id` The id of the test.
+     * `listener_id` The id of the listener.
+     * 
+     * Ok if the listener was deleted successfully.
+     */
+    pub fn delete_listener(&mut self, test_id: &str, listener_id: &str) -> Result<(), ApplicationError> {
+        let test: &mut TestConfiguration = self.get_test(test_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        let index = test.listeners.iter().position(|listener| listener.id == listener_id).ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
+        test.listeners.remove(index);
+        Ok(())
+    }
+
+    /**
+     * Update the listener configuration.
+     * 
+     * `test_id` The id of the test.
+     * `listener_id` The id of the listener.
+     * `file` The file to read from.
+     * `data` The data to return. If this is set, the file will be ignored.
+     * `delay_write_ms` Time to wait before writing the response.
+     * `port` The port to listen on.
+     * `accept` Do accept connections.
+     * `close_connection` When to close the connection.
+     * 
+     * Ok if the listener was updated successfully.
+     */
+    pub fn update_listener(&mut self, test_id: &str, listener_id: &str, file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool, close_connection: CloseConnectionWhen) -> Result<(), ApplicationError> {
+        let mut listener = self.get_listener(test_id, listener_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
+        listener.file = file;
+        listener.data = data;
+        listener.delay_write_ms = delay_write_ms;
+        listener.port = port;
+        listener.accept = accept;
+        listener.close_connection = close_connection;
+        Ok(())
+    }
+
+    /**
+     * Get a server by its ID.
+     *
+     * `test_id` The ID of the test.
+     * `server_id` The ID of the server.
+     *
+     * The server configuration.
+     */
+    pub fn get_server(&mut self, test_id: &str, server_id: &str) -> Option<&mut ServerConfiguration> {
+        self.get_test(test_id)
+            .and_then(|test| test.get_server(server_id))
+    }
+
+    /**
+     * Delete server by id.
+     * 
+     * `test_id` The id of the test.
+     * `server_id` The id of the server.
+     * 
+     * Ok if the server was deleted successfully.
+     */
+    pub fn delete_server(&mut self, test_id: &str, server_id: &str) -> Result<(), ApplicationError> {
+        let test: &mut TestConfiguration = self.get_test(test_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        test.delete_server(server_id)
+    }
+
+    /**
+     * Get an endpoint by its ID.
+     *
+     * `test_id` The ID of the test.
+     * `server_id` The ID of the server.
+     * `endpoint_id` The ID of the endpoint.
+     *
+     * The endpoint configuration.
+     */
+    pub fn get_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Option<EndpointConfiguration> {
+        self.get_server(test_id, server_id).and_then(|server| server.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id).cloned())
+    }
+
+    /**
+     * Delete endpoint by id.
+     * 
+     * `test_id` The id of the test.
+     * `server_id` The id of the server.
+     * `endpoint_id` The id of the endpoint.
+     * 
+     * Ok if the endpoint was deleted successfully.
+     */
+    pub fn delete_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Result<(), ApplicationError> {
+        let server: &mut ServerConfiguration = self.get_server(test_id, server_id).ok_or(ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
+        server.delete_endpoint(endpoint_id)
+    }
+
+    /**
+     * Update the server configuration.
+     * 
+     * `test_id` The id of the test.
+     * `server_id` The id of the server.
+     * `endpoint_id` The id of the endpoint.
+     * `path_expression` The path expression for the apinae API. This is a regular expression.
+     * `method` The HTTP method.
+     * `mock_response` The mock response.
+     * `route` The route configuration.
+     * 
+     * Ok if the server was updated successfully.
+     */
+    pub fn update_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str, path_expression: &str, method: &str, mock_response: Option<MockResponseConfiguration>, route: Option<RouteConfiguration>) -> Result<(), ApplicationError> {
+        let mut endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
+        endpoint.path_expression = path_expression.to_string();
+        endpoint.method = method.to_string();
+        endpoint.mock = mock_response;
+        endpoint.route = route;
+        Ok(())
     }
 }
 
@@ -131,6 +298,39 @@ impl TestConfiguration {
             servers,
             listeners,
         })
+    }
+
+    /**
+     * Update the test configuration.
+     *
+     * `name` The name of the test.
+     * `description` The description of the test.
+     */
+    pub fn update(&mut self, name: String, description: String) {
+        self.name = name;
+        self.description = description;
+    }
+
+    /**
+     * Get server by ID.
+     * 
+     * `server_id` The ID of the server.
+     */
+    pub fn get_server(&mut self, server_id: &str) -> Option<&mut ServerConfiguration> {
+        self.servers.iter_mut().find(|server| server.id == server_id)
+    }
+
+    /** 
+     * Delete server by id.
+     * 
+     * `server_id` The id of the server.
+     * 
+     * Ok if the server was deleted successfully.
+     */
+    pub fn delete_server(&mut self, server_id: &str) -> Result<(), ApplicationError> {
+        let index = self.servers.iter().position(|server| server.id == server_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
+        self.servers.remove(index);
+        Ok(())
     }
 }
 
@@ -225,6 +425,33 @@ impl ServerConfiguration {
             https_config,
         })
     }
+
+    /** 
+     * Update the server configuration.
+     * 
+     * `name` The name of the server.
+     * `http_port` The port to run the server on.
+     */
+    pub fn update(&mut self, name: String, http_port: Option<u16>, https_config: Option<HttpsConfiguration>) {
+        self.name = name;
+        self.http_port = http_port;
+        if let Some(https_config) = https_config {
+            self.https_config = Some(https_config);
+        }
+    }
+
+    /**
+     * Delete endpoint by id.
+     * 
+     * `endpoint_id` The id of the endpoint.
+     * 
+     * Ok if the endpoint was deleted successfully.
+     */
+    pub fn delete_endpoint(&mut self, endpoint_id: &str) -> Result<(), ApplicationError> {
+        let index = self.endpoints.iter().position(|endpoint| endpoint.id == endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
+        self.endpoints.remove(index);
+        Ok(())
+    }
 }
 
 /**
@@ -235,8 +462,8 @@ impl ServerConfiguration {
 pub struct EndpointConfiguration {
     // The ID of the test. This is a UUID automatically generated.
     pub id: String,
-    // Endpoint for the apinae API. This is a regular expression.
-    pub endpoint: String,
+    // Path expression for the apinae API. This is a regular expression.
+    pub path_expression: String,
     // The HTTP method.
     pub method: String,
     // The mock response.
@@ -249,7 +476,7 @@ impl EndpointConfiguration {
     /**
      * Create a new endpoint configuration.
      *
-     * `endpoint` Endpoint for the apinae API. This is a regular expression.
+     * `path_expression` Endpoint for the apinae API. This is a regular expression.
      * `method` The HTTP method.
      * `mock_response` The mock response.
      * `route` The route configuration.
@@ -258,7 +485,7 @@ impl EndpointConfiguration {
      */
     #[must_use]
     pub fn new(
-        endpoint: String,
+        path_expression: String,
         method: String,
         mock: Option<MockResponseConfiguration>,
         route: Option<RouteConfiguration>    
@@ -267,12 +494,13 @@ impl EndpointConfiguration {
 
         Ok(EndpointConfiguration {
             id,
-            endpoint,
+            path_expression,
             method,
             mock,
             route,
         })
     }
+
 }
 
 /**
@@ -422,8 +650,9 @@ impl From<TlsVersion> for String {
     }
 }
 
-impl From<&str> for TlsVersion {
-    fn from(version: &str) -> Self {
+impl From<String> for TlsVersion {
+    fn from(version: String) -> Self {
+        let version = version.as_str();
         match version {
             "TLSv1.0" => TlsVersion::TLSv1_0,
             "TLSv1.1" => TlsVersion::TLSv1_1,
@@ -442,7 +671,7 @@ impl From<&str> for TlsVersion {
 #[serde(rename_all = "camelCase")]
 pub struct RouteConfiguration {
     // The URL of the endpoint.
-    pub endpoint: String,
+    pub url: String,
     // The proxy url. Example: `<http://localhost:8080>`
     pub proxy_url: Option<String>,
     // The log file where the requests and responses are stored.
@@ -474,7 +703,7 @@ impl RouteConfiguration {
     /**
      * Create a new route configuration.
      *
-     * `endpoint` The URL of the endpoint. Example `<http://localhost:8080>`
+     * `url` The URL of the endpoint. Example `<http://localhost:8080>`
      * `proxy_url` Proxy to use.
      * `log` The log file where the requests and responses are stored.
      * `verbose` Verbose
@@ -491,7 +720,7 @@ impl RouteConfiguration {
     #[allow(clippy::fn_params_excessive_bools)]
     #[must_use]
     pub fn new(
-        endpoint: String,
+        url: String,
         proxy_url: Option<String>,
         log: Option<String>,
         verbose: bool,
@@ -504,7 +733,7 @@ impl RouteConfiguration {
         connect_timeout: Option<u64>,
     ) -> Self {
         RouteConfiguration {
-            endpoint,
+            url,
             proxy_url,
             log,
             verbose,
@@ -608,7 +837,7 @@ mod test {
         assert_eq!(configuration.tests[0].servers[0].http_port, Some(8080));
         assert_eq!(configuration.tests[0].servers[0].endpoints.len(), 1);
         assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0].endpoint,
+            configuration.tests[0].servers[0].endpoints[0].path_expression,
             "/test"
         );
         assert_eq!(
@@ -649,7 +878,7 @@ mod test {
                 .route
                 .as_ref()
                 .unwrap()
-                .endpoint,
+                .url,
             "/test"
         );
     }

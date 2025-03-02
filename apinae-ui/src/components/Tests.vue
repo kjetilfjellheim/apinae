@@ -62,19 +62,18 @@ const confirmDelete = (test) => {
 const addTest = () => {
     invoke("add_test", {})
         .then((message) => {
-            console.log("add_test", message);
             refresh();
         })
         .catch((error) => window.alert(error));
 }
 
 //Starts the test by calling the start_test function in the backend.
-//This is called when the user clicks the play button. The process_id is set to the
-//process_id returned by the backend.
+//This is called when the user clicks the play button. The processId is set to the
+//processId returned by the backend.
 const startTest = (test) => {
     invoke("start_test", { testid: test.id })
         .then((message) => {
-            test.process_id = message.process_id
+            test.processId = message.processId
         })
         .catch((error) => window.alert(error));
 }
@@ -84,7 +83,7 @@ const startTest = (test) => {
 const stopTest = (test) => {
     invoke("stop_test", { testid: test.id })
         .then((message) => {
-            test.process_id = message.process_id;
+            test.processId = message.processId;
         })
         .catch((error) => window.alert(error));
 }
@@ -172,7 +171,7 @@ onMounted(() => refresh());
                                                 data-bs-target="#idEditTestModel"><i
                                                     class="fa-solid fa-pen-to-square"></i></button>
                                                     <router-link
-                                                    :to="{ name: 'Test', params: { test_id: test.id } }">
+                                                    :to="{ name: 'Test', params: { testid: test.id } }">
                                             <button type="button"
                                                 class="btn btn-sm btn-outline-primary text-decoration-none"><i
                                                         class="fa-solid fa-server"></i></button></router-link>
@@ -187,7 +186,7 @@ onMounted(() => refresh());
                             <td class="align-middle">
                                 <span class="align-middle">
                                     <button type="button" class="btn btn-sm btn-warning" @click="startTest(test)"
-                                        v-if="test.process_id === null">
+                                        v-if="test.processId === null">
                                         <i class="fa-solid fa-play"></i></button>
                                     <button type="button" class="btn btn-sm btn-success" @click="stopTest(test)" v-else>
                                         <i class="fa-solid fa-stop"></i></button>

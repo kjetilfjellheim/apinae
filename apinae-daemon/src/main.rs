@@ -137,7 +137,7 @@ fn get_test<'a>(
     let test = config.tests.iter().find(|test| test.id == id);
     match test {
         Some(test) => Ok(test),
-        None => Err(ApplicationError::CouldNotFindTest(format!(
+        None => Err(ApplicationError::CouldNotFind(format!(
             "No test with id: {id}"
         ))),
     }
