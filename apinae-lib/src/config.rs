@@ -557,10 +557,8 @@ impl ServerConfiguration {
         https_config: Option<HttpsConfiguration>,
     ) {
         self.name = name;
-        self.http_port = http_port;
-        if let Some(https_config) = https_config {
-            self.https_config = Some(https_config);
-        }
+        self.http_port = http_port;        
+        self.https_config = https_config;    
     }
 
     /**
