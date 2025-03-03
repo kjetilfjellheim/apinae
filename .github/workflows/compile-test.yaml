@@ -30,9 +30,9 @@ jobs:
             - name: install frontend dependencies
               run: npm install --prefix apinae-ui      
             - name: Build daemon
-              run: cargo build --release 
+              run: cargo build
             - name: Build UI
-              run: npm run tauri build -- --no-bundle --prefix apinae-ui                     
+              run: cargo tauri build --no-bundle                     
     outdated:
       name: Outdated
       runs-on: ubuntu-22.04
