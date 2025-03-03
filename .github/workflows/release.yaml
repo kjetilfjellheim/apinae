@@ -20,6 +20,8 @@ jobs:
         run: |
           sudo apt-get update  
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+      - name: Install tinyproxy
+        run: sudo apt install tinyproxy            
       - name: Install dependencies
         run: cargo fetch
       - name: Compile
