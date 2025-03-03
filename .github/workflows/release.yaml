@@ -16,14 +16,29 @@ jobs:
         uses: bruceadams/get-release@v1.3.2
         env:
            GITHUB_TOKEN: ${{ github.token }}
-      - name: Build binary
+      - name: Install Tauri dependencies
+        run: sudo apt-get install -y libwebkit2gtk-4.0-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev patchelf
+      - name: install frontend dependencies
+        run: npm install --prefix apinae-ui      
+      - name: Build daemon
         run: cargo build --release 
-      - name: Upload release binary
+      - name: Build UI
+        run: npm run tauri build -- --no-bundle --prefix apinae-ui       
+      - name: Upload daemon binary
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: ./target/release/apinae-daemon
-          asset_name: apinae-daemon
+          asset_name: apinae
+          asset_content_type: application/octet-stream 
+      - name: Upload UI
+        uses: actions/upload-release-asset@v1.0.2
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: ./target/release/apinae-ui
+          asset_name: apinae-ui
           asset_content_type: application/octet-stream 
