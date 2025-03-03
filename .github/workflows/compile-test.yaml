@@ -27,6 +27,8 @@ jobs:
               run: cargo build
             - name: Compile and test
               run: cargo test -- --test-threads=1
+            - name: Install cargo Tauri
+              run: cargo install cargo-tauri
             - name: install frontend dependencies
               run: npm install --prefix apinae-ui      
             - name: Build daemon
