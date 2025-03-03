@@ -1,2 +1,3 @@
 /target
-apinae-ui/node_modules
+apinae-ui/node_modules/**
+apinae-ui/dist/**

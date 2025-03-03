@@ -15,10 +15,10 @@ async fn test_tcp_listener() {
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     // Assert the server response.
-    assert_command(&mut server_command, "8080", "Test").await;
-    assert_command(&mut server_command, "8081", "Testing This File").await;
-    assert_command(&mut server_command, "8082", "").await;
-    assert_command(&mut server_command, "8083", "").await;
+    assert_command(&mut server_command, "8180", "Test").await;
+    assert_command(&mut server_command, "8181", "Testing This File").await;
+    assert_command(&mut server_command, "8182", "").await;
+    assert_command(&mut server_command, "8183", "").await;
 
     // Stop the server.
     server_command.kill().expect("Failed to kill process");    
