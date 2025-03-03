@@ -18,7 +18,7 @@ jobs:
             - name: Install tinyproxy
               run: sudo apt install tinyproxy  
             - name: Install tauri dependencies
-              run: sudo apt install webkit2gtk build-essential curl wget file openssl gtk+3.0 libayatana-appindicator llibrsvg
+              run: sudo apt install libwebkit2gtk-4.1-dev_2.46.1-0ubuntu1_amd64  build-essential curl wget file openssl gtk+3.0 libayatana-appindicator llibrsvg
             - name: Install dependencies
               run: cargo fetch
             - name: Compile
