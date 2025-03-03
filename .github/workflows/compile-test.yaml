@@ -18,15 +18,13 @@ jobs:
             - name: Install tinyproxy
               run: sudo apt install tinyproxy  
             - name: Install tauri dependencies
-              run: sudo apt install libwebkit2gtk-4.1-dev_2.46.1-0ubuntu1_amd64  build-essential curl wget file openssl gtk+3.0 libayatana-appindicator llibrsvg
+              run: sudo apt install -y libwebkit2gtk-4.1-0 build-essential curl wget file openssl gtk+3.0 libayatana-appindicator llibrsvg
             - name: Install dependencies
               run: cargo fetch
             - name: Compile
               run: cargo build
             - name: Compile and test
               run: cargo test
-            - name: Install Tauri dependencies
-              run: sudo apt-get install -y libwebkit2gtk-4.1-dev_2.46.1-0ubuntu1_amd64 
             - name: install frontend dependencies
               run: npm install --prefix apinae-ui      
             - name: Build daemon
