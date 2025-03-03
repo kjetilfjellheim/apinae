@@ -24,6 +24,7 @@ pub fn run() {
     /*
      * Initialize the Tauri application.
      */
+    #[warn(unused_mut)]
     let mut builder = tauri::Builder::default();
 
     /*
