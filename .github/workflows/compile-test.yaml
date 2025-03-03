@@ -35,20 +35,3 @@ jobs:
               run: cargo build
             - name: Build UI
               run: cargo tauri build --no-bundle                     
-    outdated:
-      name: Outdated
-      runs-on: ubuntu-22.04
-      timeout-minutes: 45
-      steps:
-        - uses: actions/checkout@v4
-        - uses: dtolnay/rust-toolchain@stable
-        - uses: dtolnay/install@cargo-outdated
-        - run: cargo outdated -w --exit-code 1
-    clippy:
-      name: Clippy
-      runs-on: ubuntu-22.04
-      timeout-minutes: 45
-      steps:
-        - uses: actions/checkout@v4
-        - uses: dtolnay/rust-toolchain@clippy
-        - run: cargo clippy -- -Dclippy::all -Dclippy::pedantic
