@@ -25,6 +25,14 @@ jobs:
               run: cargo build
             - name: Compile and test
               run: cargo test
+            - name: Install Tauri dependencies
+              run: sudo apt-get install -y libwebkit2gtk-4.1-dev_2.46.1-0ubuntu1_amd64 
+            - name: install frontend dependencies
+              run: npm install --prefix apinae-ui      
+            - name: Build daemon
+              run: cargo build --release 
+            - name: Build UI
+              run: npm run tauri build -- --no-bundle --prefix apinae-ui                     
     outdated:
       name: Outdated
       runs-on: ubuntu-24.04
