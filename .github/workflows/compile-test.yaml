@@ -37,7 +37,7 @@ jobs:
               run: cargo tauri build --no-bundle                     
     clippy:
         name: Clippy
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-22.04
         timeout-minutes: 45
         steps:
             - uses: actions/checkout@v4
