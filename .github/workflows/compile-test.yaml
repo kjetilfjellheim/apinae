@@ -35,3 +35,11 @@ jobs:
               run: cargo build
             - name: Build UI
               run: cargo tauri build --no-bundle                     
+    clippy:
+        name: Clippy
+        runs-on: ubuntu-latest
+        timeout-minutes: 45
+        steps:
+            - uses: actions/checkout@v4
+            - uses: dtolnay/rust-toolchain@clippy
+            - run: cargo clippy --all-targets --all-features -- -D warnings       

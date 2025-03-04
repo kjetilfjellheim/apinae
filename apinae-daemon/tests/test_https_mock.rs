@@ -8,7 +8,8 @@ mod common;
  */
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 async fn test_https_server() {
-    // Start the server.
+    // Start the server. Allow zombie process as it's a daemon running.
+    #![allow(clippy::zombie_processes)]
     let mut server_command = common::start_server("./tests/resources/test_https_mock.json", "1")
         .await
         .expect("Failed to start server");
