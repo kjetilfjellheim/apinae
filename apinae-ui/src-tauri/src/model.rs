@@ -332,9 +332,9 @@ mod  test {
 
         assert_eq!(route_row.url, "url");
         assert_eq!(route_row.proxy_url, None);
-        assert_eq!(route_row.http1_only, false);
-        assert_eq!(route_row.accept_invalid_certs, false);
-        assert_eq!(route_row.accept_invalid_hostnames, false);
+        assert!(!route_row.http1_only);
+        assert!(!route_row.accept_invalid_certs);
+        assert!(!route_row.accept_invalid_hostnames);
         assert_eq!(route_row.min_tls_version, None);
         assert_eq!(route_row.max_tls_version, None);
         assert_eq!(route_row.read_timeout, None);
