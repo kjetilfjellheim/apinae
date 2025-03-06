@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use apinae_lib::config::{EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion};
 
 /**
@@ -110,7 +108,7 @@ pub struct MockRow {
     // The status response of the mock.
     pub status: u16,
     // The headers of the mock.
-    pub headers: HashMap<String, String>,
+    pub headers: String,
     // The delay for writing responses.
     pub delay: u64,
 }
@@ -123,7 +121,7 @@ impl From<&MockResponseConfiguration> for MockRow {
         Self {
             response: mock.response.clone(),
             status: mock.status,
-            headers: mock.headers.clone(),
+            headers: mock.headers.clone().into_iter().map(|(key, value)| format!("{}: {}\n", key, value)).collect::<String>(),
             delay: mock.delay,
         }
     }
@@ -134,7 +132,18 @@ impl From<MockRow> for MockResponseConfiguration {
      * Convert a mock row to a mock response configuration.
      */
     fn from(mock: MockRow) -> Self {
-        MockResponseConfiguration::new(mock.response.clone(), mock.status, mock.headers.clone(), mock.delay)
+        MockResponseConfiguration::new(
+            mock.response.clone(), 
+            mock.status, 
+            mock.headers.split("\n").
+                filter(|header| !header.is_empty() && header.contains(":")).
+                map(|header| {
+                    let mut parts = header.split(":");
+                    let key = parts.next().unwrap_or("").trim();
+                    let value = parts.next().unwrap_or("").trim();
+                    (String::from(key), String::from(value))
+                }).collect(),
+            mock.delay)
     }
 }
 
@@ -276,6 +285,8 @@ impl From<&TcpListenerData> for TcpListenerRow {
 
 mod  test {
 
+    use std::collections::HashMap;
+
     #[allow(unused_imports)]
     use super::*;
 
@@ -320,13 +331,13 @@ mod  test {
 
         assert_eq!(mock_row.response, None);
         assert_eq!(mock_row.status, 200);
-        assert_eq!(mock_row.headers, HashMap::new());
+        assert_eq!(mock_row.headers, String::new());
         assert_eq!(mock_row.delay, 0);
     }
 
     #[test]
     fn test_route_row_from_route_configuration() {
-        let route_config = RouteConfiguration::new("url".to_owned(), None, None, false, false, false, None, None, None, None);
+        let route_config = RouteConfiguration::new("url".to_owned(), None, None, false, false, false, Some(TlsVersion::TLSv1_2), Some(TlsVersion::TLSv1_1), None, None);
 
         let route_row = RouteRow::from(&route_config);
 
@@ -335,12 +346,15 @@ mod  test {
         assert!(!route_row.http1_only);
         assert!(!route_row.accept_invalid_certs);
         assert!(!route_row.accept_invalid_hostnames);
-        assert_eq!(route_row.min_tls_version, None);
-        assert_eq!(route_row.max_tls_version, None);
+        assert_eq!(route_row.min_tls_version, Some("TLSv1.2".to_owned()));
+        assert_eq!(route_row.max_tls_version, Some("TLSv1.1".to_owned()));
         assert_eq!(route_row.read_timeout, None);
         assert_eq!(route_row.connect_timeout, None);
     }
 
+    /**
+     * Test the conversion from a https row to a https configuration.
+     */
     #[test]
     fn test_https_row_from_https_configuration() {
         let https_config = HttpsConfiguration::new("server_certificate".to_owned(), "private_key".to_owned(), 443, None, Vec::new());
@@ -351,6 +365,50 @@ mod  test {
         assert_eq!(https_row.https_port, 443);
         assert_eq!(https_row.client_certificate, None);
         assert_eq!(https_row.supported_tls_versions, Vec::<String>::new());        
+    }
+
+    /**
+     * Test the conversion from a mock row to a mock response configuration with 
+     * headers and response.
+     */
+    #[test]
+    fn test_from_mockrow_to_mockresponseconfiguration() {
+        let mock_row = MockRow {
+            response: Some("response".to_owned()),
+            status: 200,
+            headers: "header: value\nheader2:\n \n".to_owned(),
+            delay: 0,
+        };
+
+        let mock_config = MockResponseConfiguration::from(mock_row);
+
+        assert_eq!(mock_config.response, Some("response".to_owned()));
+        assert_eq!(mock_config.status, 200);
+        assert_eq!(mock_config.headers.get("header"), Some(&"value".to_owned()));
+        assert_eq!(mock_config.headers.get("header2"), Some(&"".to_owned()));
+        assert_eq!(mock_config.delay, 0);
+    }
+
+
+    /**
+     * Test the conversion from a mock row to a mock response configuration 
+     * with no headers and empty response.
+     */
+    #[test]
+    fn test_from_mockrow_to_mockresponseconfiguration_no_header() {
+        let mock_row = MockRow {
+            response: None,
+            status: 200,
+            headers: "".to_owned(),
+            delay: 0,
+        };
+
+        let mock_config = MockResponseConfiguration::from(mock_row);
+
+        assert_eq!(mock_config.response, None);
+        assert_eq!(mock_config.status, 200);
+        assert_eq!(mock_config.headers.len(), 0);
+        assert_eq!(mock_config.delay, 0);
     }
 
 
