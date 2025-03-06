@@ -23,17 +23,17 @@ mod test {
 
     #[test]
     fn test_daemon_args() {
-        let args = Args::parse_from(&["apinae-daemon", "--file", "test.json", "--id", "1"]);
+        let args = Args::parse_from(["apinae-daemon", "--file", "test.json", "--id", "1"]);
         assert_eq!(args.file, "test.json");
         assert_eq!(args.id, Some("1".to_string()));
-        assert_eq!(args.list, false);
+        assert!(!args.list);
     }
 
     #[test]
     fn test_daemon_args_list() {
-        let args = Args::parse_from(&["apinae-daemon", "--file", "test.json", "--list"]);
+        let args = Args::parse_from(["apinae-daemon", "--file", "test.json", "--list"]);
         assert_eq!(args.file, "test.json");
         assert_eq!(args.id, None);
-        assert_eq!(args.list, true);
+        assert!(args.list);
     }
 }

@@ -260,7 +260,7 @@ const convertEndpointToRequestObject = (editEndpointData, editMockData, editRout
 const convertMockToRequestObject = (mockData) => {
   return {
     status: mockData.value.status ? parseInt(mockData.value.status) : null,
-    headers: {},
+    headers: mockData.value.headers,
     delay: parseInt(mockData.value.delay),
     response: mockData.value.response
   }
@@ -637,13 +637,9 @@ onMounted(() => {
                                     <dt class="col-3 small">Delay</dt>
                                     <dd class="col-3 small">{{ endpoint.mock?.delay }}</dd>
                                     <dt class="col-3 small">Headers</dt>
-                                    <dd class="col-3 small">
-                                      <ul class="list-unstyled">
-                                        <li v-for="(value, key) in endpoint.mock?.headers">{{ key }}: {{ value }}</li>
-                                      </ul>
-                                    </dd>                                    
+                                    <dd class="col-3 small"><pre>{{ endpoint.mock?.headers }}</pre></dd>                                    
                                     <dt class="col-3 small">Body</dt>
-                                    <dd class="col-3 small">{{ endpoint.mock?.response }}</dd>
+                                    <dd class="col-3 small"><pre>{{ endpoint.mock?.response }}</pre></dd>
                                   </dl>
                                 </div>
                                 <div v-if="endpoint?.route">
@@ -899,9 +895,14 @@ onMounted(() => {
                   v-model="editMockData.delay">
             </div>
             <div class="col-md-12" v-if="showEditMockData">
+              <label for="idEditHeaders" class="form-label small">Headers</label>
+              <textarea type="text" class="form-control form-control-sm" id="idEditHeaders"
+                v-model="editMockData.headers" rows="6"></textarea>
+            </div>             
+            <div class="col-md-12" v-if="showEditMockData">
               <label for="idEditResponse" class="form-label small">Response</label>
               <textarea type="text" class="form-control form-control-sm" id="idEditResponse"
-                v-model="editMockData.response"></textarea>
+                v-model="editMockData.response" rows="6"></textarea>
             </div>  
             <div class="col-md-6" v-if="!showEditMockData">              
               <label for="idEditUrl" class="form-label small">Url</label>
