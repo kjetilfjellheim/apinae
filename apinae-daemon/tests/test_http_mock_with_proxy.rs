@@ -8,15 +8,13 @@ mod common;
  */
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 async fn test_http_server_with_proxy() {
-    // Start the proxy. Allow zombie process as it's a daemon running.
-    #![allow(clippy::zombie_processes)]    
     let mut tinyproxy_command = Command::new("tinyproxy")
         .arg("-c")
         .arg("./tests/resources/http_tinyproxy.conf")
         .arg("-d")
         .spawn()
         .expect("Failed to start tinyproxy");
-    // Start the server. Allow zombie process as it's a daemon running.
+    // Start the server.
     let mut server_command =
         common::start_server("./tests/resources/test_http_mock_with_proxy.json", "1")
             .await
