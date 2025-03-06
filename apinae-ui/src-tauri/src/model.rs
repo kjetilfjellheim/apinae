@@ -285,6 +285,7 @@ impl From<&TcpListenerData> for TcpListenerRow {
 
 mod  test {
 
+    #[allow(unused_imports)]
     use std::collections::HashMap;
 
     #[allow(unused_imports)]
