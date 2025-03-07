@@ -332,6 +332,30 @@ onMounted(() => {
   const testId = route.params.testid
   refresh(testId)
 });
+
+//Verify that string input is filled out. 
+const validateStringRequired = (str) => {
+  if (str && str.length > 0) {
+    return "is-valid";
+  }
+  return "is-invalid";
+}
+
+//Verify that input is a number. 
+const validateNumberRequired = (str) => {
+  if (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+    return "is-valid";
+  }
+  return "is-invalid";
+}
+
+//Verify that input is a number or null. 
+const validateNumberOptional = (str) => {
+  if (!str || (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+    return "is-valid";
+  }
+  return "is-invalid"; 
+}
 </script>
 <style>
 /* The max height is full view height minus (top bar, menu bar and status bar + margins) */
@@ -379,6 +403,13 @@ onMounted(() => {
         <li class="breadcrumb-item"><router-link to="/"><i class="fas fa-house"></i></router-link></li>
         <li class="breadcrumb-item">{{ test?.name }}</li>
       </ol>
+      <div class="btn-group btn-group-sm align-middle small me-2" role="group">
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="addHttpServer()"><i class="fa-solid fa-plus">          
+      </i>Add http server</button>
+      <button type="button" class="btn btn-sm btn-outline-primary " @click="addTcpListener()"><i
+        class="fa-solid fa-plus"></i>Add tcp listener</button>     
+      </div>
+ 
     </div>
   </nav>
   <!--
@@ -403,13 +434,8 @@ onMounted(() => {
         Show the tcp listeners
         TODO: Move this to a separate component.
       -->
-      <div class="col-12">
-        <h5>Tcp listeners
-          <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-            <button type="button" class="btn btn-sm btn-outline-primary " @click="addTcpListener()"><i
-                class="fa-solid fa-plus"></i></button>
-          </div>
-        </h5>
+      <div class="col-12" v-if="tcpListeners?.length > 0">
+        <h5>Tcp listeners</h5>
       </div>
       <div class="col-12">
         <div class="card" v-for="tcpListener in tcpListeners" :key="tcpListener.port"
@@ -471,17 +497,17 @@ onMounted(() => {
                     </div>
                   </div>
                 </div>
-                <div class="col-8" v-if="tcpListener.file">
-                  <div class="mb-0 row">
+                <div class="col-8">
+                  <div class="mb-0 row" v-if="tcpListener.file">
                     <label for="fileLabel" class="col-sm-3 col-form-label small text-truncate padding-0">File</label>
-                    <div class="col-sm-9">
+                    <div class="col-sm-12">
                       <input type="text" readonly class="form-control-plaintext small padding-0" id="fileLabel"
-                        :value="tcpListener.data">
+                        :value="tcpListener.file">
                     </div>
                   </div>
                   <div class="mb-0 row" v-if="tcpListener.data">
-                    <label for="dataLabel" class="col-sm-3 col-form-label small text-truncate padding-0">Data</label>
-                    <div class="col-sm-9 small">{{ tcpListener.file }}</div>
+                    <label for="dataLabel" class="col-2 col-form-label small text-truncate padding-0">Data</label>
+                    <div class="col-sm-9 small" style="max-height: 8pc; overflow-y: scroll; max-width: calc(100% - 150px);"><pre>{{ tcpListener.data }}</pre></div>
                   </div>
                 </div>
               </div>
@@ -495,13 +521,8 @@ onMounted(() => {
           Show the http servers
           TODO: Move this to a separate component.
         -->
-        <div class="col-12">
-          <h5>Http servers
-            <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-              <button type="button" class="btn btn-sm btn-outline-primary" @click="addHttpServer()"><i
-                  class="fa-solid fa-plus"></i></button>
-            </div>
-          </h5>
+        <div class="col-12" v-if="httpServers?.length > 0">
+          <h5>Http servers</h5>
         </div>
         <div class="card" v-for="httpServer in httpServers" :key="httpServer.port">
           <div class="card-header">
@@ -719,23 +740,23 @@ onMounted(() => {
             <div class="col-md-4">
               <label for="idEditPort" class="form-label small">Port</label>
               <input type="text" class="form-control form-control-sm" id="idEditPort"
-                v-model="editTcpListenerData.port">
+                v-model="editTcpListenerData.port" :class="validateNumberRequired(editTcpListenerData.port)">
             </div>
             <div class="col-md-4">
               <label for="idEditAccept" class="form-label small">Accept</label>
               <div class="form-check">
-                <input type="checkbox" class="form-check-input" id="idEditAccept"
+                <input type="checkbox" class="form-check-input is-valid" id="idEditAccept"
                   v-model="editTcpListenerData.accept" />
               </div>
             </div>
             <div class="col-md-6">
               <label for="idEditDelayedWrite" class="form-label small">Delayed write ms</label>
               <input type="text" class="form-control form-control-sm" id="idEditDelayedWrite"
-                v-model="editTcpListenerData.delayWriteMs">
+                v-model="editTcpListenerData.delayWriteMs" :class="validateNumberOptional(editTcpListenerData.delayWriteMs)">
             </div>
             <div class="col-md-6">
               <label for="idEditCloseConnection" class="form-label small">Close connection&nbsp;</label>              
-              <select id="idEditCloseConnection" class="form-select form-select-sm"
+              <select id="idEditCloseConnection" class="form-select form-select-sm" :class="validateStringRequired(editTcpListenerData.closeConnection)"
                 v-model="editTcpListenerData.closeConnection">
                 <option value="AfterRead">AfterRead</option>
                 <option value="AfterResponse">AfterResponse</option>               
@@ -745,12 +766,12 @@ onMounted(() => {
             </div>
             <div class="col-md-12">
               <label for="idEditFile" class="form-label small">File</label>
-              <input type="text" class="form-control form-control-sm" id="idEditFile"
+              <input type="text" class="form-control form-control-sm is-valid" id="idEditFile"
                 v-model="editTcpListenerData.file">
             </div>
             <div class="col-md-12">
               <label for="idEditData" class="form-label small">Response</label>
-              <textarea class="form-control form-control-sm" id="idEditData" rows="6"
+              <textarea class="form-control form-control-sm is-valid" id="idEditData" rows="6"
                 v-model="editTcpListenerData.data"></textarea>
             </div>
           </form>
@@ -784,12 +805,12 @@ onMounted(() => {
             </div>
             <div class="col-md-6">
               <label for="idEditName" class="form-label small">Name</label>
-              <input type="text" class="form-control form-control-sm" id="idEditName" v-model="editHttpServerData.name">
+              <input type="text" class="form-control form-control-sm" id="idEditName" v-model="editHttpServerData.name" :class="validateStringRequired(editHttpServerData.name)">
             </div>
             <div class="col-md-12">
               <label for="idEditHttpPort" class="form-label small">Http port</label>
               <input type="text" class="form-control form-control-sm" id="idEditHttpPort"
-                v-model="editHttpServerData.httpPort">
+                v-model="editHttpServerData.httpPort" :class="validateNumberOptional(editHttpServerData.httpPort)">
             </div>
             <div class="col-md-6">
               <div class="form-check">
@@ -801,40 +822,46 @@ onMounted(() => {
               <div class="form-check">
                 <label for="idEditHttpsPort" class="form-label small">Https port</label>
                 <input type="text" class="form-control form-control-sm" id="idEditHttpsPort"
-                  v-model="editHttpsConfig.httpsPort">
+                  v-model="editHttpsConfig.httpsPort" :class="validateNumberRequired(editHttpsConfig.httpsPort)">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditServerCertificate" class="form-label small">Server certificate</label>
                 <input type="text" class="form-control form-control-sm" id="idEditServerCertificate"
-                  v-model="editHttpsConfig.serverCertificate">
+                  v-model="editHttpsConfig.serverCertificate" :class="validateStringRequired(editHttpsConfig.serverCertificate)">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditPrivateKey" class="form-label small">Private key</label>
                 <input type="text" class="form-control form-control-sm" id="idEditPrivateKey"
-                  v-model="editHttpsConfig.privateKey">
+                  v-model="editHttpsConfig.privateKey" :class="validateStringRequired(editHttpsConfig.privateKey)">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditClientCertificate" class="form-label small">Client certificate</label>
-                <input type="text" class="form-control form-control-sm" id="idEditClientCertificate"
+                <input type="text" class="form-control form-control-sm is-valid" id="idEditClientCertificate"
                   v-model="editHttpsConfig.clientCertificate">
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
-                <input type="checkbox" id="idTLSv1_0" value="TLSv1.0" v-model="editSupportedTlsVersions" />
-                <label for="idTLSv1_0">&nbsp;TLSv1_0</label>
-                <input type="checkbox" id="idTLSv1_1" value="TLSv1.1" v-model="editSupportedTlsVersions" />
-                <label for="idTLSv1_1">&nbsp;TLSv1_1</label>
-                <input type="checkbox" id="idTLSv1_2" value="TLSv1.2" v-model="editSupportedTlsVersions" />
-                <label for="idTLSv1_2">&nbsp;TLSv1_2</label>
-                <input type="checkbox" id="idTLSv1_3" value="TLSv1.3" v-model="editSupportedTlsVersions" />
-                <label for="idTLSv1_3">&nbsp;TLSv1_3</label>
+                <input type="checkbox" id="idTLSv1_0" value="TLSv1.0" v-model="editSupportedTlsVersions" class="is-valid form-check-input"/>
+                <label for="idTLSv1_0" class="form-check-label">&nbsp;TLSv1_0</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" id="idTLSv1_1" value="TLSv1.1" v-model="editSupportedTlsVersions" class="is-valid form-check-input"/>
+                <label for="idTLSv1_1" class="form-check-label">&nbsp;TLSv1_1</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" id="idTLSv1_2" value="TLSv1.2" v-model="editSupportedTlsVersions" class="is-valid form-check-input" />
+                <label for="idTLSv1_2" class="form-check-label">&nbsp;TLSv1_2</label>
+              </div>
+              <div class="form-check">
+                <input type="checkbox" id="idTLSv1_3" value="TLSv1.3" v-model="editSupportedTlsVersions" class="is-valid form-check-input" />
+                <label for="idTLSv1_3" class="form-check-label">&nbsp;TLSv1_3</label>
               </div>
             </div>
           </form>
@@ -869,7 +896,7 @@ onMounted(() => {
             </div>
             <div class="col-md-4">
               <label for="idEditMethod" class="form-label small">Method&nbsp;</label>              
-              <select id="idEditMethod" class="form-select form-select-sm"
+              <select id="idEditMethod" class="form-select form-select-sm" :class="validateStringRequired(editEndpointData.method)"
                 v-model="editEndpointData.method">
                 <option value="DELETE">Delete</option>
                 <option value="GET">Get</option>
@@ -882,53 +909,53 @@ onMounted(() => {
             <div class="col-md-6">
               <label for="idEditPathExpression" class="form-label small">Path expression</label>
               <input type="text" class="form-control form-control-sm" id="idEditPathExpression"
-                v-model="editEndpointData.pathExpression">
+                v-model="editEndpointData.pathExpression" :class="validateStringRequired(editEndpointData.pathExpression)">
             </div>
             <div class="col-md-6" v-if="showEditMockData">
               <label for="idEditStatus" class="form-label small">Status</label>
               <input type="text" class="form-control form-control-sm" id="idEditStatus"
-                v-model="editMockData.status">
+                v-model="editMockData.status" :class="validateNumberRequired(editMockData.status)">
             </div>                                                     
             <div class="col-md-6" v-if="showEditMockData">              
               <label for="idEditDelay" class="form-label small">Delay</label>
                 <input type="text" class="form-control form-control-sm" id="idEditDelay"
-                  v-model="editMockData.delay">
+                  v-model="editMockData.delay" :class="validateNumberRequired(editMockData.delay)">
             </div>
             <div class="col-md-12" v-if="showEditMockData">
               <label for="idEditHeaders" class="form-label small">Headers</label>
-              <textarea type="text" class="form-control form-control-sm" id="idEditHeaders"
+              <textarea type="text" class="form-control form-control-sm is-valid" id="idEditHeaders"
                 v-model="editMockData.headers" rows="6"></textarea>
             </div>             
             <div class="col-md-12" v-if="showEditMockData">
               <label for="idEditResponse" class="form-label small">Response</label>
-              <textarea type="text" class="form-control form-control-sm" id="idEditResponse"
+              <textarea type="text" class="form-control form-control-sm is-valid" id="idEditResponse"
                 v-model="editMockData.response" rows="6"></textarea>
             </div>  
             <div class="col-md-6" v-if="!showEditMockData">              
               <label for="idEditUrl" class="form-label small">Url</label>
                 <input type="text" class="form-control form-control-sm" id="idEditUrl"
-                  v-model="editRouteData.url">
+                  v-model="editRouteData.url" :class="validateStringRequired(editRouteData.url)">
             </div>
             <div class="col-md-6" v-if="!showEditMockData">              
               <label for="idEditProxyUrl" class="form-label small">Proxy url</label>
-                <input type="text" class="form-control form-control-sm" id="idEditProxyUrl"
+                <input type="text" class="form-control form-control-sm is-valid" id="idEditProxyUrl"
                   v-model="editRouteData.proxyUrl">
             </div>           
             <div class="col-md-6" v-if="!showEditMockData">  
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="idEditHttp1Only" v-model="editRouteData.http1Only">
+                <input class="form-check-input is-valid" type="checkbox" id="idEditHttp1Only" v-model="editRouteData.http1Only">
                 <label class="form-check-label" for="idEditHttp1Only">Http1 only</label><br>                
               </div>
             </div>   
             <div class="col-md-6" v-if="!showEditMockData">  
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidCerts" v-model="editRouteData.acceptInvalidCerts">
+                <input class="form-check-input is-valid" type="checkbox" id="idEditAcceptInvalidCerts" v-model="editRouteData.acceptInvalidCerts">
                 <label class="form-check-label" for="idEditAcceptInvalidCerts">Accept invalid certs</label>
               </div>
             </div>   
             <div class="col-md-6" v-if="!showEditMockData">  
               <div class="form-check">
-                <input class="form-check-input" type="checkbox" id="idEditAcceptInvalidHostnames" v-model="editRouteData.acceptInvalidHostnames">
+                <input class="form-check-input is-valid" type="checkbox" id="idEditAcceptInvalidHostnames" v-model="editRouteData.acceptInvalidHostnames">
                 <label class="form-check-label" for="idEditAcceptInvalidHostnames">Accept invalid hostnames</label>
               </div>
             </div>  
@@ -936,7 +963,7 @@ onMounted(() => {
             </div>
             <div class="col-md-6" v-if="!showEditMockData">
               <label for="idEditMinTlsVersion" class="form-label small">Min Tls version&nbsp;</label>              
-              <select id="idEditMinTlsVersion" class="form-select form-select-sm"
+              <select id="idEditMinTlsVersion" class="form-select form-select-sm is-valid"
                 v-model="editRouteData.minTlsVersion">
                 <option value="TLSv1.0">TLSv1.0</option>
                 <option value="TLSv1.1">TLSv1.1</option>            
@@ -946,7 +973,7 @@ onMounted(() => {
             </div>
             <div class="col-md-6" v-if="!showEditMockData">
               <label for="idEditMaxTlsVersion" class="form-label small">Max Tls version&nbsp;</label>              
-              <select id="idEditMaxTlsVersion" class="form-select form-select-sm"
+              <select id="idEditMaxTlsVersion" class="form-select form-select-sm is-valid"
                 v-model="editRouteData.maxTlsVersion">
                 <option value="TLSv1.0">TLSv1.0</option>
                 <option value="TLSv1.1">TLSv1.1</option>            
@@ -956,11 +983,11 @@ onMounted(() => {
             </div>                           
             <div class="col-md-6" v-if="!showEditMockData">  
               <label class="form-label small" for="idEditReadTimeout">Read timeout</label>
-              <input class="form-control form-control-sm" type="text" id="idEditReadTimeout" v-model="editRouteData.readTimeout">
+              <input class="form-control form-control-sm" type="text" id="idEditReadTimeout" v-model="editRouteData.readTimeout" :class="validateNumberOptional(editRouteData.readTimeout)">
             </div>  
             <div class="col-md-6" v-if="!showEditMockData">  
               <label class="form-label small" for="idEditConnectTimeout">Connect timeout</label>
-              <input class="form-control form-control-sm" type="test" id="idEditConnectTimeout" v-model="editRouteData.connectTimeout">
+              <input class="form-control form-control-sm" type="test" id="idEditConnectTimeout" v-model="editRouteData.connectTimeout" :class="validateNumberOptional(editRouteData.connectTimeout)">
             </div>                                                
           </form>
         </div>
