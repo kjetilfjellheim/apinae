@@ -121,7 +121,7 @@ impl From<&MockResponseConfiguration> for MockRow {
         Self {
             response: mock.response.clone(),
             status: mock.status,
-            headers: mock.headers.clone().into_iter().map(|(key, value)| format!("{}: {}\n", key, value)).collect::<String>(),
+            headers: mock.headers.iter().fold(String::new(), |mut output, val| { output.push_str(&format!("{}: {}\n", val.0, val.1)); output }),
             delay: mock.delay,
         }
     }

@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::{model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow}, state::ProcessData};
 use tauri::{AppHandle, State};
 use crate::AppData;
-use apinae_lib::config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration};
+use apinae_lib::{config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration}, settings::Settings};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
 /**
@@ -495,7 +495,8 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
     } else {
         let file_path = get_current_file_path(&app_data)?;
         let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
-        let process = std::process::Command::new("apinae")        
+        let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
+        let process = std::process::Command::new(app_path)        
             .arg("--file")
             .arg(get_current_file_path(&app_data)?)
             .arg("--id")
@@ -555,6 +556,31 @@ pub async fn stop_test(app_data: State<'_, AppData>, testid: &str) -> Result<Tes
         }
     }
 }
+
+/**
+ * Saves the settings.
+ * 
+ * `settings` The settings being saved.
+ * 
+ * # Errors
+ * If the settings could not be saved.
+ */
+#[tauri::command]
+pub async fn save_settings(settings: Settings) -> Result<(), String> {
+    settings.save().map_err(|err| err.to_string())
+}
+
+/**
+ * Loads the settings.
+ * 
+ * Returns:
+ * The settings.
+ */
+#[tauri::command]
+pub async fn load_settings() -> Result<Settings, String> {
+    Ok(Settings::load())
+}
+
 
 /**
  * Gets the configuration data.

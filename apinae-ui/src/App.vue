@@ -2,6 +2,8 @@
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
+import settings from "./components/Settings.vue";
+
 const current_file_path = ref("");
 
 const render_route_view = ref(false);
@@ -34,6 +36,11 @@ async function clean() {
     .then((message) => {render_route_view.value = true;})
     .catch((error) => window.alert(error));
 } 
+
+function show_settings() {
+  const modal = new bootstrap.Modal(document.getElementById("idSettingsModal"));
+  modal.show();
+}
 
 </script>
 <style>
@@ -97,7 +104,7 @@ li.dropdown:last-child .dropdown-menu {
                 <li>
                   <hr class="dropdown-divider">
                 </li>
-                <li><a class="dropdown-item" v-on:click=""><i class="fa-solid fa-power-off"></i>&nbsp;Exit</a></li>
+                <li><a class="dropdown-item" data-bs-toggle="modal" data-bs-target="#idSettingsModal"><i class="fas fa-gear"></i>&nbsp;Settings</a></li>
               </ul>
             </li>
           </ul>
@@ -109,4 +116,5 @@ li.dropdown:last-child .dropdown-menu {
       <div class="container">File: {{ current_file_path }}</div>
     </footer>
   </main>
+  <settings></settings>
 </template>
