@@ -90,6 +90,30 @@ const stopTest = (test) => {
 
 //Refreshes the tests array when the component is mounted.
 onMounted(() => refresh());
+
+//Verify that string input is filled out. 
+const validateStringRequired = (str) => {
+  if (str && str.length > 0) {
+    return "is-valid";
+  }
+  return "is-invalid";
+}
+
+//Verify that input is a number. 
+const validateNumberRequired = (str) => {
+  if (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+    return "is-valid";
+  }
+  return "is-invalid";
+}
+
+//Verify that input is a number or null. 
+const validateNumberOptional = (str) => {
+  if (!str || (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+    return "is-valid";
+  }
+  return "is-invalid"; 
+}
 </script>
 <style>
 /* The max height is full view height minus (top bar, menu bar and status bar + margins) */
@@ -216,11 +240,11 @@ onMounted(() => refresh());
                     <div class="mb-3">
                         <label for="idEditName" class="form-label small">Name</label>
                         <input type="text" class="form-control form-control-sm" id="idEditName"
-                            v-model="editTestData.name">
+                            v-model="editTestData.name" :class="validateStringRequired(editTestData.name)">
                     </div>
                     <div class="mb-3">
                         <label for="idEditDescription" class="form-label small">Description</label>
-                        <textarea class="form-control form-control-sm" id="idEditDescription" rows="3"
+                        <textarea class="form-control form-control-sm is-valid" id="idEditDescription" rows="3"
                             v-model="editTestData.description"></textarea>
                     </div>
                 </div>

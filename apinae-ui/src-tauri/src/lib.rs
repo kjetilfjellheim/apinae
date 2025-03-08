@@ -4,7 +4,7 @@ mod state;
 
 use state::AppData;
 
-use crate::api::{add_endpoint, add_test, add_server, add_listener, clean, confirm_dialog, delete_endpoint, delete_test, delete_server, delete_listener, get_test, get_servers, get_listeners, get_tests, load, save, save_as, stop_test, start_test, update_endpoint, update_test, update_server, update_listener};
+use crate::api::{load_settings, save_settings, add_endpoint, add_test, add_server, add_listener, clean, confirm_dialog, delete_endpoint, delete_test, delete_server, delete_listener, get_test, get_servers, get_listeners, get_tests, load, save, save_as, stop_test, start_test, update_endpoint, update_test, update_server, update_listener};
 
 /**
  * This function is the entry point of the Tauri application.
@@ -49,7 +49,8 @@ pub fn run() {
             add_endpoint, delete_endpoint, update_endpoint,
             confirm_dialog, 
             start_test, 
-            stop_test])        
+            stop_test,
+            save_settings, load_settings])        
         .run(tauri::generate_context!())
         .expect("Error while running tauri application");
 }
