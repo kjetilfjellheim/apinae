@@ -506,12 +506,7 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
             .map_err(|err| err.to_string())?;
         let process_id = process.id();
         process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
-        Ok(TestRow {
-            id: test.id.clone(),
-        name: test.name.clone(),
-            description: test.description.clone(),
-            process_id: Some(process_id),
-        })
+        Ok(TestRow::new(test.id.as_str(), test.name.as_str(), test.description.as_str(), Some(process_id)))
     }
 }
 

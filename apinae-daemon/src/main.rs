@@ -8,7 +8,7 @@ use apinae_lib::{
     error::ApplicationError,
 };
 use args::Args;
-use server::ServerSetup;
+use server::setup::ServerSetup;
 
 /**
  * The main function for the apinae-daemon application.
@@ -110,10 +110,7 @@ async fn start_daemon(
     server_setup.setup_test(test).await;
     server_setup.start_servers().await.map_err(|err| {
         ApplicationError::ServerStartUpError(format!("Server startup failed: {err}"))
-    })?;
-    server_setup.start_listeners().await.map_err(|err| {
-        ApplicationError::ServerStartUpError(format!("Listener startup failed: {err}"))
-    })?;    
+    })?; 
     Ok(())
 }
 
@@ -230,5 +227,12 @@ mod test {
         let _ = start_daemon(Some(&"1".to_string()), &config).await.is_ok();
         assert!(start_daemon(Some(&"2".to_string()), &config).await.is_err());
         assert!(start_daemon(None, &config).await.is_err());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_list_tests() {
+        let config: AppConfiguration =
+            AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
+        list_tests(&config);
     }
 }
