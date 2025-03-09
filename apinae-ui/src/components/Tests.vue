@@ -167,7 +167,7 @@ const validateNumberOptional = (str) => {
                         Tests
                         <div class="btn-group btn-group-sm align-middle small" role="group">
                             <button type="button" class="btn btn-sm btn-outline-primary margin-0" @click="addTest()"><i
-                                    class="fa-solid fa-plus"></i></button>
+                                    class="fa-solid fa-plus"></i>Add test</button>
                         </div>
                     </caption>
                     <thead>
