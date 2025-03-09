@@ -467,6 +467,27 @@ pub async fn confirm_dialog(app: AppHandle) -> bool {
 }
 
 /**
+ * Shows a open file dialog.
+ * 
+ * `app` The Tauri application handle.
+ * 
+ * Returns:
+ * True if the user confirms the dialog, false otherwise.
+ */
+#[tauri::command]
+pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option<String>) -> Option<String> {
+   let dialog = app.dialog().file();
+    let dialog = if let Some(extension) = extension {
+        dialog.add_filter(name.unwrap_or_default(), &[&extension])
+    } else {
+        dialog
+    };
+    dialog.blocking_pick_file().map(|file_path| {
+        get_file_path(file_path).unwrap_or("".to_owned())
+    })
+}
+
+/**
  * Starts a test.
  * 
  * `app_data` The application data.
