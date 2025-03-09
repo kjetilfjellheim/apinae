@@ -16,6 +16,31 @@ pub struct TestRow {
     pub process_id: Option<u32>,
 }
 
+impl TestRow {
+
+    /**
+     * Create a new test row.
+     * 
+     * # Arguments
+     * `id` - The unique identifier of the test.
+     * `name` - The name of the test.
+     * `description` - The description of the test.
+     * `process_id` - The process id of the test.
+     * 
+     * # Returns
+     * TestRow - The test row.
+     */
+    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>) -> Self {
+        Self {
+            id: id.to_string(),
+            name: name.to_string(),
+            description: description.to_string(),
+            process_id,
+        }
+    }
+
+}
+
 impl From<TestConfiguration> for TestRow {
     /**
      * Convert a test configuration to a test row.
