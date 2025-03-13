@@ -1,7 +1,4 @@
 use serde::{Deserialize, Serialize};
-/**
- * The configuration for the application. It contains all data that needs to be stored for the application.
- */
 use std::{collections::HashMap, time::SystemTime};
 
 use crate::error::ApplicationError;
@@ -347,8 +344,7 @@ impl AppConfiguration {
         endpoint_id: &str,
         path_expression: &str,
         method: &str,
-        mock_response: Option<MockResponseConfiguration>,
-        route: Option<RouteConfiguration>,
+        endpoint_type: Option<EndpointType>,
     ) -> Result<(), ApplicationError> {
         let endpoint = self
             .get_endpoint(test_id, server_id, endpoint_id)
@@ -357,8 +353,7 @@ impl AppConfiguration {
             })?;
         endpoint.path_expression = path_expression.to_string();
         endpoint.method = method.to_string();
-        endpoint.mock = mock_response;
-        endpoint.route = route;
+        endpoint.endpoint_type = endpoint_type;
         Ok(())
     }
 }
@@ -596,10 +591,8 @@ pub struct EndpointConfiguration {
     pub path_expression: String,
     // The HTTP method.
     pub method: String,
-    // The mock response.
-    pub mock: Option<MockResponseConfiguration>,
-    // The route configuration.
-    pub route: Option<RouteConfiguration>,
+    // Defines how the endpoint is to be handled.
+    pub endpoint_type: Option<EndpointType>
 }
 
 impl EndpointConfiguration {
@@ -608,8 +601,7 @@ impl EndpointConfiguration {
      *
      * `path_expression` Endpoint for the apinae API. This is a regular expression.
      * `method` The HTTP method.
-     * `mock_response` The mock response.
-     * `route` The route configuration.
+     * `endpoint_type` Defines how the endpoint is to be handled.
      *
      * # Errors
      * An error if the identifier could not be generated.
@@ -617,8 +609,7 @@ impl EndpointConfiguration {
     pub fn new(
         path_expression: String,
         method: String,
-        mock: Option<MockResponseConfiguration>,
-        route: Option<RouteConfiguration>,
+        endpoint_type: Option<EndpointType>,
     ) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
 
@@ -626,10 +617,19 @@ impl EndpointConfiguration {
             id,
             path_expression,
             method,
-            mock,
-            route,
+            endpoint_type,
         })
     }
+}
+
+/**
+ * The type of the endpoint. Determines what type of handling to use.
+ */
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub enum EndpointType {
+    Mock { configuration: MockResponseConfiguration },
+    Route { configuration: RouteConfiguration },
 }
 
 /**
@@ -644,6 +644,9 @@ pub enum CloseConnectionWhen {
 }
 
 impl From<CloseConnectionWhen> for String {
+    /**
+     * Convert a `CloseConnectionWhen` to a string. 
+     */
     fn from(close_connection: CloseConnectionWhen) -> Self {
         match close_connection {
             CloseConnectionWhen::BeforeRead => "BeforeRead".to_string(),
@@ -655,6 +658,9 @@ impl From<CloseConnectionWhen> for String {
 }
 
 impl From<&str> for CloseConnectionWhen {
+    /**
+     * Convert a string to a `CloseConnectionWhen`. 
+     */
     fn from(close_connection: &str) -> Self {
         match close_connection {
             "BeforeRead" => CloseConnectionWhen::BeforeRead,
@@ -723,6 +729,33 @@ impl TcpListenerData {
             close_connection,
         })
     }
+
+    /**
+     * Update the tcp configuration.
+     *
+     * `file` The file to read from.
+     * `data` The data to return. If this is set, the file will be ignored.
+     * `delay_write_ms` Time to wait before writing the response.
+     * `port` The port to listen on.
+     * `accept` Do accept connections.
+     * `close_connection` When to close the connection.
+     */
+    pub fn update(
+        &mut self,
+        file: Option<String>,
+        data: Option<String>,
+        delay_write_ms: Option<u64>,
+        port: u16,
+        accept: bool,
+        close_connection: CloseConnectionWhen,
+    ) {
+        self.file = file;
+        self.data = data;
+        self.delay_write_ms = delay_write_ms;
+        self.port = port;
+        self.accept = accept;
+        self.close_connection = close_connection;
+    }
 }
 
 /**
@@ -768,6 +801,9 @@ impl MockResponseConfiguration {
     }
 }
 
+/**
+ * The supported TLS versions.
+ */
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 pub enum TlsVersion {
     TLSv1_0,
@@ -946,13 +982,7 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        Some(MockResponseConfiguration::new(
-                            Some("Test Response".to_string()),
-                            200,
-                            HashMap::new(),
-                            0,
-                        )),
-                        Some(RouteConfiguration::new(
+                        Some(EndpointType::Route { configuration: RouteConfiguration::new(
                             "/test".to_string(),
                             None,
                             None,
@@ -963,7 +993,7 @@ mod test {
                             None,
                             None,
                             None,
-                        )),
+                        ) }),
                     )
                     .unwrap()],
                     None,
@@ -983,51 +1013,20 @@ mod test {
         assert_eq!(configuration.tests[0].servers[0].name, "Server");
         assert_eq!(configuration.tests[0].servers[0].http_port, Some(8080));
         assert_eq!(configuration.tests[0].servers[0].endpoints.len(), 1);
-        assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0].path_expression,
-            "/test"
-        );
-        assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0]
-                .mock
-                .as_ref()
-                .unwrap()
-                .response,
-            Some("Test Response".to_string())
-        );
-        assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0]
-                .mock
-                .as_ref()
-                .unwrap()
-                .status,
-            200
-        );
-        assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0]
-                .mock
-                .as_ref()
-                .unwrap()
-                .headers
-                .len(),
-            0
-        );
-        assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0]
-                .mock
-                .as_ref()
-                .unwrap()
-                .delay,
-            0
-        );
-        assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0]
-                .route
-                .as_ref()
-                .unwrap()
-                .url,
-            "/test"
-        );
+        assert_eq!(configuration.tests[0].servers[0].endpoints[0].path_expression, "/test");
+        assert_eq!(configuration.tests[0].servers[0].endpoints[0].method, "GET");
+        assert_eq!(configuration.tests[0].servers[0].endpoints[0].endpoint_type, Some(EndpointType::Route { configuration: RouteConfiguration::new(
+            "/test".to_string(),
+            None,
+            None,
+            false,
+            false,
+            false,
+            None,
+            None,
+            None,
+            None,
+        ) }));
     }
 
     /**
@@ -1047,24 +1046,14 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        Some(MockResponseConfiguration::new(
-                            Some("Test Response".to_string()),
-                            200,
-                            HashMap::new(),
-                            0,
-                        )),
-                        Some(RouteConfiguration::new(
-                            "/test".to_string(),
-                            None,
-                            None,
-                            false,
-                            false,
-                            false,
-                            None,
-                            None,
-                            None,
-                            None,
-                        )),
+                        Some(EndpointType::Mock {
+                            configuration: MockResponseConfiguration::new(
+                                Some("Test Response".to_string()),
+                                200,
+                                HashMap::new(),
+                                0,
+                            ),
+                        }),
                     )
                     .unwrap()],
                     None,
@@ -1095,24 +1084,14 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        Some(MockResponseConfiguration::new(
-                            Some("Test Response".to_string()),
-                            200,
-                            HashMap::new(),
-                            0,
-                        )),
-                        Some(RouteConfiguration::new(
-                            "/test".to_string(),
-                            None,
-                            None,
-                            false,
-                            false,
-                            false,
-                            None,
-                            None,
-                            None,
-                            None,
-                        )),
+                        Some(EndpointType::Mock {
+                            configuration: MockResponseConfiguration::new(
+                                Some("Test Response".to_string()),
+                                200,
+                                HashMap::new(),
+                                0,
+                            ),
+                        }),
                     )
                     .unwrap()],
                     None,

@@ -3,7 +3,7 @@ use std::{fs::File, io::BufReader, sync::Arc, time::Duration};
 use actix_web::{middleware::Logger, http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
 use apinae_lib::{
     config::{
-        EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TlsVersion
+        EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TlsVersion
     },
     error::ApplicationError,
 };
@@ -204,12 +204,15 @@ async fn handle_endpoint(
     req: HttpRequest,
     payload: Option<web::Payload>,
 ) -> Result<HttpResponse, ApplicationError> {
-    if let Some(mock) = &endpoint.mock {
-        std::thread::sleep(std::time::Duration::from_millis(mock.delay));
-        return generate_mock_response(mock);
-    }
-    if let Some(route_configuration) = &endpoint.route {
-        return route_request(route_configuration, req, payload).await;
+    if let Some(endpoint_type) = &endpoint.endpoint_type {
+        match endpoint_type {
+            EndpointType::Mock { configuration } => {
+                return generate_mock_response(configuration);
+            }
+            EndpointType::Route { configuration } => {
+                return route_request(configuration, req, payload).await;
+            }
+        }
     }
     Ok(HttpResponse::NotImplemented().body("Not implemented"))
 }
@@ -628,7 +631,7 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_valid_endpoint() {
         let endpoint =
-            EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None, None).unwrap();
+            EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None).unwrap();
         assert!(is_valid_endpoint("/test", "GET", &endpoint).unwrap());
     }
 

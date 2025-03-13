@@ -20,20 +20,23 @@
               "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
               "pathExpression": "^\/test$",
               "method": "GET",
-              "soapAction": null,
-              "mock": {
-                "response": "{ \"test\": \"Success https\" }",
-                "status": 200,
-                "headers": {
-                  "Content-Type": "application/json"
-                },
-                "delay": 0
+              "endpointType": {
+                "mock": {
+                  "configuration": {
+                    "response": "{ \"test\": \"Success https\" }",
+                    "status": 200,
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "delay": 0
+                  }
+                }
               }
             }
           ]
         }
       ],
-      "listeners": []      
+      "listeners": []
     }
   ]
 }

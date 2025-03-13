@@ -110,7 +110,7 @@ async fn start_daemon(
     server_setup.setup_test(test).await;
     server_setup.start_servers().await.map_err(|err| {
         ApplicationError::ServerStartUpError(format!("Server startup failed: {err}"))
-    })?; 
+    })?;
     Ok(())
 }
 
