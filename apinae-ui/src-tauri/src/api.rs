@@ -3,7 +3,7 @@ use std::path::Path;
 use crate::{model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow}, state::ProcessData};
 use tauri::{AppHandle, State};
 use crate::AppData;
-use apinae_lib::{config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration}, settings::Settings};
+use apinae_lib::{config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration}, settings::Settings};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
 /**
@@ -327,14 +327,8 @@ pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result
 #[tauri::command]
 pub async fn update_listener(app_data: State<'_, AppData>, testid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.tests.iter_mut().find(|t| t.id == testid).ok_or("Test not found")?;
-    let tcp_listener_index = test.listeners.iter_mut().position(|s| s.id == listenerid).ok_or("Listener not found")?;
-    test.listeners[tcp_listener_index].port = tcplistener.port;
-    test.listeners[tcp_listener_index].file = tcplistener.file;
-    test.listeners[tcp_listener_index].data = tcplistener.data;
-    test.listeners[tcp_listener_index].delay_write_ms = tcplistener.delay_write_ms;
-    test.listeners[tcp_listener_index].accept = tcplistener.accept;
-    test.listeners[tcp_listener_index].close_connection = CloseConnectionWhen::from(tcplistener.close_connection.as_str());    
+    let mut listener = data.get_listener(testid, listenerid).ok_or("Listener not found")?;
+    listener.update(tcplistener.file, tcplistener.data, tcplistener.delay_write_ms, tcplistener.port, tcplistener.accept, CloseConnectionWhen::from(tcplistener.close_connection.as_str()));
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -396,7 +390,7 @@ pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<
 pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let server = data.get_server(testid, serverid).ok_or("Server not found")?;
-    server.endpoints.push(EndpointConfiguration::new("/".to_owned(), String::new(), None, None).map_err(|err| err.to_string())?);
+    server.endpoints.push(EndpointConfiguration::new("/".to_owned(), String::new(), None).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -438,12 +432,18 @@ pub async fn delete_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
  * If the server could not be found.
  * If the endpoint could not be updated.
  */
+#[allow(clippy::manual_map)]
 #[tauri::command]
 pub async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let mock_response = endpoint.mock.map(MockResponseConfiguration::from);
-    let route_response = endpoint.route.map(RouteConfiguration::from);
-    data.update_endpoint(testid, serverid, endpointid, endpoint.path_expression.as_str(), endpoint.method.as_str(), mock_response, route_response).map_err(|err| err.to_string())?;
+    let endpoint_type = if let Some(mock_response) = &endpoint.mock {
+        Some(EndpointType::Mock { configuration: mock_response.into() })
+    } else if let Some(route_response) = &endpoint.route {
+        Some(EndpointType::Route { configuration: route_response.into() })
+    } else {
+        None
+    };  
+    data.update_endpoint(testid, serverid, endpointid, endpoint.path_expression.as_str(), endpoint.method.as_str(), endpoint_type).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -464,6 +464,27 @@ pub async fn confirm_dialog(app: AppHandle) -> bool {
         .kind(tauri_plugin_dialog::MessageDialogKind::Warning)
         .buttons(MessageDialogButtons::YesNo)                
         .blocking_show()
+}
+
+/**
+ * Shows a open file dialog.
+ * 
+ * `app` The Tauri application handle.
+ * 
+ * Returns:
+ * True if the user confirms the dialog, false otherwise.
+ */
+#[tauri::command]
+pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option<String>) -> Option<String> {
+   let dialog = app.dialog().file();
+    let dialog = if let Some(extension) = extension {
+        dialog.add_filter(name.unwrap_or_default(), &[&extension])
+    } else {
+        dialog
+    };
+    dialog.blocking_pick_file().map(|file_path| {
+        get_file_path(file_path).unwrap_or("".to_owned())
+    })
 }
 
 /**
@@ -506,12 +527,7 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
             .map_err(|err| err.to_string())?;
         let process_id = process.id();
         process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
-        Ok(TestRow {
-            id: test.id.clone(),
-        name: test.name.clone(),
-            description: test.description.clone(),
-            process_id: Some(process_id),
-        })
+        Ok(TestRow::new(test.id.as_str(), test.name.as_str(), test.description.as_str(), Some(process_id)))
     }
 }
 

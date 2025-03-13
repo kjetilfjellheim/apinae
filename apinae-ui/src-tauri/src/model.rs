@@ -1,4 +1,4 @@
-use apinae_lib::config::{EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion};
+use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion};
 
 /**
  * This struct represents a test row for both request and responses.
@@ -14,6 +14,31 @@ pub struct TestRow {
     pub description: String,
     // The process id of the test.
     pub process_id: Option<u32>,
+}
+
+impl TestRow {
+
+    /**
+     * Create a new test row.
+     * 
+     * # Arguments
+     * `id` - The unique identifier of the test.
+     * `name` - The name of the test.
+     * `description` - The description of the test.
+     * `process_id` - The process id of the test.
+     * 
+     * # Returns
+     * TestRow - The test row.
+     */
+    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>) -> Self {
+        Self {
+            id: id.to_string(),
+            name: name.to_string(),
+            description: description.to_string(),
+            process_id,
+        }
+    }
+
 }
 
 impl From<TestConfiguration> for TestRow {
@@ -91,8 +116,18 @@ impl From<&EndpointConfiguration> for EndpointRow {
             id: endpoint_config.id.clone(),
             path_expression: endpoint_config.path_expression.clone(),
             method: endpoint_config.method.clone(),
-            mock: endpoint_config.mock.as_ref().map(std::convert::Into::into),
-            route: endpoint_config.route.as_ref().map(std::convert::Into::into),
+            mock: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| {
+                match endpoint_type {
+                    EndpointType::Mock{ configuration} => Some(MockRow::from(configuration)),
+                    _ => None
+                }
+            }),
+            route: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| {
+                match endpoint_type {
+                    EndpointType::Route{ configuration} => Some(RouteRow::from(configuration)),
+                    _ => None
+                }
+            })
         }
     }
 }
@@ -127,11 +162,11 @@ impl From<&MockResponseConfiguration> for MockRow {
     }
 }
 
-impl From<MockRow> for MockResponseConfiguration {
+impl From<&MockRow> for MockResponseConfiguration {
     /**
      * Convert a mock row to a mock response configuration.
      */
-    fn from(mock: MockRow) -> Self {
+    fn from(mock: &MockRow) -> Self {
         MockResponseConfiguration::new(
             mock.response.clone(), 
             mock.status, 
@@ -192,12 +227,12 @@ impl From<&RouteConfiguration> for RouteRow {
     }
 }
 
-impl From<RouteRow> for RouteConfiguration {
+impl From<&RouteRow> for RouteConfiguration {
     /**
      * Convert a route row to a route configuration.
      */
-    fn from(route: RouteRow) -> Self {
-        RouteConfiguration::new(route.url, route.proxy_url, None, route.http1_only, route.accept_invalid_certs, route.accept_invalid_hostnames, route.min_tls_version.map(TlsVersion::from), route.max_tls_version.map(TlsVersion::from), route.read_timeout, route.connect_timeout)
+    fn from(route: &RouteRow) -> Self {
+        RouteConfiguration::new(route.url.clone(), route.proxy_url.clone(), None, route.http1_only, route.accept_invalid_certs, route.accept_invalid_hostnames, route.min_tls_version.clone().map(TlsVersion::from), route.max_tls_version.clone().map(TlsVersion::from), route.read_timeout, route.connect_timeout)
     }
 }
 
@@ -314,7 +349,7 @@ mod  test {
 
     #[test]
     fn test_endpoint_row_from_endpoint_configuration() {
-        let endpoint_config = EndpointConfiguration::new("path".to_owned(), "method".to_owned(), None, None).unwrap();
+        let endpoint_config = EndpointConfiguration::new("path".to_owned(), "method".to_owned(), None).unwrap();
 
         let endpoint_row = EndpointRow::from(&endpoint_config);
 
@@ -381,7 +416,7 @@ mod  test {
             delay: 0,
         };
 
-        let mock_config = MockResponseConfiguration::from(mock_row);
+        let mock_config = MockResponseConfiguration::from(&mock_row);
 
         assert_eq!(mock_config.response, Some("response".to_owned()));
         assert_eq!(mock_config.status, 200);
@@ -404,7 +439,7 @@ mod  test {
             delay: 0,
         };
 
-        let mock_config = MockResponseConfiguration::from(mock_row);
+        let mock_config = MockResponseConfiguration::from(&mock_row);
 
         assert_eq!(mock_config.response, None);
         assert_eq!(mock_config.status, 200);

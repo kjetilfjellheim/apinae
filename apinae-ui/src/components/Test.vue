@@ -87,6 +87,71 @@ const refresh = (testId) => {
     .catch((error) => window.alert(error));
 }
 
+//Set the data file for the tcp listener. This is called when the user clicks the select file button.
+//The file is set on the editTcpListenerData object.
+const setEditTcpListenerDataFile = () => {
+  invoke("open_dialog", { name: null, extension: null })
+    .then((message) => {
+      if (message) {
+        editTcpListenerData.value.file = message;
+      }
+    })
+    .catch((error) => window.alert(error));
+}
+
+//Clear the data file for the tcp listener. This is called when the user clicks the clear button.
+const clearEditTcpListenerDataFile = () => {
+  editTcpListenerData.value.file = null;
+}
+
+//Set the private key for the https config. This is called when the user clicks the select file button.
+const setEditHttpsConfigPrivateKey = () => {
+  invoke("open_dialog", { name: "Pem file", extension: "pem" })
+    .then((message) => {
+      if (message) {
+        editHttpsConfig.value.privateKey = message;
+      }
+    })
+    .catch((error) => window.alert(error));
+}
+
+//Clear the server certificate for the https config. This is called when the user clicks the clear button.
+const clearEditHttpsConfigPrivateKey = () => {
+  editHttpsConfig.value.privateKey = null;
+}
+
+//Set the server certificate for the https config. This is called when the user clicks the select file button.
+const setEditHttpsConfigServerCertificate = () => {
+  invoke("open_dialog", { name: "Pem file", extension: "pem" })
+    .then((message) => {
+      if (message) {
+        editHttpsConfig.value.serverCertificate = message;
+      }
+    })
+    .catch((error) => window.alert(error));
+}
+
+//Clear the server certificate for the https config. This is called when the user clicks the clear button.
+const clearEditHttpsConfigServerCertificate = () => {
+  editHttpsConfig.value.serverCertificate = null;
+}
+
+//Set the client certificate for the https config. This is called when the user clicks the select file button.
+const setEditHttpsConfigClientCertificate = () => {
+  invoke("open_dialog", { name: "Pem file", extension: "pem" })
+    .then((message) => {
+      if (message) {
+        editHttpsConfig.value.clientCertificate = message;
+      }
+    })
+    .catch((error) => window.alert(error));
+}
+
+//Clear the server certificate for the https config. This is called when the user clicks the clear button.
+const clearEditHttpsConfigClientCertificate = () => {
+  editHttpsConfig.value.clientCertificate = null;
+}
+
 //Add an http server to the test. This is called when the user clicks the add button.
 //The server is added to the test and the data is refreshed.
 const addHttpServer = () => {
@@ -633,7 +698,7 @@ const validateNumberOptional = (str) => {
                             Endpoints
                             <div class="btn-group btn-group-sm align-middle small" role="group">
                               <button type="button" class="btn btn-sm btn-outline-primary"
-                                @click="addEndpoint(httpServer)"><i class="fa-solid fa-plus"></i></button>
+                                @click="addEndpoint(httpServer)"><i class="fa-solid fa-plus"></i>Add endpoint</button>
                             </div>
                           </caption>
                           <thead>
@@ -766,8 +831,12 @@ const validateNumberOptional = (str) => {
             </div>
             <div class="col-md-12">
               <label for="idEditFile" class="form-label small">File</label>
-              <input type="text" class="form-control form-control-sm is-valid" id="idEditFile"
-                v-model="editTcpListenerData.file">
+              <div class="input-group mb-3">
+                <input type="text" readonly class="form-control form-control-sm is-valid" id="idEditFile"
+                  v-model="editTcpListenerData.file">
+                <button class="btn btn-sm btn-outline-primary" type="button" id="idOpenTcpListenerFile" @click="setEditTcpListenerDataFile()">Select file</button>
+                <button class="btn btn-sm btn-outline-danger" type="button" id="idOpenTcpListenerFile" @click="clearEditTcpListenerDataFile()">Clear</button>
+              </div>
             </div>
             <div class="col-md-12">
               <label for="idEditData" class="form-label small">Response</label>
@@ -828,38 +897,52 @@ const validateNumberOptional = (str) => {
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditServerCertificate" class="form-label small">Server certificate</label>
-                <input type="text" class="form-control form-control-sm" id="idEditServerCertificate"
-                  v-model="editHttpsConfig.serverCertificate" :class="validateStringRequired(editHttpsConfig.serverCertificate)">
+                <div class="input-group mb-3">
+                  <input type="text" readonly class="form-control form-control-sm" id="idEditServerCertificate"
+                    v-model="editHttpsConfig.serverCertificate" :class="validateStringRequired(editHttpsConfig.serverCertificate)">
+                  <button class="btn btn-sm btn-outline-primary" type="button" id="idOpenServerCertificateFile" @click="setEditHttpsConfigServerCertificate()">Select file</button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" id="idClearServerCertificateFile" @click="clearEditHttpsConfigServerCertificate()">Clear</button>
+                </div> 
+                  
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditPrivateKey" class="form-label small">Private key</label>
-                <input type="text" class="form-control form-control-sm" id="idEditPrivateKey"
-                  v-model="editHttpsConfig.privateKey" :class="validateStringRequired(editHttpsConfig.privateKey)">
+                <div class="input-group mb-3">
+                  <input type="text" readonly class="form-control form-control-sm" id="idEditPrivateKey"
+                    v-model="editHttpsConfig.privateKey" :class="validateStringRequired(editHttpsConfig.privateKey)">
+                  <button class="btn btn-sm btn-outline-primary" type="button" id="idOpenPrivateKeyFile" @click="setEditHttpsConfigPrivateKey()">Select file</button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" id="idClearPrivateKeyFile" @click="clearEditHttpsConfigPrivateKey()">Clear</button>
+                </div>                
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
               <div class="form-check">
                 <label for="idEditClientCertificate" class="form-label small">Client certificate</label>
-                <input type="text" class="form-control form-control-sm is-valid" id="idEditClientCertificate"
-                  v-model="editHttpsConfig.clientCertificate">
+
+                <div class="input-group mb-3">
+                  <input type="text" readonly class="form-control form-control-sm is-valid" id="idEditClientCertificate"
+                    v-model="editHttpsConfig.clientCertificate">
+                  <button class="btn btn-sm btn-outline-primary" type="button" id="idOpenPrivateKeyFile" @click="setEditHttpsConfigClientCertificate()">Select file</button>
+                  <button class="btn btn-sm btn-outline-danger" type="button" id="idClearPrivateKeyFile" @click="clearEditHttpsConfigClientCertificate()">Clear</button>
+                </div>                    
               </div>
             </div>
             <div class="col-md-12" v-if="showEditHttpsConfig">
-              <div class="form-check">
+              <div class="form-check form-check-inline">
                 <input type="checkbox" id="idTLSv1_0" value="TLSv1.0" v-model="editSupportedTlsVersions" class="is-valid form-check-input"/>
                 <label for="idTLSv1_0" class="form-check-label">&nbsp;TLSv1_0</label>
               </div>
-              <div class="form-check">
+              <div class="form-check form-check-inline">
                 <input type="checkbox" id="idTLSv1_1" value="TLSv1.1" v-model="editSupportedTlsVersions" class="is-valid form-check-input"/>
                 <label for="idTLSv1_1" class="form-check-label">&nbsp;TLSv1_1</label>
               </div>
-              <div class="form-check">
+              <div class="form-check form-check-inline">
                 <input type="checkbox" id="idTLSv1_2" value="TLSv1.2" v-model="editSupportedTlsVersions" class="is-valid form-check-input" />
                 <label for="idTLSv1_2" class="form-check-label">&nbsp;TLSv1_2</label>
               </div>
-              <div class="form-check">
+              <div class="form-check form-check-inline">
                 <input type="checkbox" id="idTLSv1_3" value="TLSv1.3" v-model="editSupportedTlsVersions" class="is-valid form-check-input" />
                 <label for="idTLSv1_3" class="form-check-label">&nbsp;TLSv1_3</label>
               </div>
@@ -965,8 +1048,6 @@ const validateNumberOptional = (str) => {
               <label for="idEditMinTlsVersion" class="form-label small">Min Tls version&nbsp;</label>              
               <select id="idEditMinTlsVersion" class="form-select form-select-sm is-valid"
                 v-model="editRouteData.minTlsVersion">
-                <option value="TLSv1.0">TLSv1.0</option>
-                <option value="TLSv1.1">TLSv1.1</option>            
                 <option value="TLSv1.2">TLSv1.2</option>
                 <option value="TLSv1.3">TLSv1.3</option>
               </select>                            
@@ -974,9 +1055,7 @@ const validateNumberOptional = (str) => {
             <div class="col-md-6" v-if="!showEditMockData">
               <label for="idEditMaxTlsVersion" class="form-label small">Max Tls version&nbsp;</label>              
               <select id="idEditMaxTlsVersion" class="form-select form-select-sm is-valid"
-                v-model="editRouteData.maxTlsVersion">
-                <option value="TLSv1.0">TLSv1.0</option>
-                <option value="TLSv1.1">TLSv1.1</option>            
+                v-model="editRouteData.maxTlsVersion">           
                 <option value="TLSv1.2">TLSv1.2</option>
                 <option value="TLSv1.3">TLSv1.3</option>
               </select>                            

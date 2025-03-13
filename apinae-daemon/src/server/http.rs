@@ -1,9 +1,9 @@
-use std::{fs::File, io::{BufReader, Read}, sync::Arc, time::Duration};
+use std::{fs::File, io::BufReader, sync::Arc, time::Duration};
 
 use actix_web::{middleware::Logger, http::StatusCode, web, App, HttpRequest, HttpResponse, HttpServer};
 use apinae_lib::{
     config::{
-        CloseConnectionWhen, EndpointConfiguration, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion
+        EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TlsVersion
     },
     error::ApplicationError,
 };
@@ -16,95 +16,18 @@ use rustls::{
     RootCertStore, ServerConfig, SupportedProtocolVersion,
 };
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use tokio::{
-    io::Interest, sync::RwLock
-};
 use log::{error, info};
+use tokio::task::JoinHandle;
+
+use super::common::StartableServer;
 
 const QUERYPARAMSEPARATOR: char = '&';
 const KEYVALUESEPARATOR: char = '=';
 
 /**
- * The `ServerSetup` struct is used to start and stop servers.
- */
-pub struct ServerSetup {
-    servers: Arc<RwLock<Vec<AppServer>>>,
-    listeners: Arc<RwLock<Vec<AppListener>>>,
-}
-
-impl ServerSetup {
-    /**
-     * Create a new `ServerSetup`.
-     *
-     * # Returns
-     * The created `ServerSetup`.
-     */
-    pub fn new() -> Self {
-        ServerSetup {
-            servers: Arc::new(RwLock::new(vec![])),
-            listeners: Arc::new(RwLock::new(vec![])),
-        }
-    }
-
-    /**
-     * Setup the test with the specified configuration. This also initalizes the app servers.
-     */
-    pub async fn setup_test(&mut self, test_configuration: &TestConfiguration) {
-        log::info!("Setting up test with id {}", test_configuration.id);
-        let servers: Vec<AppServer> = test_configuration
-            .servers
-            .iter()
-            .map(|server_configuration| AppServer::new(server_configuration.clone()))
-            .collect();
-        let listeners: Vec<AppListener> = test_configuration
-            .listeners
-            .iter()
-            .map(AppListener::new)
-            .collect();
-        self.servers.write().await.extend(servers);
-        self.listeners.write().await.extend(listeners);
-    }
-
-    /**
-     * Start the servers.
-     *
-     * # Returns
-     * Ok if the servers were started.
-     *
-     * # Errors
-     * An error if the servers could not be started.
-     */
-    pub async fn start_servers(&mut self) -> Result<(), ApplicationError> {
-        let mut handles = vec![];
-        for server in self.servers.write().await.iter_mut() {
-            handles.push(server.start_server_http()?);
-            handles.push(server.start_server_https()?);
-        }
-        Ok(())
-    }
-
-    /**
-     * Start the listeners.
-     *
-     * # Returns
-     * Ok if the listeners were started.
-     *
-     * # Errors
-     * An error if the servers could not be started.
-     */
-    pub async fn start_listeners(&mut self) -> Result<(), ApplicationError> {
-        let mut handles = vec![];
-        for server in self.listeners.write().await.iter_mut() {
-            handles.push(server.start_listener().await?);
-        }
-        Ok(())
-    }
-}
-
-/**
  * The `AppServer` struct is used to configure and start the server.
  */
-struct AppServer {
+pub struct AppServer {
     // Server configuration
     server_configuration: ServerConfiguration,
 }
@@ -119,7 +42,7 @@ impl AppServer {
      * # Returns
      * The created `AppServer`.
      */
-    fn new(server_configuration: ServerConfiguration) -> Self {
+    pub fn new(server_configuration: ServerConfiguration) -> Self {
         AppServer {
             server_configuration,
         }
@@ -134,7 +57,7 @@ impl AppServer {
      * # Errors
      * An error if the server could not be started.
      */
-    fn start_server_http(&mut self) -> Result<(), ApplicationError> {
+    pub fn start_server_http(&mut self) -> Result<(), ApplicationError> {
         if let Some(http_port) = self.server_configuration.http_port {
             log::info!("Starting http server on port: {http_port}");
             let appstate = web::Data::new(self.server_configuration.clone());
@@ -168,7 +91,7 @@ impl AppServer {
      * # Errors
      * An error if the server could not be started.
      */
-    fn start_server_https(&self) -> Result<(), ApplicationError> {
+    pub fn start_server_https(&self) -> Result<(), ApplicationError> {
         let config = self.server_configuration.clone();
         if let Some(https_config) = config.https_config {
             log::info!("Starting https server on port: {}", https_config.https_port);
@@ -198,228 +121,6 @@ impl AppServer {
             });
         }
         Ok(())
-    }
-}
-
-/**
- * The `AppListener` struct is used to configure and start the listener.
- */
-struct AppListener {
-    // Server configuration
-    tcp_listener: TcpListenerData,
-}
-
-impl AppListener {
-    /**
-     * Create a new `AppListener`.
-     *
-     * # Arguments
-     * `tcp_listener`: The TCP listener configuration.
-     *
-     * # Returns
-     * The created `AppListener`.
-     */
-    pub fn new(tcp_listener: &TcpListenerData) -> Self {
-        AppListener {
-            tcp_listener: tcp_listener.clone(),
-        }
-    }
-
-    /**
-     * Start the listener.
-     *
-     * # Returns
-     * Ok if the listener was started.
-     *
-     * # Errors
-     * An error if the listener could not be started.
-     *
-     */
-    async fn start_listener(&self) -> Result<(), ApplicationError> {
-        let server = self.bind_listener().await?;
-        let tcp_listener_data = self.tcp_listener.clone();
-
-        tokio::spawn(async move {
-            loop {
-                let Some(stream) = Self::wait_for_accept(&server, &tcp_listener_data).await else {
-                    continue;
-                };
-                let tcp_listener_data = tcp_listener_data.clone();
-                let _ = tokio::spawn(async move {
-                    let _ = Self::handle_tcp_stream(stream, tcp_listener_data).await.map_err(|err| {
-                        error!("Error handling tcp connection: {err}");
-                    });
-                    info!("Connection closed");
-                }).await;
-            }
-        });
-        Ok(())
-    }
-
-    /**
-     * Bind the listener.
-     *
-     * # Returns
-     * The bound listener.
-     *
-     * # Errors
-     *  An error if the listener could not be bound.
-     */
-    async fn bind_listener(&self) -> Result<tokio::net::TcpListener, ApplicationError> {
-        let server = tokio::net::TcpListener::bind(("127.0.0.1", self.tcp_listener.port))
-            .await
-            .map_err(|err| {
-                ApplicationError::ServerStartUpError(format!(
-                    "Failed to create tcp listener: {err}"
-                ))
-            })?;
-        log::info!("Listening on: {}", self.tcp_listener.port);
-        Ok(server)
-    }
-
-    /**
-     * Write the data to the output stream.
-     *
-     * # Arguments
-     * `stream`: The output stream.
-     * `data`: The data to write.
-     *
-     */
-    fn output_string_data(stream: &mut tokio::net::TcpStream, data: &String) {
-        info!("Sending: {data}");
-        let _ = stream.try_write(data.as_bytes()).map_err(|err| {
-            error!("Failed to write data: {err}");
-        });
-    }
-
-    /**
-     * Write the file data to the output stream.
-     *
-     * # Arguments
-     * `stream`: The output stream.
-     * `file`: The file to write.
-     *
-     */
-    fn output_file_data(stream: &mut tokio::net::TcpStream, file: &String) {
-        match File::open(file) {
-            Ok(file) => {
-                let mut output = BufReader::new(file);
-                let mut buffer = Vec::new();
-                info!("Sending: {}", String::from_utf8_lossy(&buffer));
-                let _ = output.read_to_end(&mut buffer).map_err(|err| {
-                    error!("Failed to read file: {err}");
-                });
-                let _ = stream.try_write(buffer.as_mut()).map_err(|err| {
-                    error!("Failed to write file: {err}");
-                });
-            }
-            Err(err) => {
-                error!("Failed to open file: {err}");
-            }
-        }
-    }
-
-    /**
-     * Wait for the accept.
-     *
-     * # Arguments
-     * `server`: The server.
-     *
-     * # Returns
-     * The accepted stream.
-     *
-     */
-    async fn wait_for_accept(
-        tcp_listener: &tokio::net::TcpListener,
-        tcp_listener_data: &TcpListenerData,
-    ) -> Option<tokio::net::TcpStream> {
-        if !tcp_listener_data.accept {
-            tokio::time::sleep(Duration::from_secs(1)).await;
-            return None;
-        }
-        let (stream, _) = match tcp_listener.accept().await {
-            Ok(stream) => stream,
-            Err(err) => {
-                error!("Failed to accept connection: {err}");
-                return None;
-            }
-        };
-        log::debug!("Accepted connection");
-        Some(stream)
-    }
-
-    /**
-     * Handle the TCP stream.
-     * 
-     * # Arguments
-     * `stream`: The TCP stream.
-     * `tcp_listener_data`: The TCP listener data.
-     * 
-     * # Returns
-     * Ok if the stream was handled.
-     * 
-     * # Errors
-     * An error if the stream could not be handled.
-     * 
-     */
-    async fn handle_tcp_stream(
-        mut stream: tokio::net::TcpStream,
-        tcp_listener_data: TcpListenerData,
-    ) -> Result<(), ApplicationError> {
-        let mut written = true;
-
-        loop {            
-            tokio::time::sleep(Duration::from_micros(10)).await;
-
-            let ready = stream
-                .ready(Interest::READABLE | Interest::WRITABLE)
-                .await
-                .map_err(|err| {
-                    ApplicationError::ServerStartUpError(format!("Failed to get ready: {err}"))
-                })?;
-            log::debug!("Ready: {:?}", ready);
-            if ready.is_read_closed() || ready.is_write_closed() {            
-                return Ok(());
-            }
-
-            if tcp_listener_data.close_connection == CloseConnectionWhen::BeforeRead {
-                return Ok(());
-            }
-
-            if ready.is_readable() {                
-                loop {
-                    let mut buffer = vec![];
-                    let _ = stream.try_read_buf(&mut buffer);                
-                    if !buffer.is_empty() {
-                        info!("Received: {:?}", String::from_utf8_lossy(&buffer));                                  
-                    }
-                    if buffer.is_empty() {
-                        written = false;
-                        break;                        
-                    }     
-                }           
-            }
-
-            if tcp_listener_data.close_connection == CloseConnectionWhen::AfterRead {
-                return Ok(());
-            }
-
-            if ready.is_writable() && !written {     
-                if let Some(delay_write_ms) = tcp_listener_data.delay_write_ms {
-                    tokio::time::sleep(Duration::from_millis(delay_write_ms)).await;
-                }
-                if let Some(data) = tcp_listener_data.data.as_ref() {
-                    Self::output_string_data(&mut stream, data);
-                } else if let Some(file) = tcp_listener_data.file.as_ref() {                    
-                    Self::output_file_data(&mut stream, file);             
-                }
-                
-                if tcp_listener_data.close_connection == CloseConnectionWhen::AfterResponse {
-                    return Ok(());
-                }
-                written = true;
-            }
-        }
     }
 }
 
@@ -503,12 +204,15 @@ async fn handle_endpoint(
     req: HttpRequest,
     payload: Option<web::Payload>,
 ) -> Result<HttpResponse, ApplicationError> {
-    if let Some(mock) = &endpoint.mock {
-        std::thread::sleep(std::time::Duration::from_millis(mock.delay));
-        return generate_mock_response(mock);
-    }
-    if let Some(route_configuration) = &endpoint.route {
-        return route_request(route_configuration, req, payload).await;
+    if let Some(endpoint_type) = &endpoint.endpoint_type {
+        match endpoint_type {
+            EndpointType::Mock { configuration } => {
+                return generate_mock_response(configuration);
+            }
+            EndpointType::Route { configuration } => {
+                return route_request(configuration, req, payload).await;
+            }
+        }
     }
     Ok(HttpResponse::NotImplemented().body("Not implemented"))
 }
@@ -896,6 +600,24 @@ fn get_client_verifier(
     Ok(client_auth)
 }
 
+impl StartableServer for AppServer {
+    /**
+     * Start the server.
+     *
+     * # Returns
+     * Ok if the server was started.
+     *
+     * # Errors
+     * An error if the server could not be started.
+     */
+    fn start_server(&mut self) -> Result<Vec<JoinHandle<()>>, ApplicationError> {
+        let handles = vec![];
+        self.start_server_http()?;
+        self.start_server_https()?;
+        Ok(handles)
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -909,7 +631,7 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_valid_endpoint() {
         let endpoint =
-            EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None, None).unwrap();
+            EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None).unwrap();
         assert!(is_valid_endpoint("/test", "GET", &endpoint).unwrap());
     }
 

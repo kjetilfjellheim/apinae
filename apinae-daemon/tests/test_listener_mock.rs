@@ -24,6 +24,9 @@ async fn test_tcp_listener() {
     server_command.kill().expect("Failed to kill process");    
 }
 
+/**
+ * Asserts the server response.
+ */
 async fn assert_command(server_command: &mut Child, port : &str, expected: &str) {   
     let connect = format!("http://localhost:{}", port);     
     let nc_command = match Command::new("curl")
