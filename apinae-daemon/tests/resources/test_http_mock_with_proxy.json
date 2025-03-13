@@ -16,12 +16,14 @@
                             "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
                             "pathExpression": "^\/test$",
                             "method": "GET",
-                            "soapAction": null,
-                            "route": {
-                                "url": "http://localhost:8082",
-                                "proxyUrl": "http://localhost:8081"
-
-                            }
+                            "endpointType": {
+                                "route": {
+                                    "configuration": {
+                                        "url": "http://localhost:8082",
+                                        "proxyUrl": "http://localhost:8081"
+                                    }
+                                }
+                            }                            
                         }
                     ]
                 },
@@ -34,14 +36,17 @@
                             "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
                             "pathExpression": "^\/test$",
                             "method": "GET",
-                            "soapAction": null,
-                            "mock": {
-                                "response": "{ \"test\": \"Success http\" }",
-                                "status": 200,
-                                "headers": {
-                                    "Content-Type": "application/json"
-                                },
-                                "delay": 0
+                            "endpointType": {
+                                "mock": {
+                                    "configuration": {
+                                        "response": "{ \"test\": \"Success http\" }",
+                                        "status": 200,
+                                        "headers": {
+                                            "Content-Type": "application/json"
+                                        },
+                                        "delay": 0
+                                    }
+                                }
                             }
                         }
                     ]

@@ -17,13 +17,17 @@
                             "pathExpression": "^\/test$",
                             "method": "GET",
                             "soapAction": null,
-                            "mock": {
-                                "response": "{ \"test\": \"Success http\" }",
-                                "status": 200,
-                                "headers": {
-                                    "Content-Type": "application/json"
-                                },
-                                "delay": 0
+                            "endpointType": {
+                                "mock": {
+                                    "configuration": {
+                                        "response": "{ \"test\": \"Success http\" }",
+                                        "status": 200,
+                                        "headers": {
+                                            "Content-Type": "application/json"
+                                        },
+                                        "delay": 0
+                                    }
+                                }
                             }
                         },
                         {
@@ -31,13 +35,17 @@
                             "pathExpression": "^\/test$",
                             "method": "POST",
                             "soapAction": null,
-                            "mock": {
-                                "response": "{ \"test\": \"Success http\" }",
-                                "status": 201,
-                                "headers": {
-                                    "Content-Type": "application/json"
-                                },
-                                "delay": 0
+                            "endpointType": {
+                                "mock": {
+                                    "configuration": {
+                                        "response": "{ \"test\": \"Success http\" }",
+                                        "status": 200,
+                                        "headers": {
+                                            "Content-Type": "application/json"
+                                        },
+                                        "delay": 0
+                                    }
+                                }
                             }
                         }                        
                     ]
