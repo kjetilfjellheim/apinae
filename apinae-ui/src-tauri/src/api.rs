@@ -327,8 +327,7 @@ pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result
 #[tauri::command]
 pub async fn update_listener(app_data: State<'_, AppData>, testid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let mut listener = data.get_listener(testid, listenerid).ok_or("Listener not found")?;
-    listener.update(tcplistener.file, tcplistener.data, tcplistener.delay_write_ms, tcplistener.port, tcplistener.accept, CloseConnectionWhen::from(tcplistener.close_connection.as_str()));
+    data.update_listener(testid, listenerid, tcplistener.file, tcplistener.data, tcplistener.delay_write_ms, tcplistener.port, tcplistener.accept, CloseConnectionWhen::from(tcplistener.close_connection.as_str())).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }

@@ -220,9 +220,13 @@ impl AppConfiguration {
         accept: bool,
         close_connection: CloseConnectionWhen,
     ) -> Result<(), ApplicationError> {
-        let mut listener = self.get_listener(test_id, listener_id).ok_or_else(|| {
-            ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found."))
-        })?;
+        let listener = self.get_test(test_id).and_then(|test| {
+            test.listeners
+                .iter_mut()
+                .find(|listener| listener.id == listener_id)
+        }).ok_or(ApplicationError::CouldNotFind(format!(
+            "Listener with id {listener_id} not found."
+        )))?;
         listener.file = file;
         listener.data = data;
         listener.delay_write_ms = delay_write_ms;
