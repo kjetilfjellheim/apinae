@@ -45,6 +45,11 @@ function show_settings() {
 </script>
 <style>
 
+main {
+  background-color: rgb(10, 0, 100);
+  height: 100vh;
+}
+
 .container-fluid {
   padding: 0px 0px 0px 0px;
 }
@@ -75,10 +80,11 @@ li.dropdown:last-child .dropdown-menu {
 .padding-0 {
   padding: 0;
 }
+
 </style>
 <template>
   <main class="margin-0 padding-0">
-    <nav class="navbar navbar-expand-lg navbar-light bg-body-tertiary">
+    <nav class="navbar navbar-expand-lg navbar-light bg-primary">
       <div class="container-fluid">
         <ul class="navbar-nav">
           <li class="nav-item">
@@ -112,8 +118,14 @@ li.dropdown:last-child .dropdown-menu {
       </div>
     </nav>
     <router-view v-if="render_route_view" />
-    <footer class="footer navbar-light bg-body-tertiary">
-      <div class="container">File: {{ current_file_path }}</div>
+    <footer class="footer bg-info-subtle">
+      <div class="container-fluid small">
+        <div class="row">
+          <div class="col-12">
+            <span class="text-muted" style="margin: auto;">File: {{ current_file_path }}</span>
+          </div>
+        </div>
+      </div>
     </footer>
   </main>
   <settings></settings>
