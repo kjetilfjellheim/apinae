@@ -49,7 +49,7 @@ onMounted(() => {
     <div id="idSettingsModal" class="modal" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header bg-primary">
                     <h5 class="modal-title">Settings</h5>
                 </div>
                 <div class="modal-body">
@@ -74,7 +74,7 @@ onMounted(() => {
                         </div>
                     </form>
                 </div>
-                <div class="modal-footer">
+                <div class="modal-footer bg-primary-subtle">
                     <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
                     <button type="button" class="btn btn-sm btn-primary" @click="saveSettings()">Save changes</button>
                 </div>

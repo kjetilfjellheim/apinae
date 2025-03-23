@@ -93,41 +93,41 @@ onMounted(() => refresh());
 
 //Verify that string input is filled out. 
 const validateStringRequired = (str) => {
-  if (str && str.length > 0) {
-    return "is-valid";
-  }
-  return "is-invalid";
+    if (str && str.length > 0) {
+        return "is-valid";
+    }
+    return "is-invalid";
 }
 
 //Verify that input is a number. 
 const validateNumberRequired = (str) => {
-  if (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
-    return "is-valid";
-  }
-  return "is-invalid";
+    if (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+        return "is-valid";
+    }
+    return "is-invalid";
 }
 
 //Verify that input is a number or null. 
 const validateNumberOptional = (str) => {
-  if (!str || (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
-    return "is-valid";
-  }
-  return "is-invalid"; 
+    if (!str || (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+        return "is-valid";
+    }
+    return "is-invalid";
 }
 </script>
 <style>
 /* The max height is full view height minus (top bar, menu bar and status bar + margins) */
 .main-content {
-  max-height: calc(100vh - 93px);
-  overflow-y: scroll;
+    max-height: calc(100vh - 93px);
+    overflow-y: scroll;
 }
 
 .margin-0 {
-    margin: 0px 0px 0px 0px !important;
+    margin: 0;
 }
 
 .padding-0 {
-    padding: 0px 0px 0px 0px !important;
+    padding: 0;
 }
 </style>
 <template>
@@ -135,7 +135,7 @@ const validateNumberOptional = (str) => {
      Show navigation bar. 
      TODO: Move this to a separate component.
      -->
-    <nav class="navbar navbar-expand-sm bg-body-tertiary small">
+    <nav class="navbar navbar-expand-sm bg-primary-subtle small">
         <div class="container-fluid">
             <ol class="breadcrumb margin-0 padding-0 align-middle">
                 <li class="breadcrumb-item"><router-link to="/"><i class="fas fa-house"></i></router-link></li>
@@ -149,76 +149,82 @@ const validateNumberOptional = (str) => {
     <div class="container-fluid main-content padding-0 margin-0">
         <div class="row padding-0 margin-0">
             <div class="col-12">&nbsp;</div>
-            <div class="col-12 bg-body-tertiary">
-                <h5>File information</h5>
-            </div>
             <div class="col-12">
-                <dl class="row">
-                    <dt class="col-sm-3">Name</dt>
-                    <dd class="col-sm-9"></dd>
-                    <dt class="col-sm-3">Description</dt>
-                    <dd class="col-sm-9"></dd>
-                </dl>
-            </div>
-            <div class="col-12">&nbsp;</div>
-            <div class="col-12 bg-body-tertiary">
-                <table class="table table-sm table-striped table-bordered caption-top">
-                    <caption>
-                        Tests
-                        <div class="btn-group btn-group-sm align-middle small" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-primary margin-0" @click="addTest()"><i
-                                    class="fa-solid fa-plus"></i>Add test</button>
-                        </div>
-                    </caption>
-                    <thead>
-                        <tr>
-                            <th scope="col">Id</th>
-                            <th scope="col">Name</th>
-                            <th scope="col">Description</th>
-                            <th scope="col"></th>
-                            <th scope="col"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr v-for="test in tests" :key="test.id">
-                            <td class="align-middle"><label class="align-middle small">{{ test.id }}</label></td>
-                            <td class="align-middle"><label class="align-middle small">{{ test.name }}</label></td>
-                            <td class="align-middle"><label class="align-middle small">{{ test.description }}</label>
-                            </td>
-                            <td class="align-middle">
-                                <span class="align-middle">
-                                    <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
-                                        <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-primary text-decoration-none"
-                                                @click="editTest(test)" data-bs-toggle="modal"
-                                                data-bs-target="#idEditTestModel"><i
-                                                    class="fa-solid fa-pen-to-square"></i></button>
-                                                    <router-link
-                                                    :to="{ name: 'Test', params: { testid: test.id } }">
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-primary text-decoration-none"><i
-                                                        class="fa-solid fa-server"></i></button></router-link>
-                                        </div>
-                                        <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-                                            <button class="btn btn-sm btn-outline-danger text-decoration-none"
-                                                @click="confirmDelete(test)"><i class="fa-solid fa-minus"></i></button>
-                                        </div>
-                                    </div>
-                                </span>
-                            </td>
-                            <td class="align-middle">
-                                <span class="align-middle">
-                                    <button type="button" class="btn btn-sm btn-warning" @click="startTest(test)"
-                                        v-if="test.processId === null">
-                                        <i class="fa-solid fa-play"></i></button>
-                                    <button type="button" class="btn btn-sm btn-success" @click="stopTest(test)" v-else>
-                                        <i class="fa-solid fa-stop"></i></button>
-                                </span>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
+                <div class="card">
+                    <div class="card-header bg-primary">
+                        &nbsp;Tests
+                    </div>
+                    <div class="card-body margin-0 padding-0">
+                        <table class="table table-sm table-striped table-bordered table-primary caption-top margin-0 padding-0">
+                            <caption class="text-start small bg-body-secondary">
+                                &nbsp;
+                                <div class="btn-group btn-group-sm align-middle small" role="group">
+                                    <button type="button" class="btn btn-sm btn-outline-primary" @click="addTest()"><i
+                                            class="fa-solid fa-plus"></i>&nbsp;Add test</button>
+                                </div>
+                            </caption>
+                            <thead>
+                                <tr>
+                                    <th scope="col">Id</th>
+                                    <th scope="col">Name</th>
+                                    <th scope="col">Description</th>
+                                    <th scope="col"></th>
+                                    <th scope="col"></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="test in tests" :key="test.id">
+                                    <td class="align-middle"><label class="align-middle small">{{ test.id }}</label>
+                                    </td>
+                                    <td class="align-middle"><label class="align-middle small">{{ test.name }}</label>
+                                    </td>
+                                    <td class="align-middle"><label class="align-middle small">{{ test.description
+                                            }}</label>
+                                    </td>
+                                    <td class="align-middle">
+                                        <span class="align-middle">
+                                            <div class="btn-toolbar" role="toolbar"
+                                                aria-label="Toolbar with button groups">
+                                                <div class="btn-group btn-group-sm align-middle small me-2"
+                                                    role="group">
+                                                    <button type="button"
+                                                        class="btn btn-sm btn-outline-primary text-decoration-none"
+                                                        @click="editTest(test)" data-bs-toggle="modal"
+                                                        data-bs-target="#idEditTestModel"><i
+                                                            class="fa-solid fa-pen-to-square"></i></button>
+                                                    <router-link :to="{ name: 'Test', params: { testid: test.id } }">
+                                                        <button type="button"
+                                                            class="btn btn-sm btn-outline-primary text-decoration-none"><i
+                                                                class="fa-solid fa-server"></i></button></router-link>
+                                                </div>
+                                                <div class="btn-group btn-group-sm align-middle small me-2"
+                                                    role="group">
+                                                    <button class="btn btn-sm btn-outline-danger text-decoration-none"
+                                                        @click="confirmDelete(test)"><i
+                                                            class="fa-solid fa-minus"></i></button>
+                                                </div>
+                                            </div>
+                                        </span>
+                                    </td>
+                                    <td class="align-middle">
+                                        <span class="align-middle">
+                                            <button type="button" class="btn btn-sm btn-warning"
+                                                @click="startTest(test)" v-if="test.processId === null">
+                                                <i class="fa-solid fa-play"></i></button>
+                                            <button type="button" class="btn btn-sm btn-success" @click="stopTest(test)"
+                                                v-else>
+                                                <i class="fa-solid fa-stop"></i></button>
+                                        </span>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+
+
+
             </div>
         </div>
     </div>
@@ -229,7 +235,7 @@ const validateNumberOptional = (str) => {
     <div class="modal fade" id="idEditTestModel" tabindex="-1" aria-labelledby="editTestLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
-                <div class="modal-header">
+                <div class="modal-header bg-primary">
                     <h6 class="modal-title fs-5 small" id="editTestLabel">Edit test</h6>
                 </div>
                 <div class="modal-body">
@@ -248,10 +254,11 @@ const validateNumberOptional = (str) => {
                             v-model="editTestData.description"></textarea>
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal" data-bs-target="#idEditTestModel">Cancel</button>
-                    <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal" data-bs-target="#idEditTestModel"
-                        @click="updateTest(editTestData)">Ok</button>
+                <div class="modal-footer bg-primary-subtle">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
+                        data-bs-target="#idEditTestModel">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal"
+                        data-bs-target="#idEditTestModel" @click="updateTest(editTestData)">Ok</button>
                 </div>
             </div>
         </div>
