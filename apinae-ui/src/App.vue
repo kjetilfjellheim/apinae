@@ -6,7 +6,7 @@ import settings from "./components/Settings.vue";
 
 const current_file_path = ref("");
 
-const render_route_view = ref(false);
+const render_route_view = ref(true);
 
 async function load() {
   render_route_view.value = false;
