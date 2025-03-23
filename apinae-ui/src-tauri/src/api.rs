@@ -1,15 +1,28 @@
-use std::path::Path;
+use std::{collections::HashMap, path::Path};
 
 use crate::{model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow}, state::ProcessData};
 use tauri::{AppHandle, State};
 use crate::AppData;
-use apinae_lib::{config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration}, settings::Settings};
+use apinae_lib::{config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration}, settings::Settings};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
 /**
  * Default name for new tests, servers, listeners and endpoints.
  */
 const DEFAULT_NAME: &str = "Untitled";
+/**
+ * Default status code for new mock responses.
+ */
+const DEFAULT_STATUS_CODE: u16 = 200;
+/**
+ * Default delay for new mock responses.
+ */
+const DEFAULT_DELAY: u64 = 0;
+
+/**
+ * Default method for new endpoints.
+ */
+const DEFAULT_METHOD: &str = "GET";
 
 /**
  * Loads the configuration from a file.
@@ -389,7 +402,7 @@ pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<
 pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let server = data.get_server(testid, serverid).ok_or("Server not found")?;
-    server.endpoints.push(EndpointConfiguration::new("/".to_owned(), String::new(), None).map_err(|err| err.to_string())?);
+    server.endpoints.push(EndpointConfiguration::new("/".to_owned(), DEFAULT_METHOD.to_owned(), Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, DEFAULT_STATUS_CODE, HashMap::new(), DEFAULT_DELAY) })).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
