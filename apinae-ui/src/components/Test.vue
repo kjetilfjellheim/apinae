@@ -408,7 +408,7 @@ const validateStringRequired = (str) => {
 
 //Verify that input is a number. 
 const validateNumberRequired = (str) => {
-  if (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+  if (typeof str === "number" || (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str))))) {
     return "is-valid";
   }
   return "is-invalid";
@@ -416,7 +416,7 @@ const validateNumberRequired = (str) => {
 
 //Verify that input is a number or null. 
 const validateNumberOptional = (str) => {
-  if (!str || (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
+  if (typeof str === "number" || (!str || (Number.isInteger(str) || (str.length > 0 && !isNaN(str))))) {
     return "is-valid";
   }
   return "is-invalid"; 
