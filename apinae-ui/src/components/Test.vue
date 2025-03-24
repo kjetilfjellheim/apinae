@@ -456,6 +456,10 @@ const validateNumberOptional = (str) => {
 }
 
 .btn-accordion-buttons {
+  position: relative;
+}
+
+.button-position-right {
   position: absolute;
   right: 50px;
 }
@@ -513,22 +517,21 @@ const validateNumberOptional = (str) => {
                 :data-bs-target="'#tcpListener' + tcpListener.id" aria-expanded="false"
                 :aria-controls="'tcpListener' + tcpListener.id">
                 <i class="fa-solid fa-ear-listen"></i>&nbsp;Tcp listener for port {{ tcpListener.port }}
-              </button>
+              </button>            
             </h6>
             <div :id="'tcpListener' + tcpListener.id" class="accordion-collapse collapse bg-body-secondary"
               :aria-labelledby="'tcpListener' + tcpListener.id" data-bs-parent="#accordionTcpListener">
               <div class="accordion-body">
-                <div class="btn-accordion-buttons" role="toolbar"
-                  aria-label="Toolbar with button groups margin-0 padding-0 align-middle">
+                <div class="btn-accordion-buttons">
                   <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
                     role="group">
                     <button type="button" class="btn btn-sm btn-outline-primary align-middle"
                       @click="editTcpListener(tcpListener)" data-bs-toggle="modal"
-                      data-bs-target="#idEditTcpListenerModel"><i class="fa-solid fa-file-pen"></i></button>
+                      data-bs-target="#idEditTcpListenerModel"><i class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
                     <button class="btn btn-sm btn-outline-danger align-middle"
-                      @click="confirmDeleteTcpListener(tcpListener.id)"><i class="fa-solid fa-trash"></i></button>
+                      @click="confirmDeleteTcpListener(tcpListener.id)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
                   </div>
-                </div>
+                </div>                
                 <div class="container-fluid margin-0 padding-0">
                   <div class="row">
                     <div class="col-2">
@@ -550,9 +553,8 @@ const validateNumberOptional = (str) => {
                         <dt class="col-sm-1 small">File</dt>
                         <dd class="col-sm-11 small">{{ tcpListener.file }}</dd>
                         <dt class="col-sm-1 small">Data</dt>
-                        <dd class="col-sm-11 small"
-                          style="max-height: 8pc; overflow-y: scroll; max-width: calc(100% - 0px);">
-                          <pre>{{ tcpListener.data }}</pre>
+                        <dd class="col-sm-11 small">
+                          <pre style="max-height: 8pc; overflow-y: scroll; width: 100%">{{ tcpListener.data }}</pre>
                         </dd>
                       </dl>
                     </div>
@@ -578,15 +580,14 @@ const validateNumberOptional = (str) => {
             <div :id="'httpServer' + httpServer.id" class="accordion-collapse collapse"
               :aria-labelledby="'httpServer' + httpServer.id" data-bs-parent="#accordionHttpServer">
               <div class="accordion-body">
-                <div class="btn-accordion-buttons" role="toolbar"
-                  aria-label="Toolbar with button groups margin-0 padding-0 align-middle">
-                  <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
+              <div class="btn-accordion-buttons">
+                <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
                     role="group">
                     <button type="button" class="btn btn-sm btn-outline-primary align-middle"
                       @click="editHttpServer(httpServer)" data-bs-toggle="modal"
-                      data-bs-target="#idEditHttpServerModel"><i class="fa-solid fa-file-pen"></i></button>
+                      data-bs-target="#idEditHttpServerModel"><i class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
                     <button class="btn btn-sm btn-outline-danger align-middle"
-                      @click="confirmDeleteHttpServer(httpServer.id)"><i class="fa-solid fa-trash"></i></button>
+                      @click="confirmDeleteHttpServer(httpServer.id)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
                   </div>
                 </div>
                 <div class="container-fluid margin-0 padding-0">
@@ -659,13 +660,11 @@ const validateNumberOptional = (str) => {
                                     <tr>
                                       <td class="text-truncate small">{{ endpoint.mock?.status }}</td>
                                       <td class="text-truncate small">{{ endpoint.mock?.delay }}</td>
-                                      <td class="text-truncate small">
-                                        <pre class="margin-0 padding-0"
-                                          style="min-width: 100%; max-height: 8pc; overflow-y: scroll; max-width: calc(100% - 150px);">{{ endpoint.mock?.headers }}</pre>
+                                      <td class="text-truncate small" >
+                                        <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; width: 50vh; min-width: 100%;">{{ endpoint.mock?.headers }}</pre>
                                       </td>
                                       <td class="text-truncate small">
-                                        <pre class="margin-0 padding-0"
-                                          style="min-width: 100%; max-height: 8pc; overflow-y: scroll; max-width: calc(100% - 150px);">{{ endpoint.mock?.response }}</pre>
+                                        <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; width: 50vh; min-width: 100%;">{{ endpoint.mock?.response }}</pre>
                                       </td>
                                     </tr>
                                   </tbody>
