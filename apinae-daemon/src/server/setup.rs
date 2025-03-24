@@ -1,14 +1,7 @@
 use std::rc::Rc;
 
-use apinae_lib::{
-    config::
-        TestConfiguration
-    ,
-    error::ApplicationError,
-};
-use tokio::
-    sync::RwLock
-;
+use apinae_lib::{config::TestConfiguration, error::ApplicationError};
+use tokio::sync::RwLock;
 
 use super::{common::StartableServer, http::AppServer, tcp::AppListener};
 
@@ -27,9 +20,7 @@ impl ServerSetup {
      * The created `ServerSetup`.
      */
     pub fn new() -> Self {
-        ServerSetup {
-            servers: Rc::new(RwLock::new(vec![])),
-        }
+        ServerSetup { servers: Rc::new(RwLock::new(vec![])) }
     }
 
     /**
@@ -37,16 +28,9 @@ impl ServerSetup {
      */
     pub async fn setup_test(&mut self, test_configuration: &TestConfiguration) {
         log::info!("Setting up test with id {}", test_configuration.id);
-        let servers: Vec<Box<dyn StartableServer>> = test_configuration
-            .servers
-            .iter()
-            .map(|server_configuration| Box::new(AppServer::new(server_configuration.clone())) as Box<dyn StartableServer>)
-            .collect();
-        let listeners: Vec<Box<dyn StartableServer>> = test_configuration
-            .listeners
-            .iter()
-            .map(|tcp_listener_data| Box::new(AppListener::new(tcp_listener_data)) as Box<dyn StartableServer>)
-            .collect();
+        let servers: Vec<Box<dyn StartableServer>> =
+            test_configuration.servers.iter().map(|server_configuration| Box::new(AppServer::new(server_configuration.clone())) as Box<dyn StartableServer>).collect();
+        let listeners: Vec<Box<dyn StartableServer>> = test_configuration.listeners.iter().map(|tcp_listener_data| Box::new(AppListener::new(tcp_listener_data)) as Box<dyn StartableServer>).collect();
         self.servers.write().await.extend(servers);
         self.servers.write().await.extend(listeners);
     }
@@ -67,7 +51,6 @@ impl ServerSetup {
         }
         Ok(())
     }
-
 }
 
 #[cfg(test)]
@@ -82,19 +65,11 @@ mod tests {
             id: "test".to_string(),
             name: "Test".to_string(),
             description: "Test description".to_string(),
-            servers: vec![
-                ServerConfiguration {
-                    id: "test".to_string(),
-                    name: "Test server".to_string(),
-                    http_port: Some(8080),
-                    https_config: None,
-                    endpoints: vec![],
-                },
-            ],
+            servers: vec![ServerConfiguration { id: "test".to_string(), name: "Test server".to_string(), http_port: Some(8080), https_config: None, endpoints: vec![] }],
             listeners: vec![],
         };
         server_setup.setup_test(&test_configuration).await;
         let servers = server_setup.start_servers().await;
-        assert!(servers.is_ok());        
+        assert!(servers.is_ok());
     }
 }
