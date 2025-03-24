@@ -98,19 +98,14 @@ fn list_tests(config: &AppConfiguration) {
  * An error if the test is not found.
  * An error if the id is missing.
  */
-async fn start_daemon(
-    id: Option<&String>,
-    config: &AppConfiguration,
-) -> Result<(), ApplicationError> {
+async fn start_daemon(id: Option<&String>, config: &AppConfiguration) -> Result<(), ApplicationError> {
     let Some(id) = id else {
         return Err(ApplicationError::MissingId("Missing id".to_string()));
     };
     let test = get_test(id, config)?;
     let mut server_setup = ServerSetup::new();
     server_setup.setup_test(test).await;
-    server_setup.start_servers().await.map_err(|err| {
-        ApplicationError::ServerStartUpError(format!("Server startup failed: {err}"))
-    })?;
+    server_setup.start_servers().await.map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
     Ok(())
 }
 
@@ -127,16 +122,11 @@ async fn start_daemon(
  * # Errors
  * An error if the test is not found.
  */
-fn get_test<'a>(
-    id: &str,
-    config: &'a AppConfiguration,
-) -> Result<&'a TestConfiguration, ApplicationError> {
+fn get_test<'a>(id: &str, config: &'a AppConfiguration) -> Result<&'a TestConfiguration, ApplicationError> {
     let test = config.tests.iter().find(|test| test.id == id);
     match test {
         Some(test) => Ok(test),
-        None => Err(ApplicationError::CouldNotFind(format!(
-            "No test with id: {id}"
-        ))),
+        None => Err(ApplicationError::CouldNotFind(format!("No test with id: {id}"))),
     }
 }
 
@@ -157,12 +147,8 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
 
     use tokio::signal::unix::{signal, SignalKind};
 
-    let mut signal_terminate = signal(SignalKind::terminate()).map_err(|err| {
-        ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}"))
-    })?;
-    let mut signal_interrupt = signal(SignalKind::interrupt()).map_err(|err| {
-        ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}"))
-    })?;
+    let mut signal_terminate = signal(SignalKind::terminate()).map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
+    let mut signal_interrupt = signal(SignalKind::interrupt()).map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
 
     tokio::select! {
         _ = signal_terminate.recv() => exit(0),
@@ -189,14 +175,10 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
 
     // Infos here:
     // https://learn.microsoft.com/en-us/windows/console/handlerroutine
-    let mut signal_c =
-        windows::ctrl_c().map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
-    let mut signal_break = windows::ctrl_break()
-        .map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
-    let mut signal_close = windows::ctrl_close()
-        .map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
-    let mut signal_shutdown = windows::ctrl_shutdown()
-        .map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
+    let mut signal_c = windows::ctrl_c().map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
+    let mut signal_break = windows::ctrl_break().map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
+    let mut signal_close = windows::ctrl_close().map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
+    let mut signal_shutdown = windows::ctrl_shutdown().map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
 
     tokio::select! {
         _ = signal_c.recv() => exit(0),
@@ -222,8 +204,7 @@ mod test {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_start_daemon() {
-        let config: AppConfiguration =
-            AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
+        let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
         let _ = start_daemon(Some(&"1".to_string()), &config).await.is_ok();
         assert!(start_daemon(Some(&"2".to_string()), &config).await.is_err());
         assert!(start_daemon(None, &config).await.is_err());
@@ -231,8 +212,7 @@ mod test {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_list_tests() {
-        let config: AppConfiguration =
-            AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
+        let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
         list_tests(&config);
     }
 }

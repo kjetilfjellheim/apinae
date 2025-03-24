@@ -18,16 +18,12 @@ pub struct AppData {
 impl AppData {
     /**
      * Creates a new instance of the `AppData` struct.
-     * 
+     *
      * # Returns
      * The new instance of the `AppData` struct.
      */
     pub fn new() -> Self {
-        Self {
-            data: Mutex::new(AppConfiguration::new(String::from("Untitled"), String::new(), Vec::new()).into()),
-            file_path: Mutex::new(None),
-            process_data: Mutex::new(HashMap::new()),
-        }
+        Self { data: Mutex::new(AppConfiguration::new(String::from("Untitled"), String::new(), Vec::new()).into()), file_path: Mutex::new(None), process_data: Mutex::new(HashMap::new()) }
     }
 }
 
@@ -45,18 +41,15 @@ pub struct ProcessData {
 impl ProcessData {
     /**
      * Creates a new instance of the `ProcessData` struct.
-     * 
+     *
      * # Arguments
      * `process_id` - The process ID.
      * `process` - The process.
-     * 
+     *
      * # Returns
      * The new instance of the `ProcessData` struct.
      */
     pub fn new(process_id: u32, process: std::process::Child) -> Self {
-        Self {
-            process_id,
-            process
-        }
+        Self { process_id, process }
     }
 }

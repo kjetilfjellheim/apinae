@@ -17,28 +17,21 @@ pub struct TestRow {
 }
 
 impl TestRow {
-
     /**
      * Create a new test row.
-     * 
+     *
      * # Arguments
      * `id` - The unique identifier of the test.
      * `name` - The name of the test.
      * `description` - The description of the test.
      * `process_id` - The process id of the test.
-     * 
+     *
      * # Returns
      * TestRow - The test row.
      */
     pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>) -> Self {
-        Self {
-            id: id.to_string(),
-            name: name.to_string(),
-            description: description.to_string(),
-            process_id,
-        }
+        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id }
     }
-
 }
 
 impl From<TestConfiguration> for TestRow {
@@ -46,12 +39,7 @@ impl From<TestConfiguration> for TestRow {
      * Convert a test configuration to a test row.
      */
     fn from(test: TestConfiguration) -> Self {
-        Self {
-            id: test.id.clone(),
-            name: test.name.clone(),
-            description: test.description.clone(),
-            process_id: None,
-        }
+        Self { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None }
     }
 }
 
@@ -116,18 +104,14 @@ impl From<&EndpointConfiguration> for EndpointRow {
             id: endpoint_config.id.clone(),
             path_expression: endpoint_config.path_expression.clone(),
             method: endpoint_config.method.clone(),
-            mock: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| {
-                match endpoint_type {
-                    EndpointType::Mock{ configuration} => Some(MockRow::from(configuration)),
-                    _ => None
-                }
+            mock: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| match endpoint_type {
+                EndpointType::Mock { configuration } => Some(MockRow::from(configuration)),
+                _ => None,
             }),
-            route: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| {
-                match endpoint_type {
-                    EndpointType::Route{ configuration} => Some(RouteRow::from(configuration)),
-                    _ => None
-                }
-            })
+            route: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| match endpoint_type {
+                EndpointType::Route { configuration } => Some(RouteRow::from(configuration)),
+                _ => None,
+            }),
         }
     }
 }
@@ -156,7 +140,10 @@ impl From<&MockResponseConfiguration> for MockRow {
         Self {
             response: mock.response.clone(),
             status: mock.status,
-            headers: mock.headers.iter().fold(String::new(), |mut output, val| { output.push_str(&format!("{}: {}\n", val.0, val.1)); output }),
+            headers: mock.headers.iter().fold(String::new(), |mut output, val| {
+                output.push_str(&format!("{}: {}\n", val.0, val.1));
+                output
+            }),
             delay: mock.delay,
         }
     }
@@ -168,17 +155,20 @@ impl From<&MockRow> for MockResponseConfiguration {
      */
     fn from(mock: &MockRow) -> Self {
         MockResponseConfiguration::new(
-            mock.response.clone(), 
-            mock.status, 
-            mock.headers.split("\n").
-                filter(|header| !header.is_empty() && header.contains(":")).
-                map(|header| {
+            mock.response.clone(),
+            mock.status,
+            mock.headers
+                .split("\n")
+                .filter(|header| !header.is_empty() && header.contains(":"))
+                .map(|header| {
                     let mut parts = header.split(":");
                     let key = parts.next().unwrap_or("").trim();
                     let value = parts.next().unwrap_or("").trim();
                     (String::from(key), String::from(value))
-                }).collect(),
-            mock.delay)
+                })
+                .collect(),
+            mock.delay,
+        )
     }
 }
 
@@ -212,7 +202,7 @@ impl From<&RouteConfiguration> for RouteRow {
     /**
      * Convert a route configuration to a route row.
      */
-    fn from(route: &RouteConfiguration) -> Self {        
+    fn from(route: &RouteConfiguration) -> Self {
         Self {
             url: route.url.clone(),
             proxy_url: route.proxy_url.clone(),
@@ -232,10 +222,20 @@ impl From<&RouteRow> for RouteConfiguration {
      * Convert a route row to a route configuration.
      */
     fn from(route: &RouteRow) -> Self {
-        RouteConfiguration::new(route.url.clone(), route.proxy_url.clone(), None, route.http1_only, route.accept_invalid_certs, route.accept_invalid_hostnames, route.min_tls_version.clone().map(TlsVersion::from), route.max_tls_version.clone().map(TlsVersion::from), route.read_timeout, route.connect_timeout)
+        RouteConfiguration::new(
+            route.url.clone(),
+            route.proxy_url.clone(),
+            None,
+            route.http1_only,
+            route.accept_invalid_certs,
+            route.accept_invalid_hostnames,
+            route.min_tls_version.clone().map(TlsVersion::from),
+            route.max_tls_version.clone().map(TlsVersion::from),
+            route.read_timeout,
+            route.connect_timeout,
+        )
     }
 }
-
 
 /**
  * This struct represents a https configuration.
@@ -275,7 +275,13 @@ impl From<HttpsRow> for HttpsConfiguration {
      * Convert a https row to a https configuration.
      */
     fn from(https_row: HttpsRow) -> Self {
-        HttpsConfiguration::new(https_row.server_certificate, https_row.private_key, https_row.https_port, https_row.client_certificate, https_row.supported_tls_versions.into_iter().map(TlsVersion::from).collect())
+        HttpsConfiguration::new(
+            https_row.server_certificate,
+            https_row.private_key,
+            https_row.https_port,
+            https_row.client_certificate,
+            https_row.supported_tls_versions.into_iter().map(TlsVersion::from).collect(),
+        )
     }
 }
 
@@ -313,12 +319,12 @@ impl From<&TcpListenerData> for TcpListenerRow {
             delay_write_ms: tcp_listener.delay_write_ms,
             port: tcp_listener.port,
             accept: tcp_listener.accept,
-            close_connection: String::from(tcp_listener.clone().close_connection)
+            close_connection: String::from(tcp_listener.clone().close_connection),
         }
     }
 }
 
-mod  test {
+mod test {
 
     #[allow(unused_imports)]
     use std::collections::HashMap;
@@ -400,21 +406,16 @@ mod  test {
         assert_eq!(https_row.private_key, "private_key");
         assert_eq!(https_row.https_port, 443);
         assert_eq!(https_row.client_certificate, None);
-        assert_eq!(https_row.supported_tls_versions, Vec::<String>::new());        
+        assert_eq!(https_row.supported_tls_versions, Vec::<String>::new());
     }
 
     /**
-     * Test the conversion from a mock row to a mock response configuration with 
+     * Test the conversion from a mock row to a mock response configuration with
      * headers and response.
      */
     #[test]
     fn test_from_mockrow_to_mockresponseconfiguration() {
-        let mock_row = MockRow {
-            response: Some("response".to_owned()),
-            status: 200,
-            headers: "header: value\nheader2:\n \n".to_owned(),
-            delay: 0,
-        };
+        let mock_row = MockRow { response: Some("response".to_owned()), status: 200, headers: "header: value\nheader2:\n \n".to_owned(), delay: 0 };
 
         let mock_config = MockResponseConfiguration::from(&mock_row);
 
@@ -425,19 +426,13 @@ mod  test {
         assert_eq!(mock_config.delay, 0);
     }
 
-
     /**
-     * Test the conversion from a mock row to a mock response configuration 
+     * Test the conversion from a mock row to a mock response configuration
      * with no headers and empty response.
      */
     #[test]
     fn test_from_mockrow_to_mockresponseconfiguration_no_header() {
-        let mock_row = MockRow {
-            response: None,
-            status: 200,
-            headers: "".to_owned(),
-            delay: 0,
-        };
+        let mock_row = MockRow { response: None, status: 200, headers: "".to_owned(), delay: 0 };
 
         let mock_config = MockResponseConfiguration::from(&mock_row);
 
@@ -446,6 +441,4 @@ mod  test {
         assert_eq!(mock_config.headers.len(), 0);
         assert_eq!(mock_config.delay, 0);
     }
-
-
 }

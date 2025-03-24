@@ -1,15 +1,15 @@
-use std::{fs::File, io::{BufReader, Read}, time::Duration};
+use std::{
+    fs::File,
+    io::{BufReader, Read},
+    time::Duration,
+};
 
 use apinae_lib::{
-    config::{
-        CloseConnectionWhen, TcpListenerData
-    },
+    config::{CloseConnectionWhen, TcpListenerData},
     error::ApplicationError,
 };
-use tokio::{
-    io::Interest, task::JoinHandle}
-;
 use log::{error, info};
+use tokio::{io::Interest, task::JoinHandle};
 
 use super::common::StartableServer;
 
@@ -32,9 +32,7 @@ impl AppListener {
      * The created `AppListener`.
      */
     pub fn new(tcp_listener: &TcpListenerData) -> Self {
-        AppListener {
-            tcp_listener: tcp_listener.clone(),
-        }
+        AppListener { tcp_listener: tcp_listener.clone() }
     }
 
     /**
@@ -62,7 +60,8 @@ impl AppListener {
                         error!("Error handling tcp connection: {err}");
                     });
                     info!("Connection closed");
-                }).await;
+                })
+                .await;
             }
         });
         Ok(())
@@ -78,13 +77,7 @@ impl AppListener {
      *  An error if the listener could not be bound.
      */
     async fn bind_listener(&self) -> Result<tokio::net::TcpListener, ApplicationError> {
-        let server = tokio::net::TcpListener::bind(("127.0.0.1", self.tcp_listener.port))
-            .await
-            .map_err(|err| {
-                ApplicationError::ServerStartUpError(format!(
-                    "Failed to create tcp listener: {err}"
-                ))
-            })?;
+        let server = tokio::net::TcpListener::bind(("127.0.0.1", self.tcp_listener.port)).await.map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to create tcp listener: {err}")))?;
         log::info!("Listening on: {}", self.tcp_listener.port);
         Ok(server)
     }
@@ -141,10 +134,7 @@ impl AppListener {
      * The accepted stream.
      *
      */
-    async fn wait_for_accept(
-        tcp_listener: &tokio::net::TcpListener,
-        tcp_listener_data: &TcpListenerData,
-    ) -> Option<tokio::net::TcpStream> {
+    async fn wait_for_accept(tcp_listener: &tokio::net::TcpListener, tcp_listener_data: &TcpListenerData) -> Option<tokio::net::TcpStream> {
         if !tcp_listener_data.accept {
             tokio::time::sleep(Duration::from_secs(1)).await;
             return None;
@@ -162,35 +152,27 @@ impl AppListener {
 
     /**
      * Handle the TCP stream.
-     * 
+     *
      * # Arguments
      * `stream`: The TCP stream.
      * `tcp_listener_data`: The TCP listener data.
-     * 
+     *
      * # Returns
      * Ok if the stream was handled.
-     * 
+     *
      * # Errors
      * An error if the stream could not be handled.
-     * 
+     *
      */
-    async fn handle_tcp_stream(
-        mut stream: tokio::net::TcpStream,
-        tcp_listener_data: TcpListenerData,
-    ) -> Result<(), ApplicationError> {
+    async fn handle_tcp_stream(mut stream: tokio::net::TcpStream, tcp_listener_data: TcpListenerData) -> Result<(), ApplicationError> {
         let mut written = true;
 
-        loop {            
+        loop {
             tokio::time::sleep(Duration::from_micros(10)).await;
 
-            let ready = stream
-                .ready(Interest::READABLE | Interest::WRITABLE)
-                .await
-                .map_err(|err| {
-                    ApplicationError::ServerStartUpError(format!("Failed to get ready: {err}"))
-                })?;
+            let ready = stream.ready(Interest::READABLE | Interest::WRITABLE).await.map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to get ready: {err}")))?;
             log::debug!("Ready: {:?}", ready);
-            if ready.is_read_closed() || ready.is_write_closed() {            
+            if ready.is_read_closed() || ready.is_write_closed() {
                 return Ok(());
             }
 
@@ -198,34 +180,34 @@ impl AppListener {
                 return Ok(());
             }
 
-            if ready.is_readable() {                
+            if ready.is_readable() {
                 loop {
                     let mut buffer = vec![];
-                    let _ = stream.try_read_buf(&mut buffer);                
+                    let _ = stream.try_read_buf(&mut buffer);
                     if !buffer.is_empty() {
-                        info!("Received: {:?}", String::from_utf8_lossy(&buffer));                                  
+                        info!("Received: {:?}", String::from_utf8_lossy(&buffer));
                     }
                     if buffer.is_empty() {
                         written = false;
-                        break;                        
-                    }     
-                }           
+                        break;
+                    }
+                }
             }
 
             if tcp_listener_data.close_connection == CloseConnectionWhen::AfterRead {
                 return Ok(());
             }
 
-            if ready.is_writable() && !written {     
+            if ready.is_writable() && !written {
                 if let Some(delay_write_ms) = tcp_listener_data.delay_write_ms {
                     tokio::time::sleep(Duration::from_millis(delay_write_ms)).await;
                 }
                 if let Some(data) = tcp_listener_data.data.as_ref() {
                     Self::output_string_data(&mut stream, data);
-                } else if let Some(file) = tcp_listener_data.file.as_ref() {                    
-                    Self::output_file_data(&mut stream, file);             
+                } else if let Some(file) = tcp_listener_data.file.as_ref() {
+                    Self::output_file_data(&mut stream, file);
                 }
-                
+
                 if tcp_listener_data.close_connection == CloseConnectionWhen::AfterResponse {
                     return Ok(());
                 }

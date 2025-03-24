@@ -29,11 +29,7 @@ impl AppConfiguration {
      */
     #[must_use]
     pub fn new(name: String, description: String, tests: Vec<TestConfiguration>) -> Self {
-        AppConfiguration {
-            name,
-            description,
-            tests,
-        }
+        AppConfiguration { name, description, tests }
     }
 
     /**
@@ -57,15 +53,8 @@ impl AppConfiguration {
      * # Errors
      * An error if the test could not be found.
      */
-    pub fn update_test(
-        &mut self,
-        test_id: &str,
-        name: &str,
-        description: &str,
-    ) -> Result<(), ApplicationError> {
-        let test = self.get_test(test_id).ok_or_else(|| {
-            ApplicationError::CouldNotFind(format!("Test with id {test_id} not found."))
-        })?;
+    pub fn update_test(&mut self, test_id: &str, name: &str, description: &str) -> Result<(), ApplicationError> {
+        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
         test.name = name.to_string();
         test.description = description.to_string();
         Ok(())
@@ -82,12 +71,8 @@ impl AppConfiguration {
      * An error if the configuration could not be saved.
      */
     pub fn save(&self, path: &str) -> Result<(), ApplicationError> {
-        let string_data = serde_json::to_string_pretty(&self).map_err(|err| {
-            ApplicationError::FileError(format!("Failed to convert model to string: {err}"))
-        })?;
-        std::fs::write(path, string_data).map_err(|err| {
-            ApplicationError::FileError(format!("Failed to write model to file: {err}"))
-        })?;
+        let string_data = serde_json::to_string_pretty(&self).map_err(|err| ApplicationError::FileError(format!("Failed to convert model to string: {err}")))?;
+        std::fs::write(path, string_data).map_err(|err| ApplicationError::FileError(format!("Failed to write model to file: {err}")))?;
         Ok(())
     }
 
@@ -102,14 +87,8 @@ impl AppConfiguration {
      * An error if the configuration could not be loaded.
      */
     pub fn load(path: &str) -> Result<Self, ApplicationError> {
-        let string_data = std::fs::read_to_string(path).map_err(|err| {
-            ApplicationError::FileError(format!("Failed to read input data to string: {err}"))
-        })?;
-        serde_json::from_str(&string_data).map_err(|err| {
-            ApplicationError::FileError(format!(
-                "Failed to convert input string to config model: {err}"
-            ))
-        })
+        let string_data = std::fs::read_to_string(path).map_err(|err| ApplicationError::FileError(format!("Failed to read input data to string: {err}")))?;
+        serde_json::from_str(&string_data).map_err(|err| ApplicationError::FileError(format!("Failed to convert input string to config model: {err}")))
     }
 
     /**
@@ -133,13 +112,7 @@ impl AppConfiguration {
      * An error if the test could not be found.
      */
     pub fn delete_test(&mut self, test_id: &str) -> Result<(), ApplicationError> {
-        let index = self
-            .tests
-            .iter()
-            .position(|test| test.id == test_id)
-            .ok_or_else(|| {
-                ApplicationError::CouldNotFind(format!("Test with id {test_id} not found."))
-            })?;
+        let index = self.tests.iter().position(|test| test.id == test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
         self.tests.remove(index);
         Ok(())
     }
@@ -153,12 +126,7 @@ impl AppConfiguration {
      * The listener configuration.
      */
     pub fn get_listener(&mut self, test_id: &str, listener_id: &str) -> Option<TcpListenerData> {
-        self.get_test(test_id).and_then(|test| {
-            test.listeners
-                .iter_mut()
-                .find(|listener| listener.id == listener_id)
-                .cloned()
-        })
+        self.get_test(test_id).and_then(|test| test.listeners.iter_mut().find(|listener| listener.id == listener_id).cloned())
     }
 
     /**
@@ -170,25 +138,11 @@ impl AppConfiguration {
      * # Errors
      * An error if the test could not be found.
      * An error if the listener could not be found.
-     * 
+     *
      */
-    pub fn delete_listener(
-        &mut self,
-        test_id: &str,
-        listener_id: &str,
-    ) -> Result<(), ApplicationError> {
-        let test: &mut TestConfiguration =
-            self.get_test(test_id)
-                .ok_or(ApplicationError::CouldNotFind(format!(
-                    "Test with id {test_id} not found."
-                )))?;
-        let index = test
-            .listeners
-            .iter()
-            .position(|listener| listener.id == listener_id)
-            .ok_or(ApplicationError::CouldNotFind(format!(
-                "Listener with id {listener_id} not found."
-            )))?;
+    pub fn delete_listener(&mut self, test_id: &str, listener_id: &str) -> Result<(), ApplicationError> {
+        let test: &mut TestConfiguration = self.get_test(test_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        let index = test.listeners.iter().position(|listener| listener.id == listener_id).ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
         test.listeners.remove(index);
         Ok(())
     }
@@ -220,13 +174,10 @@ impl AppConfiguration {
         accept: bool,
         close_connection: CloseConnectionWhen,
     ) -> Result<(), ApplicationError> {
-        let listener = self.get_test(test_id).and_then(|test| {
-            test.listeners
-                .iter_mut()
-                .find(|listener| listener.id == listener_id)
-        }).ok_or(ApplicationError::CouldNotFind(format!(
-            "Listener with id {listener_id} not found."
-        )))?;
+        let listener = self
+            .get_test(test_id)
+            .and_then(|test| test.listeners.iter_mut().find(|listener| listener.id == listener_id))
+            .ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
         listener.file = file;
         listener.data = data;
         listener.delay_write_ms = delay_write_ms;
@@ -244,13 +195,8 @@ impl AppConfiguration {
      *
      * The server configuration.
      */
-    pub fn get_server(
-        &mut self,
-        test_id: &str,
-        server_id: &str,
-    ) -> Option<&mut ServerConfiguration> {
-        self.get_test(test_id)
-            .and_then(|test| test.get_server(server_id))
+    pub fn get_server(&mut self, test_id: &str, server_id: &str) -> Option<&mut ServerConfiguration> {
+        self.get_test(test_id).and_then(|test| test.get_server(server_id))
     }
 
     /**
@@ -262,16 +208,8 @@ impl AppConfiguration {
      * # Errors
      * An error if the test could not be found.
      */
-    pub fn delete_server(
-        &mut self,
-        test_id: &str,
-        server_id: &str,
-    ) -> Result<(), ApplicationError> {
-        let test: &mut TestConfiguration =
-            self.get_test(test_id)
-                .ok_or(ApplicationError::CouldNotFind(format!(
-                    "Test with id {test_id} not found."
-                )))?;
+    pub fn delete_server(&mut self, test_id: &str, server_id: &str) -> Result<(), ApplicationError> {
+        let test: &mut TestConfiguration = self.get_test(test_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
         test.delete_server(server_id)
     }
 
@@ -284,18 +222,8 @@ impl AppConfiguration {
      *
      * The endpoint configuration.
      */
-    pub fn get_endpoint(
-        &mut self,
-        test_id: &str,
-        server_id: &str,
-        endpoint_id: &str,
-    ) -> Option<&mut EndpointConfiguration> {
-        self.get_server(test_id, server_id).and_then(|server| {
-            server
-                .endpoints
-                .iter_mut()
-                .find(|endpoint| endpoint.id == endpoint_id)
-        })
+    pub fn get_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Option<&mut EndpointConfiguration> {
+        self.get_server(test_id, server_id).and_then(|server| server.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id))
     }
 
     /**
@@ -310,17 +238,8 @@ impl AppConfiguration {
      * An error if the server could not be found.
      * An error if the endpoint could not be found.
      */
-    pub fn delete_endpoint(
-        &mut self,
-        test_id: &str,
-        server_id: &str,
-        endpoint_id: &str,
-    ) -> Result<(), ApplicationError> {
-        let server: &mut ServerConfiguration =
-            self.get_server(test_id, server_id)
-                .ok_or(ApplicationError::CouldNotFind(format!(
-                    "Server with id {server_id} not found."
-                )))?;
+    pub fn delete_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Result<(), ApplicationError> {
+        let server: &mut ServerConfiguration = self.get_server(test_id, server_id).ok_or(ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
         server.delete_endpoint(endpoint_id)
     }
 
@@ -341,20 +260,8 @@ impl AppConfiguration {
      * An error if the endpoint could not be found.
      */
     #[allow(clippy::too_many_arguments)]
-    pub fn update_endpoint(
-        &mut self,
-        test_id: &str,
-        server_id: &str,
-        endpoint_id: &str,
-        path_expression: &str,
-        method: &str,
-        endpoint_type: Option<EndpointType>,
-    ) -> Result<(), ApplicationError> {
-        let endpoint = self
-            .get_endpoint(test_id, server_id, endpoint_id)
-            .ok_or_else(|| {
-                ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found."))
-            })?;
+    pub fn update_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str, path_expression: &str, method: &str, endpoint_type: Option<EndpointType>) -> Result<(), ApplicationError> {
+        let endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
         endpoint.path_expression = path_expression.to_string();
         endpoint.method = method.to_string();
         endpoint.endpoint_type = endpoint_type;
@@ -391,20 +298,9 @@ impl TestConfiguration {
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(
-        name: String,
-        description: String,
-        servers: Vec<ServerConfiguration>,
-        listeners: Vec<TcpListenerData>,
-    ) -> Result<Self, ApplicationError> {
+    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(TestConfiguration {
-            id,
-            name,
-            description,
-            servers,
-            listeners,
-        })
+        Ok(TestConfiguration { id, name, description, servers, listeners })
     }
 
     /**
@@ -424,9 +320,7 @@ impl TestConfiguration {
      * `server_id` The ID of the server.
      */
     pub fn get_server(&mut self, server_id: &str) -> Option<&mut ServerConfiguration> {
-        self.servers
-            .iter_mut()
-            .find(|server| server.id == server_id)
+        self.servers.iter_mut().find(|server| server.id == server_id)
     }
 
     /**
@@ -439,13 +333,7 @@ impl TestConfiguration {
      * An error if the server could not be found.
      */
     pub fn delete_server(&mut self, server_id: &str) -> Result<(), ApplicationError> {
-        let index = self
-            .servers
-            .iter()
-            .position(|server| server.id == server_id)
-            .ok_or_else(|| {
-                ApplicationError::CouldNotFind(format!("Server with id {server_id} not found."))
-            })?;
+        let index = self.servers.iter().position(|server| server.id == server_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
         self.servers.remove(index);
         Ok(())
     }
@@ -481,20 +369,8 @@ impl HttpsConfiguration {
      * The https configuration.
      */
     #[must_use]
-    pub fn new(
-        server_certificate: String,
-        private_key: String,
-        https_port: u16,
-        client_certificate: Option<String>,
-        supported_tls_versions: Vec<TlsVersion>,
-    ) -> Self {
-        HttpsConfiguration {
-            server_certificate,
-            private_key,
-            https_port,
-            client_certificate,
-            supported_tls_versions,
-        }
+    pub fn new(server_certificate: String, private_key: String, https_port: u16, client_certificate: Option<String>, supported_tls_versions: Vec<TlsVersion>) -> Self {
+        HttpsConfiguration { server_certificate, private_key, https_port, client_certificate, supported_tls_versions }
     }
 }
 
@@ -527,20 +403,9 @@ impl ServerConfiguration {
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(
-        name: String,
-        http_port: Option<u16>,
-        endpoints: Vec<EndpointConfiguration>,
-        https_config: Option<HttpsConfiguration>,
-    ) -> Result<Self, ApplicationError> {
+    pub fn new(name: String, http_port: Option<u16>, endpoints: Vec<EndpointConfiguration>, https_config: Option<HttpsConfiguration>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(ServerConfiguration {
-            id,
-            name,
-            http_port,
-            endpoints,
-            https_config,
-        })
+        Ok(ServerConfiguration { id, name, http_port, endpoints, https_config })
     }
 
     /**
@@ -549,15 +414,10 @@ impl ServerConfiguration {
      * `name` The name of the server.
      * `http_port` The port to run the server on.
      */
-    pub fn update(
-        &mut self,
-        name: String,
-        http_port: Option<u16>,
-        https_config: Option<HttpsConfiguration>,
-    ) {
+    pub fn update(&mut self, name: String, http_port: Option<u16>, https_config: Option<HttpsConfiguration>) {
         self.name = name;
-        self.http_port = http_port;        
-        self.https_config = https_config;    
+        self.http_port = http_port;
+        self.https_config = https_config;
     }
 
     /**
@@ -571,13 +431,7 @@ impl ServerConfiguration {
      * An error if the endpoint could not be found.
      */
     pub fn delete_endpoint(&mut self, endpoint_id: &str) -> Result<(), ApplicationError> {
-        let index = self
-            .endpoints
-            .iter()
-            .position(|endpoint| endpoint.id == endpoint_id)
-            .ok_or_else(|| {
-                ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found."))
-            })?;
+        let index = self.endpoints.iter().position(|endpoint| endpoint.id == endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
         self.endpoints.remove(index);
         Ok(())
     }
@@ -596,7 +450,7 @@ pub struct EndpointConfiguration {
     // The HTTP method.
     pub method: String,
     // Defines how the endpoint is to be handled.
-    pub endpoint_type: Option<EndpointType>
+    pub endpoint_type: Option<EndpointType>,
 }
 
 impl EndpointConfiguration {
@@ -610,19 +464,10 @@ impl EndpointConfiguration {
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(
-        path_expression: String,
-        method: String,
-        endpoint_type: Option<EndpointType>,
-    ) -> Result<Self, ApplicationError> {
+    pub fn new(path_expression: String, method: String, endpoint_type: Option<EndpointType>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
 
-        Ok(EndpointConfiguration {
-            id,
-            path_expression,
-            method,
-            endpoint_type,
-        })
+        Ok(EndpointConfiguration { id, path_expression, method, endpoint_type })
     }
 }
 
@@ -649,7 +494,7 @@ pub enum CloseConnectionWhen {
 
 impl From<CloseConnectionWhen> for String {
     /**
-     * Convert a `CloseConnectionWhen` to a string. 
+     * Convert a `CloseConnectionWhen` to a string.
      */
     fn from(close_connection: CloseConnectionWhen) -> Self {
         match close_connection {
@@ -663,7 +508,7 @@ impl From<CloseConnectionWhen> for String {
 
 impl From<&str> for CloseConnectionWhen {
     /**
-     * Convert a string to a `CloseConnectionWhen`. 
+     * Convert a string to a `CloseConnectionWhen`.
      */
     fn from(close_connection: &str) -> Self {
         match close_connection {
@@ -710,28 +555,13 @@ impl TcpListenerData {
      * `port` The port to listen on.
      * `accept` Do accept connections.
      * `close_connection` When to close the connection.
-     * 
+     *
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(
-        file: Option<String>,
-        data: Option<String>,
-        delay_write_ms: Option<u64>,
-        port: u16,
-        accept: bool,
-        close_connection: CloseConnectionWhen,
-    ) -> Result<Self, ApplicationError> {
+    pub fn new(file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool, close_connection: CloseConnectionWhen) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(TcpListenerData {
-            id,
-            file,
-            data,
-            delay_write_ms,
-            port,
-            accept,
-            close_connection,
-        })
+        Ok(TcpListenerData { id, file, data, delay_write_ms, port, accept, close_connection })
     }
 
     /**
@@ -744,15 +574,7 @@ impl TcpListenerData {
      * `accept` Do accept connections.
      * `close_connection` When to close the connection.
      */
-    pub fn update(
-        &mut self,
-        file: Option<String>,
-        data: Option<String>,
-        delay_write_ms: Option<u64>,
-        port: u16,
-        accept: bool,
-        close_connection: CloseConnectionWhen,
-    ) {
+    pub fn update(&mut self, file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool, close_connection: CloseConnectionWhen) {
         self.file = file;
         self.data = data;
         self.delay_write_ms = delay_write_ms;
@@ -790,18 +612,8 @@ impl MockResponseConfiguration {
      * The mock response configuration.
      */
     #[must_use]
-    pub fn new(
-        response: Option<String>,
-        status: u16,
-        headers: HashMap<String, String>,
-        delay: u64,
-    ) -> Self {
-        MockResponseConfiguration {
-            response,
-            status,
-            headers,
-            delay,
-        }
+    pub fn new(response: Option<String>, status: u16, headers: HashMap<String, String>, delay: u64) -> Self {
+        MockResponseConfiguration { response, status, headers, delay }
     }
 }
 
@@ -832,7 +644,7 @@ impl From<TlsVersion> for String {
 
 impl From<String> for TlsVersion {
     /**
-     * Convert a string to a `TlsVersion`. Used when converting to the file model. 
+     * Convert a string to a `TlsVersion`. Used when converting to the file model.
      */
     fn from(version: String) -> Self {
         let version = version.as_str();
@@ -909,18 +721,7 @@ impl RouteConfiguration {
         read_timeout: Option<u64>,
         connect_timeout: Option<u64>,
     ) -> Self {
-        RouteConfiguration {
-            url,
-            proxy_url,
-            log,
-            http1_only,
-            accept_invalid_certs,
-            accept_invalid_hostnames,
-            min_tls_version,
-            max_tls_version,
-            read_timeout,
-            connect_timeout,
-        }
+        RouteConfiguration { url, proxy_url, log, http1_only, accept_invalid_certs, accept_invalid_hostnames, min_tls_version, max_tls_version, read_timeout, connect_timeout }
     }
 }
 
@@ -933,11 +734,7 @@ impl RouteConfiguration {
  * An error if the identifier could not be generated.
  */
 fn get_identifier() -> Result<String, ApplicationError> {
-    let id = SystemTime::now()
-        .duration_since(SystemTime::UNIX_EPOCH)
-        .map_err(|err| {
-            ApplicationError::ConfigurationError(format!("Failed to generate identifier: {err}"))
-        })?;
+    let id = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).map_err(|err| ApplicationError::ConfigurationError(format!("Failed to generate identifier: {err}")))?;
     Ok(id.as_millis().to_string())
 }
 
@@ -986,18 +783,7 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        Some(EndpointType::Route { configuration: RouteConfiguration::new(
-                            "/test".to_string(),
-                            None,
-                            None,
-                            false,
-                            false,
-                            false,
-                            None,
-                            None,
-                            None,
-                            None,
-                        ) }),
+                        Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None) }),
                     )
                     .unwrap()],
                     None,
@@ -1019,18 +805,10 @@ mod test {
         assert_eq!(configuration.tests[0].servers[0].endpoints.len(), 1);
         assert_eq!(configuration.tests[0].servers[0].endpoints[0].path_expression, "/test");
         assert_eq!(configuration.tests[0].servers[0].endpoints[0].method, "GET");
-        assert_eq!(configuration.tests[0].servers[0].endpoints[0].endpoint_type, Some(EndpointType::Route { configuration: RouteConfiguration::new(
-            "/test".to_string(),
-            None,
-            None,
-            false,
-            false,
-            false,
-            None,
-            None,
-            None,
-            None,
-        ) }));
+        assert_eq!(
+            configuration.tests[0].servers[0].endpoints[0].endpoint_type,
+            Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None,) })
+        );
     }
 
     /**
@@ -1050,14 +828,7 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        Some(EndpointType::Mock {
-                            configuration: MockResponseConfiguration::new(
-                                Some("Test Response".to_string()),
-                                200,
-                                HashMap::new(),
-                                0,
-                            ),
-                        }),
+                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
                     )
                     .unwrap()],
                     None,
@@ -1088,14 +859,7 @@ mod test {
                     vec![EndpointConfiguration::new(
                         "/test".to_string(),
                         "GET".to_string(),
-                        Some(EndpointType::Mock {
-                            configuration: MockResponseConfiguration::new(
-                                Some("Test Response".to_string()),
-                                200,
-                                HashMap::new(),
-                                0,
-                            ),
-                        }),
+                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
                     )
                     .unwrap()],
                     None,

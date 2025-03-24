@@ -1,9 +1,15 @@
 use std::{collections::HashMap, path::Path};
 
-use crate::{model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow}, state::ProcessData};
-use tauri::{AppHandle, State};
 use crate::AppData;
-use apinae_lib::{config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration}, settings::Settings};
+use crate::{
+    model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow},
+    state::ProcessData,
+};
+use apinae_lib::{
+    config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration},
+    settings::Settings,
+};
+use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
 /**
@@ -26,13 +32,13 @@ const DEFAULT_METHOD: &str = "GET";
 
 /**
  * Loads the configuration from a file.
- * 
+ *
  * `app` The Tauri application handle.
  * `app_data` The application data.
- * 
+ *
  * Returns:
  * The file path of the loaded configuration.
- * 
+ *
  * # Errors
  * If no file is selected.
  * If the configuration file could not be loaded.
@@ -51,10 +57,10 @@ pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<String
 
 /**
  * Saves the configuration to a file.
- * 
+ *
  * `app` The Tauri application handle.
  * `app_data` The application data.
- * 
+ *
  * # Errors
  * If the configuration file could not be saved.
  */
@@ -72,10 +78,10 @@ pub async fn save(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), St
 
 /**
  * Saves the configuration to a new file.
- * 
+ *
  * `app` The Tauri application handle.
  * `app_data` The application data.
- * 
+ *
  * # Errors
  * If no file is selected.
  * If the configuration file could not be saved.
@@ -96,13 +102,13 @@ pub async fn save_as(app: AppHandle, app_data: State<'_, AppData>) -> Result<(),
 
 /**
  * Cleans the configuration.
- * 
+ *
  * `app` The Tauri application handle.
  * `app_data` The application data.
- * 
+ *
  * Returns:
  * The cleaned configuration.
- * 
+ *
  * # Errors
  * If the user cancels the operation.
  */
@@ -111,19 +117,19 @@ pub async fn clean(app: AppHandle, app_data: State<'_, AppData>) -> Result<AppCo
     if confirm_dialog(app).await {
         let new_data = AppConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new());
         update_data(&app_data, Some(new_data))?;
-        update_file_path(&app_data, None)?;        
+        update_file_path(&app_data, None)?;
     }
     get_configuration_data(&app_data)
 }
 
 /**
  * Gets the tests.
- * 
+ *
  * `app_data` The application data.
- * 
+ *
  * Returns:
  * The tests.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  */
@@ -131,24 +137,27 @@ pub async fn clean(app: AppHandle, app_data: State<'_, AppData>) -> Result<AppCo
 pub async fn get_tests(app_data: State<'_, AppData>) -> Result<Vec<TestRow>, String> {
     let data = get_configuration_data(&app_data)?;
     let process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    let tests = data.tests.iter().map(|test| {        
-        TestRow::from(test.clone())
-    }).map(|mut test_row| {
-        test_row.process_id = process_data.get(&test_row.id).map(|process_data| process_data.process_id);
-        test_row
-    }).collect();
+    let tests = data
+        .tests
+        .iter()
+        .map(|test| TestRow::from(test.clone()))
+        .map(|mut test_row| {
+            test_row.process_id = process_data.get(&test_row.id).map(|process_data| process_data.process_id);
+            test_row
+        })
+        .collect();
     Ok(tests)
 }
 
 /**
  * Gets a test.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * Returns:
  * The test.
- * 
+ *
  * # Errors
  * If the test could not be found.
  */
@@ -161,9 +170,9 @@ pub async fn get_test(app_data: State<'_, AppData>, testid: &str) -> Result<Test
 
 /**
  * Adds a test.
- * 
+ *
  * `app_data` The application data.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be added.
@@ -178,11 +187,11 @@ pub async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
 
 /**
  * Updates a test.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `test` The test.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be updated.
@@ -190,17 +199,17 @@ pub async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
 #[tauri::command]
 pub async fn update_test(app_data: State<'_, AppData>, testid: &str, test: TestRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.update_test(testid, test.name.as_str(), test.description.as_str()).map_err(|err| err.to_string())?;    
+    data.update_test(testid, test.name.as_str(), test.description.as_str()).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
 /**
  * Deletes a test.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be deleted.
@@ -215,35 +224,33 @@ pub async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(
 
 /**
  * Gets the servers.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * Returns:
  * The servers.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
- */ 
+ */
 #[tauri::command]
 pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<HttpServerRow>, String> {
     let mut data = get_configuration_data(&app_data)?;
     let test = data.get_test(testid).ok_or("Test not found")?;
-    let http_servers = test.servers.iter().map(|http_server| {
-        HttpServerRow::from(http_server)
-    }).collect();
+    let http_servers = test.servers.iter().map(|http_server| HttpServerRow::from(http_server)).collect();
     Ok(http_servers)
 }
 
 /**
  * Updates a server.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `serverid` The server id.
  * `httpserver` The server.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -253,9 +260,7 @@ pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<V
 pub async fn update_server(app_data: State<'_, AppData>, testid: &str, serverid: &str, httpserver: HttpServerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let server = data.get_server(testid, serverid).ok_or("Test not found")?;
-    let https_config: Option<HttpsConfiguration> = httpserver.https_config.map(|https_row| {
-        https_row.into()
-    });
+    let https_config: Option<HttpsConfiguration> = httpserver.https_config.map(|https_row| https_row.into());
     server.update(httpserver.name, httpserver.http_port, https_config);
     update_data(&app_data, Some(data))?;
     Ok(())
@@ -263,11 +268,11 @@ pub async fn update_server(app_data: State<'_, AppData>, testid: &str, serverid:
 
 /**
  * Deletes a server.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `serverid` The server id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -283,10 +288,10 @@ pub async fn delete_server(app_data: State<'_, AppData>, testid: &str, serverid:
 
 /**
  * Adds a server.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -303,13 +308,13 @@ pub async fn add_server(app_data: State<'_, AppData>, testid: &str) -> Result<()
 
 /**
  * Gets the listeners.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * Returns:
  * The listeners.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -318,20 +323,18 @@ pub async fn add_server(app_data: State<'_, AppData>, testid: &str) -> Result<()
 pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<TcpListenerRow>, String> {
     let data = get_configuration_data(&app_data)?;
     let test = data.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
-    let tcp_listeners = test.listeners.iter().map(|tcp_listener| {
-        TcpListenerRow::from(tcp_listener)
-    }).collect();
+    let tcp_listeners = test.listeners.iter().map(|tcp_listener| TcpListenerRow::from(tcp_listener)).collect();
     Ok(tcp_listeners)
 }
 
 /**
  * Updates a listener.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `listenerid` The listener id.
  * `tcplistener` The listener.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -340,18 +343,28 @@ pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result
 #[tauri::command]
 pub async fn update_listener(app_data: State<'_, AppData>, testid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.update_listener(testid, listenerid, tcplistener.file, tcplistener.data, tcplistener.delay_write_ms, tcplistener.port, tcplistener.accept, CloseConnectionWhen::from(tcplistener.close_connection.as_str())).map_err(|err| err.to_string())?;
+    data.update_listener(
+        testid,
+        listenerid,
+        tcplistener.file,
+        tcplistener.data,
+        tcplistener.delay_write_ms,
+        tcplistener.port,
+        tcplistener.accept,
+        CloseConnectionWhen::from(tcplistener.close_connection.as_str()),
+    )
+    .map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
 /**
  * Deletes a listener.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `listenerid` The listener id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -367,10 +380,10 @@ pub async fn delete_listener(app_data: State<'_, AppData>, testid: &str, listene
 
 /**
  * Adds a listener.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -387,11 +400,11 @@ pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<
 
 /**
  * Adds an endpoint.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `serverid` The server id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -402,19 +415,26 @@ pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<
 pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let server = data.get_server(testid, serverid).ok_or("Server not found")?;
-    server.endpoints.push(EndpointConfiguration::new("/".to_owned(), DEFAULT_METHOD.to_owned(), Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, DEFAULT_STATUS_CODE, HashMap::new(), DEFAULT_DELAY) })).map_err(|err| err.to_string())?);
+    server.endpoints.push(
+        EndpointConfiguration::new(
+            "/".to_owned(),
+            DEFAULT_METHOD.to_owned(),
+            Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, DEFAULT_STATUS_CODE, HashMap::new(), DEFAULT_DELAY) }),
+        )
+        .map_err(|err| err.to_string())?,
+    );
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
 /**
  * Deletes an endpoint.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `serverid` The server id.
  * `endpointid` The endpoint id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -426,18 +446,18 @@ pub async fn delete_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
     let mut data = get_configuration_data(&app_data)?;
     data.delete_endpoint(testid, serverid, endpointid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
-    Ok(())  
+    Ok(())
 }
 
 /**
  * Updates an endpoint.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
  * `serverid` The server id.
  * `endpointid` The endpoint id.
  * `endpoint` The endpoint.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -454,7 +474,7 @@ pub async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
         Some(EndpointType::Route { configuration: route_response.into() })
     } else {
         None
-    };  
+    };
     data.update_endpoint(testid, serverid, endpointid, endpoint.path_expression.as_str(), endpoint.method.as_str(), endpoint_type).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
@@ -462,52 +482,41 @@ pub async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
 
 /**
  * Shows a confirmation dialog.
- * 
+ *
  * `app` The Tauri application handle.
- * 
+ *
  * Returns:
  * True if the user confirms the dialog, false otherwise.
  */
 #[tauri::command]
 pub async fn confirm_dialog(app: AppHandle) -> bool {
-    app.dialog()
-        .message("Are you sure?")
-        .title("Confirm")
-        .kind(tauri_plugin_dialog::MessageDialogKind::Warning)
-        .buttons(MessageDialogButtons::YesNo)                
-        .blocking_show()
+    app.dialog().message("Are you sure?").title("Confirm").kind(tauri_plugin_dialog::MessageDialogKind::Warning).buttons(MessageDialogButtons::YesNo).blocking_show()
 }
 
 /**
  * Shows a open file dialog.
- * 
+ *
  * `app` The Tauri application handle.
- * 
+ *
  * Returns:
  * True if the user confirms the dialog, false otherwise.
  */
 #[tauri::command]
 pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option<String>) -> Option<String> {
-   let dialog = app.dialog().file();
-    let dialog = if let Some(extension) = extension {
-        dialog.add_filter(name.unwrap_or_default(), &[&extension])
-    } else {
-        dialog
-    };
-    dialog.blocking_pick_file().map(|file_path| {
-        get_file_path(file_path).unwrap_or("".to_owned())
-    })
+    let dialog = app.dialog().file();
+    let dialog = if let Some(extension) = extension { dialog.add_filter(name.unwrap_or_default(), &[&extension]) } else { dialog };
+    dialog.blocking_pick_file().map(|file_path| get_file_path(file_path).unwrap_or("".to_owned()))
 }
 
 /**
  * Starts a test.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * Returns:
  * The test.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -518,25 +527,14 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
     let app_config = get_configuration_data(&app_data)?;
     let test = app_config.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
     let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    if let Some(process_data) = process_data.get(testid) {            
-        Ok(TestRow {
-            id: test.id.clone(),
-            name: test.name.clone(),
-            description: test.description.clone(),
-            process_id: Some(process_data.process_id),
-        })            
+    if let Some(process_data) = process_data.get(testid) {
+        Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: Some(process_data.process_id) })
     } else {
         let file_path = get_current_file_path(&app_data)?;
         let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
         let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
-        let process = std::process::Command::new(app_path)        
-            .arg("--file")
-            .arg(get_current_file_path(&app_data)?)
-            .arg("--id")
-            .arg(testid)
-            .current_dir(path.as_os_str())
-            .spawn()
-            .map_err(|err| err.to_string())?;
+        let process =
+            std::process::Command::new(app_path).arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(testid).current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
         let process_id = process.id();
         process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
         Ok(TestRow::new(test.id.as_str(), test.name.as_str(), test.description.as_str(), Some(process_id)))
@@ -545,13 +543,13 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
 
 /**
  * Stops a test.
- * 
+ *
  * `app_data` The application data.
  * `testid` The test id.
- * 
+ *
  * Returns:
  * The test.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the test could not be found.
@@ -564,32 +562,20 @@ pub async fn stop_test(app_data: State<'_, AppData>, testid: &str) -> Result<Tes
     let test = app_config.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
     let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
     match processes_data.get_mut(testid) {
-        Some(process_data) => {   
+        Some(process_data) => {
             process_data.process.kill().map_err(|err| err.to_string())?;
             processes_data.remove(testid);
-            Ok(TestRow {
-                id: test.id.clone(),
-                name: test.name.clone(),
-                description: test.description.clone(),
-                process_id: None,
-            })
-        },
-        None => {
-            Ok(TestRow {
-                id: test.id.clone(),
-                name: test.name.clone(),
-                description: test.description.clone(),
-                process_id: None,
-            })            
+            Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None })
         }
+        None => Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None }),
     }
 }
 
 /**
  * Saves the settings.
- * 
+ *
  * `settings` The settings being saved.
- * 
+ *
  * # Errors
  * If the settings could not be saved.
  */
@@ -600,7 +586,7 @@ pub async fn save_settings(settings: Settings) -> Result<(), String> {
 
 /**
  * Loads the settings.
- * 
+ *
  * Returns:
  * The settings.
  */
@@ -609,15 +595,14 @@ pub async fn load_settings() -> Result<Settings, String> {
     Ok(Settings::load())
 }
 
-
 /**
  * Gets the configuration data.
- * 
+ *
  * `app_data` The application data.
- * 
+ *
  * Returns:
  * The configuration data.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  */
@@ -628,12 +613,12 @@ fn get_configuration_data(app_data: &State<'_, AppData>) -> Result<AppConfigurat
 
 /**
  * Gets the current file path.
- * 
+ *
  * `app_data` The application data.
- * 
+ *
  * Returns:
  * The current file path.
- * 
+ *
  * # Errors
  * If the file path could not be locked.
  * If there is no file path.
@@ -645,12 +630,12 @@ fn get_current_file_path(app_data: &State<'_, AppData>) -> Result<String, String
 
 /**
  * Gets the file path.
- * 
+ *
  * `file_path` The file path.
- * 
+ *
  * Returns:
  * The file path.
- * 
+ *
  * # Errors
  * If the file path is invalid.
  */
@@ -664,10 +649,10 @@ fn get_file_path(file_path: FilePath) -> Result<String, String> {
 
 /**
  * Updates the data.
- * 
+ *
  * `app_data` The application data.
  * `new_data` The new data.
- * 
+ *
  * # Errors
  * If the data could not be locked.
  */
@@ -679,10 +664,10 @@ fn update_data(app_data: &State<'_, AppData>, new_data: Option<AppConfiguration>
 
 /**
  * Updates the file path.
- * 
+ *
  * `app_data` The application data.
  * `new_file_path` The new file path.
- * 
+ *
  * # Errors
  * If the file path could not be locked.
  */
