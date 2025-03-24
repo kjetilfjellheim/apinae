@@ -239,7 +239,7 @@ pub async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(
 pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<HttpServerRow>, String> {
     let mut data = get_configuration_data(&app_data)?;
     let test = data.get_test(testid).ok_or("Test not found")?;
-    let http_servers = test.servers.iter().map(|http_server| HttpServerRow::from(http_server)).collect();
+    let http_servers = test.servers.iter().map(HttpServerRow::from).collect();
     Ok(http_servers)
 }
 
@@ -323,7 +323,7 @@ pub async fn add_server(app_data: State<'_, AppData>, testid: &str) -> Result<()
 pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<TcpListenerRow>, String> {
     let data = get_configuration_data(&app_data)?;
     let test = data.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
-    let tcp_listeners = test.listeners.iter().map(|tcp_listener| TcpListenerRow::from(tcp_listener)).collect();
+    let tcp_listeners = test.listeners.iter().map(TcpListenerRow::from).collect();
     Ok(tcp_listeners)
 }
 
