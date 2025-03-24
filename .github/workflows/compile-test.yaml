@@ -25,16 +25,8 @@ jobs:
               run: cargo fetch
             - name: Compile
               run: cargo build
-            - name: Compile and test
-              run: cargo test -- --test-threads=1
-            - name: Install cargo Tauri
-              run: cargo install tauri-cli
-            - name: install frontend dependencies
-              run: npm install --prefix apinae-ui      
-            - name: Build daemon
-              run: cargo build
-            - name: Build UI
-              run: cargo tauri build --no-bundle                     
+            - name: Test
+              run: cargo test -- --test-threads=1                 
     clippy:
         name: Clippy
         runs-on: ubuntu-22.04
