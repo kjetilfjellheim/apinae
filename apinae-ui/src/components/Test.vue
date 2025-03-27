@@ -62,7 +62,10 @@ const editEndpointModal = ref(null);
 // Reference to the server id for the endpoint being edited. This is used to send the server id
 // to the rust code when updating the endpoint.
 const serverIdEditEndpoint = ref(null);
-
+// Reference to the settings. This is used to set common information in the ui.
+const settingsData = ref({
+  bodyHeight: "8pc",
+});
 //Refreshes the test data, tcp listeners and http servers. This is called when the page is loaded
 //and when the user updates the data. This is because when updating the data we only update the
 //remote rust data, not the local data. This is so that we only have one source of truth for the data.
@@ -83,6 +86,11 @@ const refresh = (testId) => {
   invoke("get_listeners", { testid: testId })
     .then((message) => {
       tcpListeners.value = message;
+    })
+    .catch((error) => window.alert(error));
+  invoke("load_settings", {})
+    .then((message) => {
+      settingsData.value.bodyHeight = message.bodyHeight;
     })
     .catch((error) => window.alert(error));
 }
@@ -554,7 +562,7 @@ const validateNumberOptional = (str) => {
                         <dd class="col-sm-11 small">{{ tcpListener.file }}</dd>
                         <dt class="col-sm-12 small">Data</dt>
                         <dd class="col-sm-12 small shadow-sm bg-secondary-subtle rounded margin-0">
-                          <pre style="max-height: 8pc; overflow-y: scroll; width: 100%">{{ tcpListener.data }}</pre>
+                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" style="overflow-y: scroll; width: 100%">{{ tcpListener.data }}</pre>
                         </dd>                   
                       </dl>
                     </div>
@@ -660,11 +668,11 @@ const validateNumberOptional = (str) => {
                                         <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.delay }}</dd>
                                         <dt class="col-sm-2 col-xl-1 small">Headers</dt>
                                         <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
+                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="margin-0 padding-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
                                         </dd>
                                         <dt class="col-sm-2  col-xl-1 small" style="height: 8pc;">Body</dt>
                                         <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
+                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="margin-0 padding-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
                                         </dd>
                                       </dl>
                                     </div>      
