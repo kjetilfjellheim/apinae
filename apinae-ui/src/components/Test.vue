@@ -534,7 +534,7 @@ const validateNumberOptional = (str) => {
                 </div>                
                 <div class="container-fluid margin-0 padding-0">
                   <div class="row">
-                    <div class="col-2">
+                    <div class="col-4">
                       <dl class="row margin-0 padding-0">
                         <dt class="col-sm-8 small">Id</dt>
                         <dd class="col-sm-4 small">{{ tcpListener.id }}</dd>
@@ -548,14 +548,14 @@ const validateNumberOptional = (str) => {
                         <dd class="col-sm-4 small">{{ tcpListener.delayWriteMs }}</dd>
                       </dl>
                     </div>
-                    <div class="col-10">
+                    <div class="col-8">
                       <dl class="row margin-0 padding-0">
                         <dt class="col-sm-1 small">File</dt>
                         <dd class="col-sm-11 small">{{ tcpListener.file }}</dd>
-                        <dt class="col-sm-1 small">Data</dt>
-                        <dd class="col-sm-11 small">
+                        <dt class="col-sm-12 small">Data</dt>
+                        <dd class="col-sm-12 small shadow-sm bg-secondary-subtle rounded margin-0">
                           <pre style="max-height: 8pc; overflow-y: scroll; width: 100%">{{ tcpListener.data }}</pre>
-                        </dd>
+                        </dd>                   
                       </dl>
                     </div>
                   </div>
@@ -621,106 +621,81 @@ const validateNumberOptional = (str) => {
                         </dd>
                       </dl>
                     </div>
-                    <div class="col-12">
-                      <table class="table table-sm table-striped table-bordered caption-top margin-0 padding-0">
-                        <caption>
-                          <label>Endpoints&nbsp;</label>
+                    <div class="col-12">                    
+                          <hr class="small">
                           <div class="btn-group btn-group-sm align-middle small" role="group">
-                            <button type="button" class="btn btn-sm btn-outline-primary"
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-1"
                               @click="addEndpoint(httpServer)"><i class="fa-solid fa-plus"></i>&nbsp;Add endpoint</button>
                           </div>
-                        </caption>
-                        <thead>
-                          <tr>
-                            <th class="bg-primary-subtle small">Path</th>
-                            <th class="col bg-primary-subtle small">Method</th>
-                            <th class="col bg-primary-subtle small"></th>
-                            <th class="col bg-primary-subtle toolbar-col small"></th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          <tr v-for="endpoint in httpServer.endpoints" :key="endpoint.id">
-                            <td class="align-middle"><label class="align-middle small">{{ endpoint.pathExpression
-                            }}</label>
-                            </td>
-                            <td class="align-middle"><label class="align-middle small">{{ endpoint.method }}</label>
-                            </td>
-                            <td class="align-middle">
-                              <div v-if="endpoint?.mock">
-                                <table class="table table-sm table-striped margin-0">
-                                  <thead>
-                                    <tr>
-                                      <th class="bg-primary-subtle small">Status</th>
-                                      <th class="bg-primary-subtle small">Delay</th>
-                                      <th class="bg-primary-subtle small">Headers</th>
-                                      <th class="bg-primary-subtle small">Body</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <tr>
-                                      <td class="text-truncate small">{{ endpoint.mock?.status }}</td>
-                                      <td class="text-truncate small">{{ endpoint.mock?.delay }}</td>
-                                      <td class="text-truncate small" >
-                                        <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; width: 50vh; min-width: 100%;">{{ endpoint.mock?.headers }}</pre>
-                                      </td>
-                                      <td class="text-truncate small">
-                                        <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; width: 50vh; min-width: 100%;">{{ endpoint.mock?.response }}</pre>
-                                      </td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                              <div v-if="endpoint?.route">
-                                <table class="table table-sm table-striped margin-0">
-                                  <thead>
-                                    <tr>
-                                      <th class="bg-primary-subtle small">Url</th>
-                                      <th class="bg-primary-subtle small">Proxy url</th>
-                                      <th class="bg-primary-subtle small">Http1 only</th>
-                                      <th class="bg-primary-subtle small">Accept invalid certs</th>
-                                      <th class="bg-primary-subtle small">Accept invalid hostnames</th>
-                                      <th class="bg-primary-subtle small">Min TLS version</th>
-                                      <th class="bg-primary-subtle small">Max TLS version</th>
-                                      <th class="bg-primary-subtle small">Read timeout</th>
-                                      <th class="bg-primary-subtle small">Connect timeout</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    <tr>
-                                      <td class="text-truncate small">{{ endpoint.route?.url }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.proxyUrl }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.http1Only }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.acceptInvalidCerts }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.acceptInvalidHostnames }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.minTlsVersion }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.maxTlsVersion }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.readTimeout }}</td>
-                                      <td class="text-truncate small">{{ endpoint.route?.connectTimeout }}</td>
-                                    </tr>
-                                  </tbody>
-                                </table>
-                              </div>
-                            </td>
-                            <td class="align-middle toolbar-col">
-                              <span class="align-middle">
-                                <div class="btn-toolbar" role="toolbar" aria-label="Toolbar with button groups">
-                                  <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-                                    <button type="button" class="btn btn-sm btn-outline-primary text-decoration-none"
-                                      @click="editEndpoint(httpServer, endpoint)" data-bs-toggle="modal"
-                                      data-bs-target="#idEditEndpointModel"><i
-                                        class="fa-solid fa-pen-to-square"></i></button>
-                                  </div>
-                                  <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-                                    <button class="btn btn-sm btn-outline-danger text-decoration-none"
-                                      @click="confirmDeleteEndpoint(httpServer, endpoint)"><i
-                                        class="fa-solid fa-minus"></i></button>
+                          <template v-for="endpoint in httpServer.endpoints" :key="endpoint.id">
+                            <div class="card mb-3">
+                              <div class="row g-0">
+                                <div class="col-sm-4 bg-primary-subtle">
+                                  <dl class="row margin-0 padding-0">
+                                    <dt class="col-sm-12 small">Id</dt>
+                                    <dd class="col-sm-12 small">{{ endpoint.id }}</dd>
+                                    <dt class="col-sm-12 small">Path</dt>
+                                    <dd class="col-sm-12 small">{{ endpoint.pathExpression }}</dd>
+                                    <dt class="col-sm-12 small">Method</dt>
+                                    <dd class="col-sm-12 small">{{ endpoint.method }}</dd>
+                                    <dt class="col-sm-12 small"></dt>
+                                    <dd class="col-sm-12 small">
+                                      <div class="btn-group btn-group-sm align-middle small" role="group">
+                                        <button type="button" class="btn btn-sm btn-outline-primary"
+                                          @click="editEndpoint(httpServer, endpoint)" data-bs-toggle="modal"
+                                          data-bs-target="#idEditEndpointModel"><i class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
+                                        <button class="btn btn-sm btn-outline-danger"
+                                          @click="confirmDeleteEndpoint(httpServer, endpoint)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
+                                      </div>
+                                    </dd>
+                                  </dl>
+                                </div>
+                                <div class="col-sm-8">
+                                  <div class="card-body">
+                                    <div v-if="endpoint?.mock">
+                                      <dl class="row margin-0 padding-0">
+                                        <dt class="col-sm-2 col-xl-1 small">Status</dt>
+                                        <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.status }}</dd>
+                                        <dt class="col-sm-2 col-xl-1 small">Delay</dt>
+                                        <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.delay }}</dd>
+                                        <dt class="col-sm-2 col-xl-1 small">Headers</dt>
+                                        <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
+                                          <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
+                                        </dd>
+                                        <dt class="col-sm-2  col-xl-1 small" style="height: 8pc;">Body</dt>
+                                        <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
+                                          <pre class="margin-0 padding-0" style="max-height: 8pc; overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
+                                        </dd>
+                                      </dl>
+                                    </div>      
+                                    <div v-if="endpoint?.route">
+                                      <dl class="row margin-0 padding-0">
+                                        <dt class="col-sm-2 small">Url</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.url }}</dd>
+                                        <dt class="col-sm-2 small">Proxy url</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.proxyUrl }}</dd>
+                                        <dt class="col-sm-2 small">Http1 only</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.http1Only }}</dd>
+                                        <dt class="col-sm-6 small"></dt>
+                                        <dt class="col-sm-2 small">Accept invalid certs</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.acceptInvalidCerts }}</dd>
+                                        <dt class="col-sm-2 small">Accept invalid hostnames</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.acceptInvalidHostnames }}</dd>
+                                        <dt class="col-sm-2 small">Min TLS version</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.minTlsVersion }}</dd>
+                                        <dt class="col-sm-2 small">Max TLS version</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.maxTlsVersion }}</dd>
+                                        <dt class="col-sm-2 small">Read timeout</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.readTimeout }}</dd>
+                                        <dt class="col-sm-2 small">Connect timeout</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.connectTimeout }}</dd>
+                                      </dl>
+                                    </div>
                                   </div>
                                 </div>
-                              </span>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
+                              </div>
+                            </div>
+                          </template>                        
                     </div>
                   </div>
                 </div>
