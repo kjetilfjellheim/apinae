@@ -15,6 +15,9 @@ use crate::error::ApplicationError;
 pub struct Settings {
     // Use specific apinae command. If none then use the default apinae command will be used.
     pub apinae_path: Option<String>,
+    // The height of the body.
+    #[serde(default = "default_body_height")]
+    pub body_height: String,
 }
 
 impl Settings {
@@ -27,8 +30,8 @@ impl Settings {
      * # Returns
      * Settings - The settings object.
      */
-    pub fn new(apinae_path: Option<String>) -> Self {
-        Self { apinae_path }
+    pub fn new(apinae_path: Option<String>, body_height: String) -> Self {
+        Self { apinae_path, body_height }
     }
 
     /**
@@ -73,6 +76,13 @@ impl Default for Settings {
      * Default settings for the application.
      */
     fn default() -> Self {
-        Self { apinae_path: None }
+        Self { apinae_path: None, body_height: default_body_height() }
     }
+}
+
+/**
+ * The default height of the body.
+ */
+fn default_body_height() -> String {
+    "8pc".to_string()
 }

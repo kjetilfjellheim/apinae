@@ -13,7 +13,8 @@ const editSettingsModal = ref(null);
 //The settings data.
 const settingsData = ref({
     apinaeCommand: "",
-    commandType: ""
+    commandType: "",
+    bodyHeight: "8pc",
 });
 
 // Saves the settings. Calls the rust code to save the settings.
@@ -29,6 +30,7 @@ const saveSettings = () => {
 const convertToSettingsRequestObject = (settingsData) => {
     return {
         apinaePath: settingsData.commandType == 'specific' ? settingsData.apinaeCommand : null,
+        bodyHeight: settingsData.bodyHeight,
     };
 }
 
@@ -39,6 +41,7 @@ onMounted(() => {
         .then((settings) => {
             settingsData.value.apinaeCommand = settings.apinaePath;
             settingsData.value.commandType = settings.apinaePath ? 'specific' : 'installed';
+            settingsData.value.bodyHeight = settings.bodyHeight;
         })
         .catch((error) => window.alert(error));
 });
@@ -46,32 +49,50 @@ onMounted(() => {
 </script>
 <style></style>
 <template>
-    <div id="idSettingsModal" class="modal" tabindex="-1">
+    <div id="idSettingsModal" class="modal modal-xl" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary">
                     <h5 class="modal-title">Settings</h5>
                 </div>
                 <div class="modal-body">
-                    <form class="row g-3">
-                        <div class="col-md-12">
+                    <form class="row">
+                        <div class="col-md-4">
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="commandType" id="idInstalledRadio" value="installed" v-model="settingsData.commandType">
-                                <label class="form-check-label" for="installedRadio">Installed</label>
+                                <label class="form-check-label small" for="installedRadio">Installed</label>
                             </div>
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="radio" name="commandType" id="idSpecificRadio" value="specific" v-model="settingsData.commandType">
-                                <label class="form-check-label" for="specificRadio">Specific</label>
+                                <label class="form-check-label small" for="specificRadio">Specific</label>
                             </div>
                         </div>
-                        <div class="col-md-12">
-                            <div class="mb-3 row">
+                        <div class="col-md-4">
+                            <div class="row mb-2">
                                 <label for="idEditApinaePath" class="col-sm-2 form-label small">Path</label>
                                 <div class="col-sm-10">
                                     <input type="text" class="form-control form-control-sm" id="idEditApinaePath" v-model="settingsData.apinaeCommand" :disabled="settingsData.commandType === 'installed'">
                                 </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div id="bodyHeightBlock" class="form-text">
+                                What apinae command to use.
+                            </div>                                                         
+                        </div>
+                        <div class="col-md-6">
+                            <div class="row mb-6">
+                                <label for="idEditBodyHeight" class="col-sm-6 form-label small">Multiline field height</label>
+                                <div class="col-sm-6">
+                                    <input type="text" class="form-control form-control-sm" id="idEditBodyHeight" v-model="settingsData.bodyHeight">
+                                </div>                               
                             </div>                            
                         </div>
+                        <div class="col-md-6">
+                            <div id="bodyHeightBlock" class="form-text">
+                                The height of the multiline fields displayed.
+                            </div>                                                        
+                        </div>                        
                     </form>
                 </div>
                 <div class="modal-footer bg-primary-subtle">
