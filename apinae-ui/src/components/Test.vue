@@ -437,14 +437,6 @@ const validateNumberOptional = (str) => {
   overflow-y: scroll;
 }
 
-.margin-0 {
-  margin: 0px 0px 0px 0px !important;
-}
-
-.padding-0 {
-  padding: 0px 0px 0px 0px !important;
-}
-
 .accordion-header .accordion-button {
   box-shadow: rgba(50, 50, 93, 0.25) 0px 50px 100px -20px, rgba(0, 0, 0, 0.3) 0px 30px 60px -30px, rgba(10, 37, 64, 0.35) 0px -2px 6px 0px inset;
 }
@@ -480,7 +472,7 @@ const validateNumberOptional = (str) => {
   -->
   <nav class="navbar navbar-expand-sm bg-primary-subtle small">
     <div class="container-fluid">
-      <ol class="breadcrumb  margin-0 padding-0 align-middle">
+      <ol class="breadcrumb  m-0 p-0 align-middle">
         <li class="breadcrumb-item"><router-link to="/"><i class="fas fa-house"></i></router-link></li>
         <li class="breadcrumb-item">{{ test?.name }}</li>
       </ol>
@@ -496,19 +488,19 @@ const validateNumberOptional = (str) => {
   <!--
     Show the test data.
   -->
-  <div class="container-fluid main-content padding-0 margin-0">
-    <div class="row padding-0 margin-0">
+  <div class="container-fluid main-content p-0 m-0">
+    <div class="row p-0 m-0">
       <div class="col-12">
         &nbsp;
       </div>
       <div class="col-12">
-        <dl class="row padding-0 margin-0">
-          <dt class="col-sm-3 small padding-0 margin-0 text-light">Id</dt>
-          <dd class="col-sm-9 small padding-0 margin-0 text-light">{{ test?.id }}</dd>
-          <dt class="col-sm-3 small padding-0 margin-0 text-light">Name</dt>
-          <dd class="col-sm-9 small padding-0 margin-0 text-light">{{ test?.name }}</dd>
-          <dt class="col-sm-3 small padding-0 margin-0 text-light">Description</dt>
-          <dd class="col-sm-9 small padding-0 margin-0 text-light">{{ test?.description }}</dd>
+        <dl class="row p-0 m-0">
+          <dt class="col-sm-3 small p-0 m-0 text-light">Id</dt>
+          <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.id }}</dd>
+          <dt class="col-sm-3 small p-0 m-0 text-light">Name</dt>
+          <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.name }}</dd>
+          <dt class="col-sm-3 small p-0 m-0 text-light">Description</dt>
+          <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.description }}</dd>
         </dl>
       </div>
       <div class="col-12">&nbsp;</div>
@@ -531,7 +523,7 @@ const validateNumberOptional = (str) => {
               :aria-labelledby="'tcpListener' + tcpListener.id" data-bs-parent="#accordionTcpListener">
               <div class="accordion-body">
                 <div class="btn-accordion-buttons">
-                  <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
+                  <div class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
                     role="group">
                     <button type="button" class="btn btn-sm btn-outline-primary align-middle"
                       @click="editTcpListener(tcpListener)" data-bs-toggle="modal"
@@ -540,10 +532,10 @@ const validateNumberOptional = (str) => {
                       @click="confirmDeleteTcpListener(tcpListener.id)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
                   </div>
                 </div>                
-                <div class="container-fluid margin-0 padding-0">
+                <div class="container-fluid m-0 p-0">
                   <div class="row">
                     <div class="col-4">
-                      <dl class="row margin-0 padding-0">
+                      <dl class="row m-0 p-0">
                         <dt class="col-sm-8 small">Id</dt>
                         <dd class="col-sm-4 small">{{ tcpListener.id }}</dd>
                         <dt class="col-sm-8 small">Port</dt>
@@ -557,11 +549,11 @@ const validateNumberOptional = (str) => {
                       </dl>
                     </div>
                     <div class="col-8">
-                      <dl class="row margin-0 padding-0">
+                      <dl class="row m-0 p-0">
                         <dt class="col-sm-1 small">File</dt>
                         <dd class="col-sm-11 small">{{ tcpListener.file }}</dd>
                         <dt class="col-sm-12 small">Data</dt>
-                        <dd class="col-sm-12 small shadow-sm bg-secondary-subtle rounded margin-0">
+                        <dd class="col-sm-12 small shadow-sm bg-secondary-subtle rounded m-0">
                           <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" style="overflow-y: scroll; width: 100%">{{ tcpListener.data }}</pre>
                         </dd>                   
                       </dl>
@@ -589,7 +581,7 @@ const validateNumberOptional = (str) => {
               :aria-labelledby="'httpServer' + httpServer.id" data-bs-parent="#accordionHttpServer">
               <div class="accordion-body">
               <div class="btn-accordion-buttons">
-                <div class="btn-group btn-group-sm align-middle small me-2 margin-0 padding-0 button-position-right"
+                <div class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
                     role="group">
                     <button type="button" class="btn btn-sm btn-outline-primary align-middle"
                       @click="editHttpServer(httpServer)" data-bs-toggle="modal"
@@ -598,10 +590,10 @@ const validateNumberOptional = (str) => {
                       @click="confirmDeleteHttpServer(httpServer.id)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
                   </div>
                 </div>
-                <div class="container-fluid margin-0 padding-0">
+                <div class="container-fluid m-0 p-0">
                   <div class="row">
                     <div class="col-12">
-                      <dl class="row margin-0 padding-0">
+                      <dl class="row m-0 p-0">
                         <dt class="col-sm-2 small">Id</dt>
                         <dd class="col-sm-4 small">{{ httpServer.id }}</dd>
                         <dt class="col-sm-2 small">Name</dt>
@@ -611,7 +603,7 @@ const validateNumberOptional = (str) => {
                         <dt class="col-sm-2 small">Description</dt>
                         <dd class="col-sm-4 small">{{ httpServer.description }}</dd>
                       </dl>
-                      <dl class="row margin-0 padding-0" v-if="httpServer?.httpsConfig">
+                      <dl class="row m-0 p-0" v-if="httpServer?.httpsConfig">
                         <dt class="col-sm-2 small">Https port</dt>
                         <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.httpsPort }}</dd>
                         <dt class="col-sm-2 small">Server certificate</dt>
@@ -621,7 +613,7 @@ const validateNumberOptional = (str) => {
                         <dt class="col-sm-2 small">Client certificate</dt>
                         <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.clientCertificate }}</dd>
                       </dl>
-                      <dl class="row margin-0 padding-0" v-if="httpServer?.httpsConfig">
+                      <dl class="row m-0 p-0" v-if="httpServer?.httpsConfig">
                         <dt class="col-sm-2 small">Supported TLS versions</dt>
                         <dd class="col-sm-4 small">
                           <label v-for="tlsVersion in httpServer?.httpsConfig?.supportedTlsVersions" class="small">{{
@@ -639,7 +631,7 @@ const validateNumberOptional = (str) => {
                             <div class="card mb-3">
                               <div class="row g-0">
                                 <div class="col-sm-4 bg-primary-subtle">
-                                  <dl class="row margin-0 padding-0">
+                                  <dl class="row m-0 p-0">
                                     <dt class="col-sm-12 small">Id</dt>
                                     <dd class="col-sm-12 small">{{ endpoint.id }}</dd>
                                     <dt class="col-sm-12 small">Path</dt>
@@ -661,23 +653,23 @@ const validateNumberOptional = (str) => {
                                 <div class="col-sm-8">
                                   <div class="card-body">
                                     <div v-if="endpoint?.mock">
-                                      <dl class="row margin-0 padding-0">
+                                      <dl class="row m-0 p-0">
                                         <dt class="col-sm-2 col-xl-1 small">Status</dt>
                                         <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.status }}</dd>
                                         <dt class="col-sm-2 col-xl-1 small">Delay</dt>
                                         <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.delay }}</dd>
                                         <dt class="col-sm-2 col-xl-1 small">Headers</dt>
                                         <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="margin-0 padding-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
+                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="m-0 p-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
                                         </dd>
                                         <dt class="col-sm-2  col-xl-1 small" style="height: 8pc;">Body</dt>
                                         <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="margin-0 padding-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
+                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="m-0 p-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
                                         </dd>
                                       </dl>
                                     </div>      
                                     <div v-if="endpoint?.route">
-                                      <dl class="row margin-0 padding-0">
+                                      <dl class="row m-0 p-0">
                                         <dt class="col-sm-2 small">Url</dt>
                                         <dd class="col-sm-4 small">{{ endpoint.route?.url }}</dd>
                                         <dt class="col-sm-2 small">Proxy url</dt>

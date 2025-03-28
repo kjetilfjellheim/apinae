@@ -73,17 +73,9 @@ li.dropdown:last-child .dropdown-menu {
   border-top: 1px solid #4b4b4b;
 }
 
-.margin-0 {
-  margin: 0;
-}
-
-.padding-0 {
-  padding: 0;
-}
-
 </style>
 <template>
-  <main class="margin-0 padding-0">
+  <main class="m-0 p-0">
     <nav class="navbar navbar-expand-lg navbar-light bg-primary">
       <div class="container-fluid">
         <ul class="navbar-nav">
