@@ -463,7 +463,6 @@ const validateNumberOptional = (str) => {
   position: absolute;
   right: 50px;
 }
-
 </style>
 <template>
   <!--
@@ -485,78 +484,96 @@ const validateNumberOptional = (str) => {
       </div>
     </div>
   </nav>
-  <!--
-    Show the test data.
-  -->
-  <div class="container-fluid main-content p-0 m-0">
-    <div class="row p-0 m-0">
-      <div class="col-12">
-        &nbsp;
+
+  <ul class="nav nav-tabs mt-2" id="contentTab" role="tablist">
+    <li class="nav-item" role="presentation">
+      <button class="nav-link active" id="general-tab" data-bs-toggle="tab" data-bs-target="#general-tab-pane"
+        type="button" role="tab" aria-controls="general-tab-pane" aria-selected="true">General</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="tcplistener-tab" data-bs-toggle="tab" data-bs-target="#tcplistener-tab-pane"
+        type="button" role="tab" aria-controls="tcplistener-tab-pane" aria-selected="false">Tcp listener</button>
+    </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="httpserver-tab" data-bs-toggle="tab" data-bs-target="#httpserver-tab-pane"
+        type="button" role="tab" aria-controls="httpserver-tab-pane" aria-selected="false">Http server</button>
+    </li>
+  </ul>
+
+  <div class="tab-content" id="contentTab">
+    <div class="tab-pane fade show active" id="general-tab-pane" role="tabpanel" aria-labelledby="general-tab"
+      tabindex="0">
+      <div class="container-fluid main-content p-0 m-0">
+        <div class="row p-0 m-0">
+          <div class="col-12">
+            <dl class="row p-0 m-0">
+              <dt class="col-sm-3 small p-0 m-0 text-light">Id</dt>
+              <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.id }}</dd>
+              <dt class="col-sm-3 small p-0 m-0 text-light">Name</dt>
+              <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.name }}</dd>
+              <dt class="col-sm-3 small p-0 m-0 text-light">Description</dt>
+              <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.description }}</dd>
+            </dl>
+          </div>
+        </div>
       </div>
-      <div class="col-12">
-        <dl class="row p-0 m-0">
-          <dt class="col-sm-3 small p-0 m-0 text-light">Id</dt>
-          <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.id }}</dd>
-          <dt class="col-sm-3 small p-0 m-0 text-light">Name</dt>
-          <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.name }}</dd>
-          <dt class="col-sm-3 small p-0 m-0 text-light">Description</dt>
-          <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.description }}</dd>
-        </dl>
-      </div>
-      <div class="col-12">&nbsp;</div>
-      <!--
-        Show the tcp listeners
-        TODO: Move this to a separate component.
-      -->
-      <div class="col-12">
-        <div class="accordion accordion-flush" id="accordionTcpListener">
-          <div class="accordion-item" v-for="tcpListener in tcpListeners" :key="tcpListener.id"
-            v-if="tcpListeners?.length > 0">
-            <h6 class="accordion-header" :id="'tcpListenerHeader' + tcpListener.id">
-              <button class="accordion-button collapsed bg-primary text-light" type="button" data-bs-toggle="collapse"
-                :data-bs-target="'#tcpListener' + tcpListener.id" aria-expanded="false"
-                :aria-controls="'tcpListener' + tcpListener.id">
-                <i class="fa-solid fa-ear-listen"></i>&nbsp;Tcp listener for port {{ tcpListener.port }}
-              </button>            
-            </h6>
-            <div :id="'tcpListener' + tcpListener.id" class="accordion-collapse collapse bg-body-secondary"
-              :aria-labelledby="'tcpListener' + tcpListener.id" data-bs-parent="#accordionTcpListener">
-              <div class="accordion-body">
-                <div class="btn-accordion-buttons">
-                  <div class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
-                    role="group">
-                    <button type="button" class="btn btn-sm btn-outline-primary align-middle"
-                      @click="editTcpListener(tcpListener)" data-bs-toggle="modal"
-                      data-bs-target="#idEditTcpListenerModel"><i class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
-                    <button class="btn btn-sm btn-outline-danger align-middle"
-                      @click="confirmDeleteTcpListener(tcpListener.id)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
-                  </div>
-                </div>                
-                <div class="container-fluid m-0 p-0">
-                  <div class="row">
-                    <div class="col-4">
-                      <dl class="row m-0 p-0">
-                        <dt class="col-sm-8 small">Id</dt>
-                        <dd class="col-sm-4 small">{{ tcpListener.id }}</dd>
-                        <dt class="col-sm-8 small">Port</dt>
-                        <dd class="col-sm-4 small">{{ tcpListener.port }}</dd>
-                        <dt class="col-sm-8 small">Accept</dt>
-                        <dd class="col-sm-4 small">{{ tcpListener.accept }}</dd>
-                        <dt class="col-sm-8 small">Close</dt>
-                        <dd class="col-sm-4 small">{{ tcpListener.closeConnection }}</dd>
-                        <dt class="col-sm-8 small">Delayed write response</dt>
-                        <dd class="col-sm-4 small">{{ tcpListener.delayWriteMs }}</dd>
-                      </dl>
+    </div>
+    <div class="tab-pane fade" id="tcplistener-tab-pane" role="tabpanel" aria-labelledby="profile-tab" tabindex="0">
+      <div class="container-fluid main-content p-0 m-0">
+        <div class="row p-0 m-0">
+          <div class="col-12"></div>
+          <div class="accordion accordion-flush" id="accordionTcpListener">
+            <div class="accordion-item" v-for="tcpListener in tcpListeners" :key="tcpListener.id"
+              v-if="tcpListeners?.length > 0">
+              <h6 class="accordion-header" :id="'tcpListenerHeader' + tcpListener.id">
+                <button class="accordion-button collapsed bg-primary text-light" type="button" data-bs-toggle="collapse"
+                  :data-bs-target="'#tcpListener' + tcpListener.id" aria-expanded="false"
+                  :aria-controls="'tcpListener' + tcpListener.id">
+                  <i class="fa-solid fa-ear-listen"></i>&nbsp;Tcp listener for port {{ tcpListener.port }}
+                </button>
+              </h6>
+              <div :id="'tcpListener' + tcpListener.id" class="accordion-collapse collapse bg-body-secondary"
+                :aria-labelledby="'tcpListener' + tcpListener.id" data-bs-parent="#accordionTcpListener">
+                <div class="accordion-body">
+                  <div class="btn-accordion-buttons">
+                    <div class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
+                      role="group">
+                      <button type="button" class="btn btn-sm btn-outline-primary align-middle"
+                        @click="editTcpListener(tcpListener)" data-bs-toggle="modal"
+                        data-bs-target="#idEditTcpListenerModel"><i class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
+                      <button class="btn btn-sm btn-outline-danger align-middle"
+                        @click="confirmDeleteTcpListener(tcpListener.id)"><i
+                          class="fa-solid fa-trash"></i>&nbsp;Delete</button>
                     </div>
-                    <div class="col-8">
-                      <dl class="row m-0 p-0">
-                        <dt class="col-sm-1 small">File</dt>
-                        <dd class="col-sm-11 small">{{ tcpListener.file }}</dd>
-                        <dt class="col-sm-12 small">Data</dt>
-                        <dd class="col-sm-12 small shadow-sm bg-secondary-subtle rounded m-0">
-                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" style="overflow-y: scroll; width: 100%">{{ tcpListener.data }}</pre>
-                        </dd>                   
-                      </dl>
+                  </div>
+                  <div class="container-fluid m-0 p-0">
+                    <div class="row">
+                      <div class="col-4">
+                        <dl class="row m-0 p-0">
+                          <dt class="col-sm-8 small">Id</dt>
+                          <dd class="col-sm-4 small">{{ tcpListener.id }}</dd>
+                          <dt class="col-sm-8 small">Port</dt>
+                          <dd class="col-sm-4 small">{{ tcpListener.port }}</dd>
+                          <dt class="col-sm-8 small">Accept</dt>
+                          <dd class="col-sm-4 small">{{ tcpListener.accept }}</dd>
+                          <dt class="col-sm-8 small">Close</dt>
+                          <dd class="col-sm-4 small">{{ tcpListener.closeConnection }}</dd>
+                          <dt class="col-sm-8 small">Delayed write response</dt>
+                          <dd class="col-sm-4 small">{{ tcpListener.delayWriteMs }}</dd>
+                        </dl>
+                      </div>
+                      <div class="col-8">
+                        <dl class="row m-0 p-0">
+                          <dt class="col-sm-1 small">File</dt>
+                          <dd class="col-sm-11 small">{{ tcpListener.file }}</dd>
+                          <dt class="col-sm-12 small">Data</dt>
+                          <dd class="col-sm-12 small shadow-sm bg-secondary-subtle rounded m-0">
+                            <pre
+                              :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'"
+                              style="overflow-y: scroll; width: 100%">{{ tcpListener.data }}</pre>
+                          </dd>
+                        </dl>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -564,68 +581,81 @@ const validateNumberOptional = (str) => {
             </div>
           </div>
         </div>
-        <!--
+      </div>
+    </div>
+    <div class="tab-pane fade" id="httpserver-tab-pane" role="tabpanel" aria-labelledby="contact-tab" tabindex="0">
+
+      <div class="container-fluid main-content p-0 m-0">
+        <div class="row p-0 m-0">
+          <div class="col-12">
+            <!--
           Show the http servers
           TODO: Move this to a separate component.
         -->
-        <div class="accordion accordion-flush" id="accordionHttpServer">
-          <div class="accordion-item" v-for="httpServer in httpServers" :key="httpServer.id" v-if="httpServers?.length > 0">
-            <h6 class="accordion-header" :id="'httpServerHeader' + httpServer.id">
-              <button class="accordion-button collapsed bg-primary text-light" type="button" data-bs-toggle="collapse"
-                :data-bs-target="'#httpServer' + httpServer.id" aria-expanded="false"
-                :aria-controls="'httpServer' + httpServer.id">
-                <i class="fa-solid fa-cloud"></i>&nbsp;Http server: {{ httpServer.name }}
-              </button>
-            </h6>
-            <div :id="'httpServer' + httpServer.id" class="accordion-collapse collapse"
-              :aria-labelledby="'httpServer' + httpServer.id" data-bs-parent="#accordionHttpServer">
-              <div class="accordion-body">
-              <div class="btn-accordion-buttons">
-                <div class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
-                    role="group">
-                    <button type="button" class="btn btn-sm btn-outline-primary align-middle"
-                      @click="editHttpServer(httpServer)" data-bs-toggle="modal"
-                      data-bs-target="#idEditHttpServerModel"><i class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
-                    <button class="btn btn-sm btn-outline-danger align-middle"
-                      @click="confirmDeleteHttpServer(httpServer.id)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
-                  </div>
-                </div>
-                <div class="container-fluid m-0 p-0">
-                  <div class="row">
-                    <div class="col-12">
-                      <dl class="row m-0 p-0">
-                        <dt class="col-sm-2 small">Id</dt>
-                        <dd class="col-sm-4 small">{{ httpServer.id }}</dd>
-                        <dt class="col-sm-2 small">Name</dt>
-                        <dd class="col-sm-4 small">{{ httpServer.name }}</dd>
-                        <dt class="col-sm-2 small">Http port</dt>
-                        <dd class="col-sm-4 small">{{ httpServer?.httpPort }}</dd>
-                        <dt class="col-sm-2 small">Description</dt>
-                        <dd class="col-sm-4 small">{{ httpServer.description }}</dd>
-                      </dl>
-                      <dl class="row m-0 p-0" v-if="httpServer?.httpsConfig">
-                        <dt class="col-sm-2 small">Https port</dt>
-                        <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.httpsPort }}</dd>
-                        <dt class="col-sm-2 small">Server certificate</dt>
-                        <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.serverCertificate }}</dd>
-                        <dt class="col-sm-2 small">Private key</dt>
-                        <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.privateKey }}</dd>
-                        <dt class="col-sm-2 small">Client certificate</dt>
-                        <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.clientCertificate }}</dd>
-                      </dl>
-                      <dl class="row m-0 p-0" v-if="httpServer?.httpsConfig">
-                        <dt class="col-sm-2 small">Supported TLS versions</dt>
-                        <dd class="col-sm-4 small">
-                          <label v-for="tlsVersion in httpServer?.httpsConfig?.supportedTlsVersions" class="small">{{
-                            tlsVersion }}&nbsp;</label>
-                        </dd>
-                      </dl>
+            <div class="accordion accordion-flush" id="accordionHttpServer">
+              <div class="accordion-item" v-for="httpServer in httpServers" :key="httpServer.id"
+                v-if="httpServers?.length > 0">
+                <h6 class="accordion-header" :id="'httpServerHeader' + httpServer.id">
+                  <button class="accordion-button collapsed bg-primary text-light" type="button"
+                    data-bs-toggle="collapse" :data-bs-target="'#httpServer' + httpServer.id" aria-expanded="false"
+                    :aria-controls="'httpServer' + httpServer.id">
+                    <i class="fa-solid fa-cloud"></i>&nbsp;Http server: {{ httpServer.name }}
+                  </button>
+                </h6>
+                <div :id="'httpServer' + httpServer.id" class="accordion-collapse collapse"
+                  :aria-labelledby="'httpServer' + httpServer.id" data-bs-parent="#accordionHttpServer">
+                  <div class="accordion-body">
+                    <div class="btn-accordion-buttons">
+                      <div
+                        class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
+                        role="group">
+                        <button type="button" class="btn btn-sm btn-outline-primary align-middle"
+                          @click="editHttpServer(httpServer)" data-bs-toggle="modal"
+                          data-bs-target="#idEditHttpServerModel"><i
+                            class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
+                        <button class="btn btn-sm btn-outline-danger align-middle"
+                          @click="confirmDeleteHttpServer(httpServer.id)"><i
+                            class="fa-solid fa-trash"></i>&nbsp;Delete</button>
+                      </div>
                     </div>
-                    <div class="col-12">                    
+                    <div class="container-fluid m-0 p-0">
+                      <div class="row">
+                        <div class="col-12">
+                          <dl class="row m-0 p-0">
+                            <dt class="col-sm-2 small">Id</dt>
+                            <dd class="col-sm-4 small">{{ httpServer.id }}</dd>
+                            <dt class="col-sm-2 small">Name</dt>
+                            <dd class="col-sm-4 small">{{ httpServer.name }}</dd>
+                            <dt class="col-sm-2 small">Http port</dt>
+                            <dd class="col-sm-4 small">{{ httpServer?.httpPort }}</dd>
+                            <dt class="col-sm-2 small">Description</dt>
+                            <dd class="col-sm-4 small">{{ httpServer.description }}</dd>
+                          </dl>
+                          <dl class="row m-0 p-0" v-if="httpServer?.httpsConfig">
+                            <dt class="col-sm-2 small">Https port</dt>
+                            <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.httpsPort }}</dd>
+                            <dt class="col-sm-2 small">Server certificate</dt>
+                            <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.serverCertificate }}</dd>
+                            <dt class="col-sm-2 small">Private key</dt>
+                            <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.privateKey }}</dd>
+                            <dt class="col-sm-2 small">Client certificate</dt>
+                            <dd class="col-sm-4 small">{{ httpServer?.httpsConfig?.clientCertificate }}</dd>
+                          </dl>
+                          <dl class="row m-0 p-0" v-if="httpServer?.httpsConfig">
+                            <dt class="col-sm-2 small">Supported TLS versions</dt>
+                            <dd class="col-sm-4 small">
+                              <label v-for="tlsVersion in httpServer?.httpsConfig?.supportedTlsVersions"
+                                class="small">{{
+                                  tlsVersion }}&nbsp;</label>
+                            </dd>
+                          </dl>
+                        </div>
+                        <div class="col-12">
                           <hr class="small">
                           <div class="btn-group btn-group-sm align-middle small" role="group">
                             <button type="button" class="btn btn-sm btn-outline-primary mb-1"
-                              @click="addEndpoint(httpServer)"><i class="fa-solid fa-plus"></i>&nbsp;Add endpoint</button>
+                              @click="addEndpoint(httpServer)"><i class="fa-solid fa-plus"></i>&nbsp;Add
+                              endpoint</button>
                           </div>
                           <template v-for="endpoint in httpServer.endpoints" :key="endpoint.id">
                             <div class="card mb-3">
@@ -643,9 +673,11 @@ const validateNumberOptional = (str) => {
                                       <div class="btn-group btn-group-sm align-middle small" role="group">
                                         <button type="button" class="btn btn-sm btn-outline-primary"
                                           @click="editEndpoint(httpServer, endpoint)" data-bs-toggle="modal"
-                                          data-bs-target="#idEditEndpointModel"><i class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
+                                          data-bs-target="#idEditEndpointModel"><i
+                                            class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
                                         <button class="btn btn-sm btn-outline-danger"
-                                          @click="confirmDeleteEndpoint(httpServer, endpoint)"><i class="fa-solid fa-trash"></i>&nbsp;Delete</button>
+                                          @click="confirmDeleteEndpoint(httpServer, endpoint)"><i
+                                            class="fa-solid fa-trash"></i>&nbsp;Delete</button>
                                       </div>
                                     </dd>
                                   </dl>
@@ -660,14 +692,20 @@ const validateNumberOptional = (str) => {
                                         <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.delay }}</dd>
                                         <dt class="col-sm-2 col-xl-1 small">Headers</dt>
                                         <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="m-0 p-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
+                                          <pre
+                                            :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'"
+                                            class="m-0 p-0"
+                                            style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
                                         </dd>
                                         <dt class="col-sm-2  col-xl-1 small" style="height: 8pc;">Body</dt>
                                         <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'" class="m-0 p-0" style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
+                                          <pre
+                                            :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'"
+                                            class="m-0 p-0"
+                                            style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
                                         </dd>
                                       </dl>
-                                    </div>      
+                                    </div>
                                     <div v-if="endpoint?.route">
                                       <dl class="row m-0 p-0">
                                         <dt class="col-sm-2 small">Url</dt>
@@ -695,7 +733,9 @@ const validateNumberOptional = (str) => {
                                 </div>
                               </div>
                             </div>
-                          </template>                        
+                          </template>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -704,8 +744,13 @@ const validateNumberOptional = (str) => {
           </div>
         </div>
       </div>
+
+
     </div>
   </div>
+  <!--
+    Show the test data.
+  -->
   <!--
     Edit modals for editing the tcp listener.
     TODO: Move this to a separate component.
@@ -715,14 +760,15 @@ const validateNumberOptional = (str) => {
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-primary">
-          <h6 class="modal-title fs-5 small" id="editTcpListenerLabel"><i class="fa-solid fa-pen-to-square"></i>Edit Tcp listener</h6>
+          <h6 class="modal-title fs-5 small" id="editTcpListenerLabel"><i class="fa-solid fa-pen-to-square"></i>Edit Tcp
+            listener</h6>
         </div>
         <div class="modal-body">
           <form class="row g-3">
             <div class="col-md-4">
               <label for="idEditTcpListenerId" class="form-label small">Id</label>
               <label class="form-control form-control-sm" id="idEditTcpListenerId" readonly>{{ editTcpListenerData.id
-              }}</label>
+                }}</label>
             </div>
             <div class="col-md-4">
               <label for="idEditPort" class="form-label small">Port</label>
@@ -789,14 +835,15 @@ const validateNumberOptional = (str) => {
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-primary">
-          <h6 class="modal-title fs-5 small" id="editHttpServerLabel"><i class="fa-solid fa-pen-to-square"></i>Edit Http server</h6>
+          <h6 class="modal-title fs-5 small" id="editHttpServerLabel"><i class="fa-solid fa-pen-to-square"></i>Edit Http
+            server</h6>
         </div>
         <div class="modal-body">
           <form class="row g-3">
             <div class="col-md-6">
               <label for="idEditHttpServerId" class="form-label small">Id</label>
               <label class="form-control form-control-sm" id="idEditHttpServerId" readonly>{{ editHttpServerData.id
-              }}</label>
+                }}</label>
             </div>
             <div class="col-md-6">
               <label for="idEditName" class="form-label small">Name</label>
@@ -829,9 +876,11 @@ const validateNumberOptional = (str) => {
                     v-model="editHttpsConfig.serverCertificate"
                     :class="validateStringRequired(editHttpsConfig.serverCertificate)">
                   <button class="btn btn-sm btn-outline-primary" type="button" id="idOpenServerCertificateFile"
-                    @click="setEditHttpsConfigServerCertificate()"><i class="fa-solid fa-file"></i>&nbsp;Select file</button>
+                    @click="setEditHttpsConfigServerCertificate()"><i class="fa-solid fa-file"></i>&nbsp;Select
+                    file</button>
                   <button class="btn btn-sm btn-outline-danger" type="button" id="idClearServerCertificateFile"
-                    @click="clearEditHttpsConfigServerCertificate()"><i class="fa-solid fa-broom"></i>&nbsp;Clear</button>
+                    @click="clearEditHttpsConfigServerCertificate()"><i
+                      class="fa-solid fa-broom"></i>&nbsp;Clear</button>
                 </div>
               </div>
             </div>
@@ -855,9 +904,11 @@ const validateNumberOptional = (str) => {
                   <input type="text" readonly class="form-control form-control-sm is-valid" id="idEditClientCertificate"
                     v-model="editHttpsConfig.clientCertificate">
                   <button class="btn btn-sm btn-outline-primary" type="button" id="idOpenPrivateKeyFile"
-                    @click="setEditHttpsConfigClientCertificate()"><i class="fa-solid fa-file"></i>&nbsp;Select file</button>
+                    @click="setEditHttpsConfigClientCertificate()"><i class="fa-solid fa-file"></i>&nbsp;Select
+                    file</button>
                   <button class="btn btn-sm btn-outline-danger" type="button" id="idClearPrivateKeyFile"
-                    @click="clearEditHttpsConfigClientCertificate()"><i class="fa-solid fa-broom"></i>&nbsp;Clear</button>
+                    @click="clearEditHttpsConfigClientCertificate()"><i
+                      class="fa-solid fa-broom"></i>&nbsp;Clear</button>
                 </div>
               </div>
             </div>
@@ -903,7 +954,9 @@ const validateNumberOptional = (str) => {
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-primary">
-          <h6 class="modal-title fs-5 small" id="editEndpointLabel"><i class="fa-solid fa-pen-to-square"></i>Edit endpoint</h6>
+          <h6 class="modal-title fs-5 small" id="editEndpointLabel"><i class="fa-solid fa-pen-to-square"></i>Edit
+            endpoint
+          </h6>
         </div>
         <div class="modal-body">
           <form class="row g-3">
