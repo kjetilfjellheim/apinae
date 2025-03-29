@@ -122,13 +122,6 @@ const validateNumberOptional = (str) => {
     overflow-y: scroll;
 }
 
-.margin-0 {
-    margin: 0;
-}
-
-.padding-0 {
-    padding: 0;
-}
 </style>
 <template>
     <!-- 
@@ -137,7 +130,7 @@ const validateNumberOptional = (str) => {
      -->
     <nav class="navbar navbar-expand-sm bg-primary-subtle small">
         <div class="container-fluid">
-            <ol class="breadcrumb margin-0 padding-0 align-middle">
+            <ol class="breadcrumb m-0 p-0 align-middle">
                 <li class="breadcrumb-item"><router-link to="/"><i class="fas fa-house"></i></router-link></li>
             </ol>
         </div>
@@ -146,16 +139,16 @@ const validateNumberOptional = (str) => {
      Show main content. 
      TODO: Move this to a separate component.
     -->
-    <div class="container-fluid main-content padding-0 margin-0">
-        <div class="row padding-0 margin-0">
+    <div class="container-fluid main-content p-0 m-0">
+        <div class="row p-0 m-0">
             <div class="col-12">&nbsp;</div>
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-primary">
                         &nbsp;Tests
                     </div>
-                    <div class="card-body margin-0 padding-0">
-                        <table class="table table-sm table-striped table-bordered table-primary caption-top margin-0 padding-0">
+                    <div class="card-body m-0 p-0">
+                        <table class="table table-sm table-striped table-bordered table-primary caption-top m-0 p-0">
                             <caption class="text-start small bg-body-secondary">
                                 &nbsp;
                                 <div class="btn-group btn-group-sm align-middle small" role="group">
