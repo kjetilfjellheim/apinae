@@ -31,7 +31,7 @@ async fn assert_command(server_command: &mut Child, port: &str, expected: &str) 
         Ok(nc_command) => nc_command,
         Err(error) => {
             server_command.kill().expect("Failed to kill server process");
-            panic!("Failed to execute nc command: {}", error);
+            panic!("Failed to execute nc command: {error}");
         }
     };
     // Read the output from the nc command.
