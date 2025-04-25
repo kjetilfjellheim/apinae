@@ -171,7 +171,7 @@ impl AppListener {
             tokio::time::sleep(Duration::from_micros(10)).await;
 
             let ready = stream.ready(Interest::READABLE | Interest::WRITABLE).await.map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to get ready: {err}")))?;
-            log::debug!("Ready: {:?}", ready);
+            log::debug!("Ready: {ready:?}");
             if ready.is_read_closed() || ready.is_write_closed() {
                 return Ok(());
             }
