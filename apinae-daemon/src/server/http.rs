@@ -360,6 +360,7 @@ async fn get_request(req: HttpRequest, payload: Option<web::Payload>, url: Strin
  * An error if the status code is invalid.
  */
 fn generate_mock_response(mock_response: &MockResponseConfiguration) -> Result<HttpResponse, ApplicationError> {
+    std::thread::sleep(Duration::from_millis(mock_response.delay));    
     log::debug!("Generating mock response");
     let mut response_builder: actix_web::HttpResponseBuilder = HttpResponse::build(StatusCode::from_u16(mock_response.status).map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?);
     for (key, value) in &mock_response.headers {
