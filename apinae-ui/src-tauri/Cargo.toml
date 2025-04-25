@@ -1,6 +1,6 @@
 [package]
 name = "apinae-ui"
-version = "0.1.5"
+version = "0.2.0"
 description = "UI for Apinae"
 edition = "2021"
 
@@ -13,11 +13,11 @@ tauri-build = { version = "2.0.5", features = [] }
 
 [dependencies]
 apinae-lib = { path = "../../apinae-lib" }
-tauri = { version = "2.4.0", features = ["devtools"] }
+tauri = { version = "2.5.1", features = ["devtools"] }
 tauri-plugin-opener = "2.2.6"
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
-tauri-plugin-dialog = "2.2.0"
-tauri-plugin = "2.1.0"
+tauri-plugin-dialog = "2.2.1"
+tauri-plugin = "2.2.0"
 tracing = "0.1.41"
 tauri-plugin-devtools = "2.0.0"

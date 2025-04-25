@@ -26,12 +26,12 @@ async fn test_tcp_listener() {
  * Asserts the server response.
  */
 async fn assert_command(server_command: &mut Child, port: &str, expected: &str) {
-    let connect = format!("http://localhost:{}", port);
+    let connect = format!("http://localhost:{port}");
     let nc_command = match Command::new("curl").arg("--http0.9").arg("-X").arg("GET").arg("--max-time").arg("3").arg(connect).output() {
         Ok(nc_command) => nc_command,
         Err(error) => {
             server_command.kill().expect("Failed to kill server process");
-            panic!("Failed to execute nc command: {}", error);
+            panic!("Failed to execute nc command: {error}");
         }
     };
     // Read the output from the nc command.
@@ -39,6 +39,6 @@ async fn assert_command(server_command: &mut Child, port: &str, expected: &str) 
     // Verify the output.
     if output_string.trim() != expected {
         server_command.kill().expect("Failed to kill server process");
-        panic!("Expected: {}, Got: {}", expected, output_string);
+        panic!("Expected: {expected}, Got: {output_string}");
     }
 }

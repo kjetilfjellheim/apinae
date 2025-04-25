@@ -19,7 +19,7 @@ async fn test_http_server_with_proxy() {
         Err(error) => {
             server_command.kill().expect("Failed to kill server process");
             tinyproxy_command.kill().await.expect("Failed to kill process");
-            panic!("Failed to execute curl command: {}", error);
+            panic!("Failed to execute curl command: {error}");
         }
     };
     // Read the output from the curl command.

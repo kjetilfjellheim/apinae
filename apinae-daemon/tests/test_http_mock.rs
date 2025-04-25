@@ -16,7 +16,7 @@ async fn test_http_server() {
         Ok(command) => command,
         Err(error) => {
             server_command.kill().expect("Failed to kill server process");
-            panic!("Failed to execute curl command: {}", error);
+            panic!("Failed to execute curl command: {error}");
         }
     };
     // Read the output from the curl command.
