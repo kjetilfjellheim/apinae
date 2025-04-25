@@ -169,7 +169,7 @@ async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, pay
     if let Some(endpoint_type) = &endpoint.endpoint_type {
         match endpoint_type {
             EndpointType::Mock { configuration } => {
-                return generate_mock_response(configuration);
+                return generate_mock_response(configuration).await;
             }
             EndpointType::Route { configuration } => {
                 return route_request(configuration, req, payload).await;
@@ -359,7 +359,9 @@ async fn get_request(req: HttpRequest, payload: Option<web::Payload>, url: Strin
  * # Errors
  * An error if the status code is invalid.
  */
-fn generate_mock_response(mock_response: &MockResponseConfiguration) -> Result<HttpResponse, ApplicationError> {
+async fn generate_mock_response(mock_response: &MockResponseConfiguration) -> Result<HttpResponse, ApplicationError> {
+    log::debug!("Generating mock response");
+    tokio::time::sleep(Duration::from_millis(mock_response.delay)).await;
     log::debug!("Generating mock response");
     let mut response_builder: actix_web::HttpResponseBuilder = HttpResponse::build(StatusCode::from_u16(mock_response.status).map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?);
     for (key, value) in &mock_response.headers {
