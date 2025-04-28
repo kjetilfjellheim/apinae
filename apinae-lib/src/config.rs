@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, time::SystemTime};
+use std::{collections::{HashMap, HashSet}, time::SystemTime};
 
 use crate::error::ApplicationError;
 
@@ -268,6 +268,30 @@ impl AppConfiguration {
         endpoint.body_expression = body_expression;
         Ok(())
     }
+
+    /**
+     * Add parameter to the test.
+     * 
+     * `test_id` The id of the test.
+     * `param` The parameter to add.
+     */
+    pub fn add_param(&mut self, test_id: &str, param: String) -> Result<(), ApplicationError> {
+        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        test.add_param(param);
+        Ok(())
+    }
+
+    /**
+     * Remove parameter from the test.
+     * 
+     * `test_id` The id of the test.
+     * `param` The parameter to remove.
+     */
+    pub fn remove_param(&mut self, test_id: &str, param: &str) -> Result<(), ApplicationError> {
+        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        test.remove_param(param);
+        Ok(())
+    }
 }
 
 /**
@@ -286,6 +310,8 @@ pub struct TestConfiguration {
     pub servers: Vec<ServerConfiguration>,
     // TCP listeners
     pub listeners: Vec<TcpListenerData>,
+    // The parameters to pass to the test.
+    pub params: Option<HashSet<String>>,
 }
 
 impl TestConfiguration {
@@ -299,9 +325,9 @@ impl TestConfiguration {
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Result<Self, ApplicationError> {
+    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>, params: Option<HashSet<String>>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(TestConfiguration { id, name, description, servers, listeners })
+        Ok(TestConfiguration { id, name, description, servers, listeners, params })
     }
 
     /**
@@ -338,6 +364,35 @@ impl TestConfiguration {
         self.servers.remove(index);
         Ok(())
     }
+
+    /**
+     * Add a parameter to the test.
+     * 
+     * `param` The parameter to add.
+     */
+    pub fn add_param(&mut self, param: String) {
+        if let Some(params) = &mut self.params {
+            params.insert(param);
+        } else {
+            let mut params = HashSet::new();
+            params.insert(param);
+            self.params = Some(params);
+        }
+    }
+    /**
+     * Delete a parameter from the test.
+     * 
+     * `param` The parameter to delete.
+     */
+    pub fn remove_param(&mut self, param: &str) {
+        if let Some(params) = &mut self.params {
+            params.remove(param);
+            if params.is_empty() {
+                self.params = None;
+            }
+        }
+    }
+
 }
 
 /**
@@ -603,6 +658,7 @@ pub struct MockResponseConfiguration {
     pub delay: u64,
 }
 
+
 impl MockResponseConfiguration {
     /**
      * Create a new mock response configuration.
@@ -790,10 +846,11 @@ mod test {
                         Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None) }),
                     )
                     .unwrap()],
-                    None,
+                    None,                    
                 )
                 .unwrap()],
                 Vec::new(),
+                None
             )
             .unwrap()],
         );
@@ -841,6 +898,7 @@ mod test {
                 )
                 .unwrap()],
                 Vec::new(),
+                None,
             )
             .unwrap()],
         );
@@ -869,10 +927,11 @@ mod test {
                         Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
                     )
                     .unwrap()],
-                    None,
+                    None,                    
                 )
                 .unwrap()],
                 Vec::new(),
+                None,
             )
             .unwrap()],
         );

@@ -1,6 +1,8 @@
 mod args;
 mod server;
 
+use std::collections::HashSet;
+
 use clap::Parser;
 
 use apinae_lib::{
@@ -64,7 +66,7 @@ async fn init(args: Args, config: AppConfiguration) -> Result<(), ApplicationErr
     if args.list {
         list_tests(&config);
     } else {
-        start_daemon(args.id.as_ref(), &config).await?;
+        start_daemon(args, &config).await?;
     }
     Ok(())
 }
@@ -88,7 +90,7 @@ fn list_tests(config: &AppConfiguration) {
  * Start the daemon with the specified id.
  *
  * # Arguments
- * `id`: The id of the test to start.
+ * `args`: Arguments to start the daemon with.
  * `config`: The configuration to search for the test.
  *
  * # Returns
@@ -98,15 +100,41 @@ fn list_tests(config: &AppConfiguration) {
  * An error if the test is not found.
  * An error if the id is missing.
  */
-async fn start_daemon(id: Option<&String>, config: &AppConfiguration) -> Result<(), ApplicationError> {
-    let Some(id) = id else {
-        return Err(ApplicationError::MissingId("Missing id".to_string()));
-    };
-    let test = get_test(id, config)?;
+async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), ApplicationError> {
+    let test_id = args.clone().id.ok_or(ApplicationError::CouldNotFind("Missing id".to_string()))?;
+    let test = get_test(test_id.as_str(), config)?;
+    validate_parameters(test, &args)?;
     let mut server_setup = ServerSetup::new();
     server_setup.setup_test(test).await;
     server_setup.start_servers().await.map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
     Ok(())
+}
+
+/**
+ * Validate the parameters for the test. 
+ * All test parameters must be specified in the arguments.
+ *
+ * # Arguments
+ * `test`: The test to validate the parameters for.
+ * `args`: The application arguments to validate the parameters with.
+ *
+ * # Returns
+ * Ok if the parameters are valid.
+ *
+ * # Errors
+ * An error if the parameters are invalid.
+ */
+fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<(), ApplicationError> {
+    let test_params = &test.params.clone().unwrap_or(HashSet::new());
+    if test_params.is_empty() {
+        return Ok(());
+    }
+    for param in test_params {
+        if !args.param.iter().find(|(key, _)| key.eq(param)).is_none() {
+            return Err(ApplicationError::CouldNotFind(format!("Missing parameter: {}", param)));
+        }
+    }
+    Ok(())    
 }
 
 /**
@@ -205,9 +233,10 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_start_daemon() {
         let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
-        let _ = start_daemon(Some(&"1".to_string()), &config).await.is_ok();
-        assert!(start_daemon(Some(&"2".to_string()), &config).await.is_err());
-        assert!(start_daemon(None, &config).await.is_err());
+        let args = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1"]);
+        let _ = start_daemon(args, &config).await.is_ok();
+        let args = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "2"]);
+        assert!(start_daemon(args, &config).await.is_err());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
