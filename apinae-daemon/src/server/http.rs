@@ -331,7 +331,7 @@ fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Clien
             let reqwest_proxy = reqwest::Proxy::all(proxy.clone()).map_err(|err| ApplicationError::RoutingError(format!("Could not create proxy settings: {err}")))?;
             client_builder.proxy(reqwest_proxy).build().map_err(|err| ApplicationError::RoutingError(format!("Failed to create client with proxy: {err}")))?
         }
-        None => client_builder.build().map_err(|err| ApplicationError::RoutingError(format!("Failed to create vlient without proxy: {err}")))?,
+        None => client_builder.build().map_err(|err| ApplicationError::RoutingError(format!("Failed to create client without proxy: {err}")))?,
     };
     Ok(client)
 }
