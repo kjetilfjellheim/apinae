@@ -30,6 +30,7 @@ impl Settings {
      * # Returns
      * Settings - The settings object.
      */
+    #[must_use]
     pub fn new(apinae_path: Option<String>, body_height: String) -> Self {
         Self { apinae_path, body_height }
     }
@@ -40,6 +41,7 @@ impl Settings {
      * # Returns
      * Settings - The settings object. If any error occurs then the default settings will be returned.
      */
+    #[must_use]
     pub fn load() -> Self {
         match dirs::home_dir() {
             Some(dir) => {
@@ -54,11 +56,11 @@ impl Settings {
     /**
      * Save the settings to a file.
      *
-     * # Arguments
-     * `self` - The settings object.
-     *
      * # Returns
-     * Result<(), ApplicationError> - The result of saving the settings.
+     * The result of saving the settings.
+     * 
+     * # Errors
+     * If any error occurs while saving the settings, an `ApplicationError` will be returned.
      */
     pub fn save(&self) -> Result<(), ApplicationError> {
         let home_dir = dirs::home_dir().ok_or(ApplicationError::ConfigurationError("Could not find home directory".to_string()))?;

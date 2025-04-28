@@ -323,8 +323,9 @@ const convertEndpointToRequestObject = (editEndpointData, editMockData, editRout
   console.log("showEditMockData:" + showEditMockData.value);
   return {
     id: editEndpointData.value.id,
-    pathExpression: editEndpointData.value.pathExpression,
-    method: editEndpointData.value.method,
+    pathExpression: editEndpointData.value.pathExpression === "" ? null : editEndpointData.value.pathExpression,
+    method: editEndpointData.value.method === "" ? null : editEndpointData.value.method,
+    bodyExpression: editEndpointData.value.bodyExpression === "" ? null : editEndpointData.value.bodyExpression,
     mock: showEditMockData.value ? convertMockToRequestObject(editMockData) : null,
     route: !showEditMockData.value ? convertRouteToRequestObject(editRouteData) : null,
   }
@@ -668,6 +669,8 @@ const validateNumberOptional = (str) => {
                                     <dd class="col-sm-12 small">{{ endpoint.pathExpression }}</dd>
                                     <dt class="col-sm-12 small">Method</dt>
                                     <dd class="col-sm-12 small">{{ endpoint.method }}</dd>
+                                    <dt class="col-sm-12 small">Body</dt>
+                                    <dd class="col-sm-12 small">{{ endpoint.bodyExpression }}</dd>                                    
                                     <dt class="col-sm-12 small"></dt>
                                     <dd class="col-sm-12 small">
                                       <div class="btn-group btn-group-sm align-middle small" role="group">
@@ -949,7 +952,7 @@ const validateNumberOptional = (str) => {
     Edit modals for editing the endpoint.
     TODO: Move this to a separate component.
   -->
-  <div class="modal modal-lg fade" id="idEditEndpointModel" tabindex="-1" aria-labelledby="editEndpointLabel"
+  <div class="modal modal-xl fade" id="idEditEndpointModel" tabindex="-1" aria-labelledby="editEndpointLabel"
     aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
@@ -968,8 +971,7 @@ const validateNumberOptional = (str) => {
             </div>
             <div class="col-md-4">
               <label for="idEditMethod" class="form-label small">Method&nbsp;</label>
-              <select id="idEditMethod" class="form-select form-select-sm"
-                :class="validateStringRequired(editEndpointData.method)" v-model="editEndpointData.method">
+              <select id="idEditMethod" class="form-select form-select-sm is-valid" v-model="editEndpointData.method">
                 <option value="DELETE">Delete</option>
                 <option value="GET">Get</option>
                 <option value="HEAD">Head</option>
@@ -980,10 +982,14 @@ const validateNumberOptional = (str) => {
             </div>
             <div class="col-md-6">
               <label for="idEditPathExpression" class="form-label small">Path expression</label>
-              <input type="text" class="form-control form-control-sm" id="idEditPathExpression"
-                v-model="editEndpointData.pathExpression"
-                :class="validateStringRequired(editEndpointData.pathExpression)">
+              <input type="text" class="form-control form-control-sm is-valid" id="idEditPathExpression"
+                v-model="editEndpointData.pathExpression">
             </div>
+            <div class="col-md-6">
+              <label for="idEditBodyExpression" class="form-label small">Body expression</label>
+              <input type="text" class="form-control form-control-sm is-valid" id="idEditBodyExpression"
+                v-model="editEndpointData.bodyExpression">
+            </div>            
             <div class="col-md-6" v-if="showEditMockData">
               <label for="idEditStatus" class="form-label small">Status</label>
               <input type="text" class="form-control form-control-sm" id="idEditStatus" v-model="editMockData.status"

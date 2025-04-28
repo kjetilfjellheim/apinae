@@ -26,11 +26,6 @@ const DEFAULT_STATUS_CODE: u16 = 200;
 const DEFAULT_DELAY: u64 = 0;
 
 /**
- * Default method for new endpoints.
- */
-const DEFAULT_METHOD: &str = "GET";
-
-/**
  * Loads the configuration from a file.
  *
  * `app` The Tauri application handle.
@@ -260,7 +255,7 @@ pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<V
 pub async fn update_server(app_data: State<'_, AppData>, testid: &str, serverid: &str, httpserver: HttpServerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let server = data.get_server(testid, serverid).ok_or("Test not found")?;
-    let https_config: Option<HttpsConfiguration> = httpserver.https_config.map(|https_row| https_row.into());
+    let https_config: Option<HttpsConfiguration> = httpserver.https_config.map(std::convert::Into::into);
     server.update(httpserver.name, httpserver.http_port, https_config);
     update_data(&app_data, Some(data))?;
     Ok(())
@@ -417,8 +412,9 @@ pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: 
     let server = data.get_server(testid, serverid).ok_or("Server not found")?;
     server.endpoints.push(
         EndpointConfiguration::new(
-            "/".to_owned(),
-            DEFAULT_METHOD.to_owned(),
+            Some("/".to_owned()),
+            Some("GET".to_owned()),
+            Some(String::new()),
             Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, DEFAULT_STATUS_CODE, HashMap::new(), DEFAULT_DELAY) }),
         )
         .map_err(|err| err.to_string())?,
@@ -475,7 +471,7 @@ pub async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
     } else {
         None
     };
-    data.update_endpoint(testid, serverid, endpointid, endpoint.path_expression.as_str(), endpoint.method.as_str(), endpoint_type).map_err(|err| err.to_string())?;
+    data.update_endpoint(testid, serverid, endpointid, endpoint.path_expression, endpoint.body_expression, endpoint.method, endpoint_type).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -505,7 +501,7 @@ pub async fn confirm_dialog(app: AppHandle) -> bool {
 pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option<String>) -> Option<String> {
     let dialog = app.dialog().file();
     let dialog = if let Some(extension) = extension { dialog.add_filter(name.unwrap_or_default(), &[&extension]) } else { dialog };
-    dialog.blocking_pick_file().map(|file_path| get_file_path(file_path).unwrap_or("".to_owned()))
+    dialog.blocking_pick_file().map(|file_path| get_file_path(file_path).unwrap_or_default())
 }
 
 /**

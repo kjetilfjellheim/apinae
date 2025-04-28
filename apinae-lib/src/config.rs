@@ -260,11 +260,12 @@ impl AppConfiguration {
      * An error if the endpoint could not be found.
      */
     #[allow(clippy::too_many_arguments)]
-    pub fn update_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str, path_expression: &str, method: &str, endpoint_type: Option<EndpointType>) -> Result<(), ApplicationError> {
+    pub fn update_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str, path_expression: Option<String>, body_expression: Option<String>, method: Option<String>, endpoint_type: Option<EndpointType>) -> Result<(), ApplicationError> {
         let endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
-        endpoint.path_expression = path_expression.to_string();
-        endpoint.method = method.to_string();
+        endpoint.path_expression = path_expression;
+        endpoint.method = method;
         endpoint.endpoint_type = endpoint_type;
+        endpoint.body_expression = body_expression;
         Ok(())
     }
 }
@@ -446,9 +447,11 @@ pub struct EndpointConfiguration {
     // The ID of the test. This is a UUID automatically generated.
     pub id: String,
     // Path expression for the apinae API. This is a regular expression.
-    pub path_expression: String,
+    pub path_expression: Option<String>,
+    // Body expression for the apinae API. This is a regular expression.
+    pub body_expression: Option<String>,
     // The HTTP method.
-    pub method: String,
+    pub method: Option<String>,
     // Defines how the endpoint is to be handled.
     pub endpoint_type: Option<EndpointType>,
 }
@@ -458,16 +461,16 @@ impl EndpointConfiguration {
      * Create a new endpoint configuration.
      *
      * `path_expression` Endpoint for the apinae API. This is a regular expression.
+     * `body_expression` Body expression for the apinae API. This is a regular expression.
      * `method` The HTTP method.
      * `endpoint_type` Defines how the endpoint is to be handled.
      *
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(path_expression: String, method: String, endpoint_type: Option<EndpointType>) -> Result<Self, ApplicationError> {
+    pub fn new(path_expression: Option<String>, method: Option<String>, body_expression: Option<String>, endpoint_type: Option<EndpointType>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-
-        Ok(EndpointConfiguration { id, path_expression, method, endpoint_type })
+        Ok(EndpointConfiguration { id, path_expression, body_expression, method, endpoint_type })
     }
 }
 
@@ -781,8 +784,9 @@ mod test {
                     "Server".to_string(),
                     Some(8080),
                     vec![EndpointConfiguration::new(
-                        "/test".to_string(),
-                        "GET".to_string(),
+                        Some("/test".to_string()),
+                        Some("GET".to_string()),
+                        Some("Body".to_string()),
                         Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None) }),
                     )
                     .unwrap()],
@@ -803,8 +807,9 @@ mod test {
         assert_eq!(configuration.tests[0].servers[0].name, "Server");
         assert_eq!(configuration.tests[0].servers[0].http_port, Some(8080));
         assert_eq!(configuration.tests[0].servers[0].endpoints.len(), 1);
-        assert_eq!(configuration.tests[0].servers[0].endpoints[0].path_expression, "/test");
-        assert_eq!(configuration.tests[0].servers[0].endpoints[0].method, "GET");
+        assert_eq!(configuration.tests[0].servers[0].endpoints[0].path_expression, Some("/test".to_owned()));
+        assert_eq!(configuration.tests[0].servers[0].endpoints[0].method, Some("GET".to_owned()));
+        assert_eq!(configuration.tests[0].servers[0].endpoints[0].body_expression, Some("Body".to_owned()));
         assert_eq!(
             configuration.tests[0].servers[0].endpoints[0].endpoint_type,
             Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None,) })
@@ -826,8 +831,9 @@ mod test {
                     "Server".to_string(),
                     Some(8080),
                     vec![EndpointConfiguration::new(
-                        "/test".to_string(),
-                        "GET".to_string(),
+                        Some("/test".to_string()),
+                        Some("".to_string()),
+                        Some("GET".to_string()),
                         Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
                     )
                     .unwrap()],
@@ -857,8 +863,9 @@ mod test {
                     "Server".to_string(),
                     Some(8080),
                     vec![EndpointConfiguration::new(
-                        "/test".to_string(),
-                        "GET".to_string(),
+                        Some("/test".to_string()),
+                        Some("".to_string()),
+                        Some("GET".to_string()),
                         Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
                     )
                     .unwrap()],

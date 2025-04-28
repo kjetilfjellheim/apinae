@@ -27,7 +27,7 @@ impl TestRow {
      * `process_id` - The process id of the test.
      *
      * # Returns
-     * TestRow - The test row.
+     * `TestRow` - The test row.
      */
     pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>) -> Self {
         Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id }
@@ -86,9 +86,11 @@ pub struct EndpointRow {
     // The unique identifier of the endpoint.
     pub id: String,
     // The path expression of the endpoint.
-    pub path_expression: String,
+    pub path_expression: Option<String>,
     // The method of the endpoint.
-    pub method: String,
+    pub method: Option<String>,
+    // The body expression.
+    pub body_expression: Option<String>,    
     // The mock response of the endpoint.
     pub mock: Option<MockRow>,
     // The route configuration of the endpoint.
@@ -104,13 +106,14 @@ impl From<&EndpointConfiguration> for EndpointRow {
             id: endpoint_config.id.clone(),
             path_expression: endpoint_config.path_expression.clone(),
             method: endpoint_config.method.clone(),
+            body_expression: endpoint_config.body_expression.clone(),
             mock: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| match endpoint_type {
                 EndpointType::Mock { configuration } => Some(MockRow::from(configuration)),
-                _ => None,
+                EndpointType::Route { configuration: _ } => None,
             }),
             route: endpoint_config.endpoint_type.as_ref().and_then(|endpoint_type| match endpoint_type {
                 EndpointType::Route { configuration } => Some(RouteRow::from(configuration)),
-                _ => None,
+                EndpointType::Mock { configuration: _ } => None,
             }),
         }
     }
@@ -158,10 +161,10 @@ impl From<&MockRow> for MockResponseConfiguration {
             mock.response.clone(),
             mock.status,
             mock.headers
-                .split("\n")
-                .filter(|header| !header.is_empty() && header.contains(":"))
+                .split('\n')
+                .filter(|header| !header.is_empty() && header.contains(':'))
                 .map(|header| {
-                    let mut parts = header.split(":");
+                    let mut parts = header.split(':');
                     let key = parts.next().unwrap_or("").trim();
                     let value = parts.next().unwrap_or("").trim();
                     (String::from(key), String::from(value))
@@ -355,12 +358,12 @@ mod test {
 
     #[test]
     fn test_endpoint_row_from_endpoint_configuration() {
-        let endpoint_config = EndpointConfiguration::new("path".to_owned(), "method".to_owned(), None).unwrap();
+        let endpoint_config = EndpointConfiguration::new(Some("path".to_owned()), Some("method".to_owned()), None, None).unwrap();
 
         let endpoint_row = EndpointRow::from(&endpoint_config);
 
-        assert_eq!(endpoint_row.path_expression, "path");
-        assert_eq!(endpoint_row.method, "method");
+        assert_eq!(endpoint_row.path_expression, Some("path".to_string()));
+        assert_eq!(endpoint_row.method, Some("method".to_string()));
         assert_eq!(endpoint_row.mock, None);
         assert_eq!(endpoint_row.route, None);
     }
@@ -422,7 +425,7 @@ mod test {
         assert_eq!(mock_config.response, Some("response".to_owned()));
         assert_eq!(mock_config.status, 200);
         assert_eq!(mock_config.headers.get("header"), Some(&"value".to_owned()));
-        assert_eq!(mock_config.headers.get("header2"), Some(&"".to_owned()));
+        assert_eq!(mock_config.headers.get("header2"), Some(&String::new()));
         assert_eq!(mock_config.delay, 0);
     }
 
@@ -432,7 +435,7 @@ mod test {
      */
     #[test]
     fn test_from_mockrow_to_mockresponseconfiguration_no_header() {
-        let mock_row = MockRow { response: None, status: 200, headers: "".to_owned(), delay: 0 };
+        let mock_row = MockRow { response: None, status: 200, headers:String::new(), delay: 0 };
 
         let mock_config = MockResponseConfiguration::from(&mock_row);
 

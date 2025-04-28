@@ -114,9 +114,10 @@ impl AppServer {
  * The response.
  */
 async fn request_handler(server_configuration: web::Data<ServerConfiguration>, req: HttpRequest, payload: Option<web::Payload>) -> HttpResponse {
-    for endpoint in &server_configuration.endpoints {
-        match is_valid_endpoint(req.path(), req.method().as_str(), endpoint) {
-            Ok(true) => match handle_endpoint(endpoint, req, payload).await {
+    let payload_string: Option<String> = get_body_as_string(payload).await;
+    for endpoint in &server_configuration.endpoints {               
+        match is_valid_endpoint(req.path(), req.method().as_str(), endpoint, payload_string.clone()) {
+            Ok(true) => match handle_endpoint(endpoint, req, payload_string).await {
                 Ok(response) => return response,
                 Err(err) => {
                     error!("Error handling request: {err}. Returning not implemented");
@@ -135,12 +136,33 @@ async fn request_handler(server_configuration: web::Data<ServerConfiguration>, r
 }
 
 /**
+ * Get the payload as a string.
+ *
+ * # Arguments
+ * `payload`: The payload.
+ *
+ * # Returns
+ * The payload as a string.
+ */
+async fn get_body_as_string(payload: Option<web::Payload>) -> Option<String> {
+    let payload_string: Option<String> = if let Some(payload) = payload {
+        payload.to_bytes().await.map_err(|err| { error!("Failed to read payload: {err}"); }).and_then(|bytes| {
+            String::from_utf8(bytes.to_vec()).map_err(|err| { error!("Failed to convert payload to string: {err}"); })
+        }).ok()
+    } else {
+        None
+    };
+    payload_string
+}
+
+/**
  * Check if the request is a valid endpoint.
  *
  * # Arguments
  * `request_path`: The request path.
  * `request_method`: The request method.
  * `endpoint`: The endpoint configuration.
+ * `payload_string`: The request payload as a string.
  *
  * # Returns
  * True if the request is a valid endpoint.
@@ -148,9 +170,36 @@ async fn request_handler(server_configuration: web::Data<ServerConfiguration>, r
  * # Errors
  * An error if the endpoint is invalid.
  */
-fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &EndpointConfiguration) -> Result<bool, ApplicationError> {
-    let regexp = Regex::new(&endpoint.path_expression).map_err(|err| ApplicationError::ConfigurationError(format!("Error in regular expression {}: {err}", endpoint.path_expression)))?;
-    Ok(regexp.is_match(request_path) && request_method == endpoint.method.as_str())
+fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &EndpointConfiguration, payload_string: Option<String>) -> Result<bool, ApplicationError> {    
+    let path_result = check_regexp(endpoint.path_expression.clone(), Some(request_path.to_owned()))?;
+    let payload_result = check_regexp(endpoint.body_expression.clone(), payload_string)?;
+    let method_result = endpoint.method.as_ref().map_or_else(|| true, |f| f == request_method);
+    Ok(path_result && payload_result && method_result)
+}
+
+/**
+ * Check regular expression.
+ *
+ * # Arguments
+ * `regexp`: The regular expression.
+ * `data`: The data to check.
+ *
+ * # Returns
+ * Regular expression result.
+ *
+ * # Errors
+ * An error if the regular expression is invalid
+ */
+fn check_regexp(regexp: Option<String>, data: Option<String>) -> Result<bool, ApplicationError> {
+    let regexp = if let Some(regexp) = regexp {
+        Regex::new(regexp.as_str()).map_err(|err| ApplicationError::ConfigurationError(format!("Error in regular expression {regexp}: {err}")))?
+    } else {
+        return Ok(true);
+    };
+    let Some(data) = data else {
+        return Ok(true);
+    };        
+    Ok(regexp.is_match(&data))
 }
 
 /**
@@ -165,14 +214,14 @@ fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &Endpoi
  * # Errors
  * An error if the status code is invalid.
  */
-async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, payload: Option<web::Payload>) -> Result<HttpResponse, ApplicationError> {
+async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, payload: Option<String>) -> Result<HttpResponse, ApplicationError> {
     if let Some(endpoint_type) = &endpoint.endpoint_type {
         match endpoint_type {
             EndpointType::Mock { configuration } => {
                 return generate_mock_response(configuration).await;
             }
             EndpointType::Route { configuration } => {
-                return route_request(configuration, req, payload).await;
+                return route_request(configuration, req, payload.clone()).await;
             }
         }
     }
@@ -189,11 +238,11 @@ async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, pay
  * # Returns
  * The response.
  */
-async fn route_request(route_configuration: &RouteConfiguration, req: HttpRequest, payload: Option<web::Payload>) -> Result<HttpResponse, ApplicationError> {
+async fn route_request(route_configuration: &RouteConfiguration, req: HttpRequest, payload: Option<String>) -> Result<HttpResponse, ApplicationError> {
     let mut url = route_configuration.url.clone();
     url.push_str(req.path());
 
-    let request = get_request(req, payload, url).await?;
+    let request = get_request(&req, payload.clone(), url)?;
 
     let client = get_client(route_configuration)?;
 
@@ -282,7 +331,7 @@ fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Clien
             let reqwest_proxy = reqwest::Proxy::all(proxy.clone()).map_err(|err| ApplicationError::RoutingError(format!("Could not create proxy settings: {err}")))?;
             client_builder.proxy(reqwest_proxy).build().map_err(|err| ApplicationError::RoutingError(format!("Failed to create client with proxy: {err}")))?
         }
-        None => client_builder.build().map_err(|err| ApplicationError::RoutingError(format!("Failed to create vlient without proxy: {err}")))?,
+        None => client_builder.build().map_err(|err| ApplicationError::RoutingError(format!("Failed to create client without proxy: {err}")))?,
     };
     Ok(client)
 }
@@ -312,10 +361,10 @@ fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Clien
  * ```
  *
  */
-async fn get_request(req: HttpRequest, payload: Option<web::Payload>, url: String) -> Result<reqwest::Request, ApplicationError> {
+fn get_request(req: &HttpRequest, payload: Option<String>, url: String) -> Result<reqwest::Request, ApplicationError> {
     log::debug!("Creating request");
     let mut request_builder = reqwest::Client::new()
-        .request(Method::from_bytes(req.method().as_str().as_bytes()).map_err(|err| ApplicationError::RoutingError(format!("Failed to map method {}: {err}", req.method().as_str())))?, url.as_str());
+        .request(Method::from_bytes(req.method().as_str().as_bytes()).map_err(|err| ApplicationError::RoutingError(format!("Failed to map method {}: {err}", req.method().as_str())))?, url);
     request_builder = match req.version() {
         actix_web::http::Version::HTTP_09 => request_builder.version(reqwest::Version::HTTP_09),
         actix_web::http::Version::HTTP_10 => request_builder.version(reqwest::Version::HTTP_10),
@@ -329,7 +378,7 @@ async fn get_request(req: HttpRequest, payload: Option<web::Payload>, url: Strin
         request_builder = request_builder.header(key.as_str(), value);
     }
     if let Some(payload) = payload {
-        let bytes = payload.to_bytes().await.map_err(|err| ApplicationError::RoutingError(format!("Failed to map request header: {err}")))?;
+        let bytes = payload.clone().into_bytes();
         request_builder = request_builder.body(bytes);
     }
     request_builder = request_builder.query(
@@ -496,8 +545,8 @@ mod test {
      */
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_valid_endpoint() {
-        let endpoint = EndpointConfiguration::new("^\\/test$".to_owned(), "GET".to_owned(), None).unwrap();
-        assert!(is_valid_endpoint("/test", "GET", &endpoint).unwrap());
+        let endpoint = EndpointConfiguration::new(Some("^\\/test$".to_string()), Some("GET".to_string()), Some("".to_string()), None,).unwrap();
+        assert!(is_valid_endpoint("/test", "GET", &endpoint, Some("body".to_string())).unwrap());
     }
 
     /**
@@ -573,7 +622,7 @@ mod test {
     async fn test_generate_mock_response() {
         let mock_response = MockResponseConfiguration::new(Some("Test".to_owned()), 200, HashMap::new(), 0);
         let response = generate_mock_response(&mock_response);
-        assert!(response.is_ok());
+        assert!(response.await.is_ok());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
