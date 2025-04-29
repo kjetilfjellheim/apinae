@@ -1,7 +1,9 @@
+use std::error::Error;
+
 use clap::Parser;
 
 /// Command line application for starting daemon and reading test configurations.
-#[derive(Parser, Debug)]
+#[derive(Parser, Debug, Clone)]
 #[command(version, about, long_about = None, author="Kjetil Fjellheim")]
 pub struct Args {
     /// Input file.
@@ -15,6 +17,23 @@ pub struct Args {
     /// Lists the available tests in the specified file.
     #[arg(long)]
     pub list: bool,
+
+    /// Parameter values for the test. Multiple parameters can be specified.
+    /// This is a key-value pair separated by `=`. For example: `key=value`.
+    #[arg(long, value_parser = parse_key_val::<String, String>)]
+    pub param: Vec<(String, String)>,
+}
+
+/// Parse a single key-value pair
+fn parse_key_val<T, U>(s: &str) -> Result<(T, U), Box<dyn Error + Send + Sync + 'static>>
+where
+    T: std::str::FromStr,
+    T::Err: Error + Send + Sync + 'static,
+    U: std::str::FromStr,
+    U::Err: Error + Send + Sync + 'static,
+{
+    let pos = s.find('=').ok_or_else(|| format!("invalid KEY=value: no `=` found in `{s}`"))?;
+    Ok((s[..pos].parse()?, s[pos + 1..].parse()?))
 }
 
 #[cfg(test)]

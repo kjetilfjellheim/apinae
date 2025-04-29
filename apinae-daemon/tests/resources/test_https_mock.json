@@ -24,7 +24,7 @@
                 "mock": {
                   "configuration": {
                     "response": "{ \"test\": \"Success https\" }",
-                    "status": 200,
+                    "status": "200",
                     "headers": {
                       "Content-Type": "application/json"
                     },

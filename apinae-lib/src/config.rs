@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::HashMap, time::SystemTime};
+use std::{
+    collections::{HashMap, HashSet},
+    time::SystemTime,
+};
 
 use crate::error::ApplicationError;
 
@@ -53,10 +56,11 @@ impl AppConfiguration {
      * # Errors
      * An error if the test could not be found.
      */
-    pub fn update_test(&mut self, test_id: &str, name: &str, description: &str) -> Result<(), ApplicationError> {
+    pub fn update_test(&mut self, test_id: &str, name: &str, description: &str, params: Option<HashSet<String>>) -> Result<(), ApplicationError> {
         let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
         test.name = name.to_string();
         test.description = description.to_string();
+        test.params = params;
         Ok(())
     }
 
@@ -260,12 +264,51 @@ impl AppConfiguration {
      * An error if the endpoint could not be found.
      */
     #[allow(clippy::too_many_arguments)]
-    pub fn update_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str, path_expression: Option<String>, body_expression: Option<String>, method: Option<String>, endpoint_type: Option<EndpointType>) -> Result<(), ApplicationError> {
+    pub fn update_endpoint(
+        &mut self,
+        test_id: &str,
+        server_id: &str,
+        endpoint_id: &str,
+        path_expression: Option<String>,
+        body_expression: Option<String>,
+        method: Option<String>,
+        endpoint_type: Option<EndpointType>,
+    ) -> Result<(), ApplicationError> {
         let endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
         endpoint.path_expression = path_expression;
         endpoint.method = method;
         endpoint.endpoint_type = endpoint_type;
         endpoint.body_expression = body_expression;
+        Ok(())
+    }
+
+    /**
+     * Add parameter to the test.
+     *
+     * `test_id` The id of the test.
+     * `param` The parameter to add.
+     *
+     * # Errors
+     * An error if the test could not be found.
+     */
+    pub fn add_param(&mut self, test_id: &str, param: String) -> Result<(), ApplicationError> {
+        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        test.add_param(param);
+        Ok(())
+    }
+
+    /**
+     * Remove parameter from the test.
+     *
+     * `test_id` The id of the test.
+     * `param` The parameter to remove.
+     *
+     * # Errors
+     * An error if the test could not be found.
+     */
+    pub fn remove_param(&mut self, test_id: &str, param: &str) -> Result<(), ApplicationError> {
+        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+        test.remove_param(param);
         Ok(())
     }
 }
@@ -286,6 +329,8 @@ pub struct TestConfiguration {
     pub servers: Vec<ServerConfiguration>,
     // TCP listeners
     pub listeners: Vec<TcpListenerData>,
+    // The parameters to pass to the test.
+    pub params: Option<HashSet<String>>,
 }
 
 impl TestConfiguration {
@@ -299,9 +344,9 @@ impl TestConfiguration {
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>) -> Result<Self, ApplicationError> {
+    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>, params: Option<HashSet<String>>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(TestConfiguration { id, name, description, servers, listeners })
+        Ok(TestConfiguration { id, name, description, servers, listeners, params })
     }
 
     /**
@@ -337,6 +382,34 @@ impl TestConfiguration {
         let index = self.servers.iter().position(|server| server.id == server_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
         self.servers.remove(index);
         Ok(())
+    }
+
+    /**
+     * Add a parameter to the test.
+     *
+     * `param` The parameter to add.
+     */
+    pub fn add_param(&mut self, param: String) {
+        if let Some(params) = &mut self.params {
+            params.insert(param);
+        } else {
+            let mut params = HashSet::new();
+            params.insert(param);
+            self.params = Some(params);
+        }
+    }
+    /**
+     * Delete a parameter from the test.
+     *
+     * `param` The parameter to delete.
+     */
+    pub fn remove_param(&mut self, param: &str) {
+        if let Some(params) = &mut self.params {
+            params.remove(param);
+            if params.is_empty() {
+                self.params = None;
+            }
+        }
     }
 }
 
@@ -596,7 +669,7 @@ pub struct MockResponseConfiguration {
     // The response to return when the mock is called.
     pub response: Option<String>,
     // The status code to return when the mock is called.
-    pub status: u16,
+    pub status: String,
     // The headers to return when the mock is called.
     pub headers: HashMap<String, String>,
     // Time to wait in milliseconds before returning the response.
@@ -615,7 +688,7 @@ impl MockResponseConfiguration {
      * The mock response configuration.
      */
     #[must_use]
-    pub fn new(response: Option<String>, status: u16, headers: HashMap<String, String>, delay: u64) -> Self {
+    pub fn new(response: Option<String>, status: String, headers: HashMap<String, String>, delay: u64) -> Self {
         MockResponseConfiguration { response, status, headers, delay }
     }
 }
@@ -794,6 +867,7 @@ mod test {
                 )
                 .unwrap()],
                 Vec::new(),
+                None,
             )
             .unwrap()],
         );
@@ -834,13 +908,14 @@ mod test {
                         Some("/test".to_string()),
                         Some("".to_string()),
                         Some("GET".to_string()),
-                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
+                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), String::from("200"), HashMap::new(), 0) }),
                     )
                     .unwrap()],
                     None,
                 )
                 .unwrap()],
                 Vec::new(),
+                None,
             )
             .unwrap()],
         );
@@ -866,13 +941,14 @@ mod test {
                         Some("/test".to_string()),
                         Some("".to_string()),
                         Some("GET".to_string()),
-                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
+                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), String::from("200"), HashMap::new(), 0) }),
                     )
                     .unwrap()],
                     None,
                 )
                 .unwrap()],
                 Vec::new(),
+                None,
             )
             .unwrap()],
         );

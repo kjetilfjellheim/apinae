@@ -11,6 +11,10 @@ const tests = ref([]);
 //The data is copied from the tests object to the editTestData object.
 const editTestData = ref({});
 
+// Parameter data for adding a new parameter to the test.
+//This is called when the user clicks the add button in the edit test modal.
+const editAddParameter = ref("");
+
 //Refreshes the tests array by calling the get_tests function in the backend.
 //This is called when the component is mounted and when a test is added, updated, or deleted.
 const refresh = () => {
@@ -99,21 +103,34 @@ const validateStringRequired = (str) => {
     return "is-invalid";
 }
 
-//Verify that input is a number. 
-const validateNumberRequired = (str) => {
-    if (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
-        return "is-valid";
+// Adds a parameter to the test.
+//This is called when the user clicks the add button in the edit test modal.
+//The parameter is added to the params array of the test. The editAddParameter object is cleared.
+//If the parameter is empty, it is not added to the params array.
+const addParameter = () => {
+    if (editAddParameter.value && editAddParameter.value.length > 0) {
+        if (!editTestData.value.params) {
+            editTestData.value.params = [];
+        }
+        editTestData.value.params.push(editAddParameter.value);
+        editAddParameter.value = "";
     }
-    return "is-invalid";
 }
 
-//Verify that input is a number or null. 
-const validateNumberOptional = (str) => {
-    if (!str || (Number.isInteger(str) || (str.length > 0 && !isNaN(str)))) {
-        return "is-valid";
+//Removes a parameter from the test.
+//This is called when the user clicks the remove parameter button in the edit test modal.
+const removeParameter = (param) => {
+    if (editTestData.value.params) {
+        const index = editTestData.value.params.indexOf(param);
+        if (index > -1) {
+            editTestData.value.params.splice(index, 1);
+        }
+        if (editTestData.value.params.length === 0) {
+            editTestData.value.params = null;
+        }
     }
-    return "is-invalid";
 }
+
 </script>
 <style>
 /* The max height is full view height minus (top bar, menu bar and status bar + margins) */
@@ -161,6 +178,7 @@ const validateNumberOptional = (str) => {
                                     <th scope="col">Id</th>
                                     <th scope="col">Name</th>
                                     <th scope="col">Description</th>
+                                    <th scope="col">Parameters</th>
                                     <th scope="col"></th>
                                     <th scope="col"></th>
                                 </tr>
@@ -171,9 +189,15 @@ const validateNumberOptional = (str) => {
                                     </td>
                                     <td class="align-middle"><label class="align-middle small">{{ test.name }}</label>
                                     </td>
-                                    <td class="align-middle"><label class="align-middle small">{{ test.description
-                                            }}</label>
+                                    <td class="align-middle"><label class="align-middle small">{{ test.description }}</label>
                                     </td>
+                                    <td class="align-middle">
+                                        <template v-if="test.params">
+                                            <template v-for="param in test.params" :key="param">
+                                                <span class="badge bg-info-subtle text-primary small">{{ param }}</span>&nbsp;
+                                            </template>
+                                        </template>
+                                    </td>                                    
                                     <td class="align-middle">
                                         <span class="align-middle">
                                             <div class="btn-toolbar" role="toolbar"
@@ -212,12 +236,9 @@ const validateNumberOptional = (str) => {
                                 </tr>
                             </tbody>
                         </table>
-
+                        
                     </div>
                 </div>
-
-
-
             </div>
         </div>
     </div>
@@ -245,6 +266,18 @@ const validateNumberOptional = (str) => {
                         <label for="idEditDescription" class="form-label small">Description</label>
                         <textarea class="form-control form-control-sm is-valid" id="idEditDescription" rows="3"
                             v-model="editTestData.description"></textarea>
+                    </div>
+                    <div class="mb-3">                        
+                        <label for="idEditParams" class="form-label small">Parameters</label>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control is-valid" placeholder="Parameter" aria-label="Parameter" v-model="editAddParameter">
+                            <button class="btn btn-outline-primary" type="button" id="addParameter" @click="addParameter()">Add</button>
+                        </div>                                                
+                        <template v-if="editTestData.params">
+                            <template v-for="param in editTestData.params" :key="param">
+                                <button type="button" class="btn btn-sm btn-info small" @click="removeParameter(param)">{{ param }}</button>&nbsp;
+                            </template>
+                        </template>
                     </div>
                 </div>
                 <div class="modal-footer bg-primary-subtle">

@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion};
 
 /**
@@ -14,6 +16,8 @@ pub struct TestRow {
     pub description: String,
     // The process id of the test.
     pub process_id: Option<u32>,
+    // The parameters of the test.
+    pub params: Option<HashSet<String>>
 }
 
 impl TestRow {
@@ -25,12 +29,13 @@ impl TestRow {
      * `name` - The name of the test.
      * `description` - The description of the test.
      * `process_id` - The process id of the test.
+     * `params` - The parameters of the test.
      *
      * # Returns
      * `TestRow` - The test row.
      */
-    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>) -> Self {
-        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id }
+    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>, params: Option<HashSet<String>>) -> Self {
+        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id , params}
     }
 }
 
@@ -39,7 +44,7 @@ impl From<TestConfiguration> for TestRow {
      * Convert a test configuration to a test row.
      */
     fn from(test: TestConfiguration) -> Self {
-        Self { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None }
+        Self { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None, params: test.params }
     }
 }
 
@@ -90,7 +95,7 @@ pub struct EndpointRow {
     // The method of the endpoint.
     pub method: Option<String>,
     // The body expression.
-    pub body_expression: Option<String>,    
+    pub body_expression: Option<String>,
     // The mock response of the endpoint.
     pub mock: Option<MockRow>,
     // The route configuration of the endpoint.
@@ -128,7 +133,7 @@ pub struct MockRow {
     // The response of the mock.
     pub response: Option<String>,
     // The status response of the mock.
-    pub status: u16,
+    pub status: String,
     // The headers of the mock.
     pub headers: String,
     // The delay for writing responses.
@@ -142,7 +147,7 @@ impl From<&MockResponseConfiguration> for MockRow {
     fn from(mock: &MockResponseConfiguration) -> Self {
         Self {
             response: mock.response.clone(),
-            status: mock.status,
+            status: mock.status.clone(),
             headers: mock.headers.iter().fold(String::new(), |mut output, val| {
                 output.push_str(&format!("{}: {}\n", val.0, val.1));
                 output
@@ -159,7 +164,7 @@ impl From<&MockRow> for MockResponseConfiguration {
     fn from(mock: &MockRow) -> Self {
         MockResponseConfiguration::new(
             mock.response.clone(),
-            mock.status,
+            mock.status.clone(),
             mock.headers
                 .split('\n')
                 .filter(|header| !header.is_empty() && header.contains(':'))
@@ -337,7 +342,7 @@ mod test {
 
     #[test]
     fn test_test_row_from_test_configuration() {
-        let test_config = TestConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new()).unwrap();
+        let test_config = TestConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new(), None).unwrap();
 
         let test_row = TestRow::from(test_config);
 
@@ -370,12 +375,12 @@ mod test {
 
     #[test]
     fn test_mock_row_from_mock_response_configuration() {
-        let mock_config = MockResponseConfiguration::new(None, 200, HashMap::new(), 0);
+        let mock_config = MockResponseConfiguration::new(None, String::from("200"), HashMap::new(), 0);
 
         let mock_row = MockRow::from(&mock_config);
 
         assert_eq!(mock_row.response, None);
-        assert_eq!(mock_row.status, 200);
+        assert_eq!(mock_row.status, String::from("200"));
         assert_eq!(mock_row.headers, String::new());
         assert_eq!(mock_row.delay, 0);
     }
@@ -418,12 +423,12 @@ mod test {
      */
     #[test]
     fn test_from_mockrow_to_mockresponseconfiguration() {
-        let mock_row = MockRow { response: Some("response".to_owned()), status: 200, headers: "header: value\nheader2:\n \n".to_owned(), delay: 0 };
+        let mock_row = MockRow { response: Some("response".to_owned()), status: String::from("200"), headers: "header: value\nheader2:\n \n".to_owned(), delay: 0 };
 
         let mock_config = MockResponseConfiguration::from(&mock_row);
 
         assert_eq!(mock_config.response, Some("response".to_owned()));
-        assert_eq!(mock_config.status, 200);
+        assert_eq!(mock_config.status, String::from("200"));
         assert_eq!(mock_config.headers.get("header"), Some(&"value".to_owned()));
         assert_eq!(mock_config.headers.get("header2"), Some(&String::new()));
         assert_eq!(mock_config.delay, 0);
@@ -435,12 +440,12 @@ mod test {
      */
     #[test]
     fn test_from_mockrow_to_mockresponseconfiguration_no_header() {
-        let mock_row = MockRow { response: None, status: 200, headers:String::new(), delay: 0 };
+        let mock_row = MockRow { response: None, status: String::from("200"), headers: String::new(), delay: 0 };
 
         let mock_config = MockResponseConfiguration::from(&mock_row);
 
         assert_eq!(mock_config.response, None);
-        assert_eq!(mock_config.status, 200);
+        assert_eq!(mock_config.status, String::from("200"));
         assert_eq!(mock_config.headers.len(), 0);
         assert_eq!(mock_config.delay, 0);
     }
