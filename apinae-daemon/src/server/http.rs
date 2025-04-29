@@ -117,7 +117,7 @@ impl AppServer {
  */
 async fn request_handler(app_state: web::Data<AppState>, req: HttpRequest, payload: Option<web::Payload>) -> HttpResponse {
     let payload_string: Option<String> = get_body_as_string(payload).await;
-    for endpoint in &app_state.server_configuration.endpoints {               
+    for endpoint in &app_state.server_configuration.endpoints {
         match is_valid_endpoint(req.path(), req.method().as_str(), endpoint, payload_string.clone()) {
             Ok(true) => match handle_endpoint(endpoint, req, payload_string, app_state.params.clone()).await {
                 Ok(response) => return response,
@@ -148,9 +148,18 @@ async fn request_handler(app_state: web::Data<AppState>, req: HttpRequest, paylo
  */
 async fn get_body_as_string(payload: Option<web::Payload>) -> Option<String> {
     let payload_string: Option<String> = if let Some(payload) = payload {
-        payload.to_bytes().await.map_err(|err| { error!("Failed to read payload: {err}"); }).and_then(|bytes| {
-            String::from_utf8(bytes.to_vec()).map_err(|err| { error!("Failed to convert payload to string: {err}"); })
-        }).ok()
+        payload
+            .to_bytes()
+            .await
+            .map_err(|err| {
+                error!("Failed to read payload: {err}");
+            })
+            .and_then(|bytes| {
+                String::from_utf8(bytes.to_vec()).map_err(|err| {
+                    error!("Failed to convert payload to string: {err}");
+                })
+            })
+            .ok()
     } else {
         None
     };
@@ -172,7 +181,7 @@ async fn get_body_as_string(payload: Option<web::Payload>) -> Option<String> {
  * # Errors
  * An error if the endpoint is invalid.
  */
-fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &EndpointConfiguration, payload_string: Option<String>) -> Result<bool, ApplicationError> {    
+fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &EndpointConfiguration, payload_string: Option<String>) -> Result<bool, ApplicationError> {
     let path_result = check_regexp(endpoint.path_expression.clone(), Some(request_path.to_owned()))?;
     let payload_result = check_regexp(endpoint.body_expression.clone(), payload_string)?;
     let method_result = endpoint.method.as_ref().map_or_else(|| true, |f| f == request_method);
@@ -200,7 +209,7 @@ fn check_regexp(regexp: Option<String>, data: Option<String>) -> Result<bool, Ap
     };
     let Some(data) = data else {
         return Ok(true);
-    };        
+    };
     Ok(regexp.is_match(&data))
 }
 
@@ -416,7 +425,8 @@ async fn generate_mock_response(mock_response: &MockResponseConfiguration, param
         tokio::time::sleep(Duration::from_millis(mock_response.delay)).await;
     }
     log::debug!("Generating mock response");
-    let mut response_builder: actix_web::HttpResponseBuilder = HttpResponse::build(StatusCode::from_str(convert_params(mock_response.status.as_str(), &params).as_str()).map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?);
+    let mut response_builder: actix_web::HttpResponseBuilder =
+        HttpResponse::build(StatusCode::from_str(convert_params(mock_response.status.as_str(), &params).as_str()).map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?);
     for (key, value) in &mock_response.headers {
         response_builder.append_header((convert_params(key.as_str(), &params), convert_params(value.as_str(), &params)));
     }
@@ -443,7 +453,6 @@ fn convert_params(value: &str, params: &Vec<(String, String)>) -> String {
         if result.contains(&key) {
             result = result.replace(&key, value);
         }
-
     }
     result
 }
@@ -579,7 +588,7 @@ mod test {
      */
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_valid_endpoint() {
-        let endpoint = EndpointConfiguration::new(Some("^\\/test$".to_string()), Some("GET".to_string()), Some("".to_string()), None,).unwrap();
+        let endpoint = EndpointConfiguration::new(Some("^\\/test$".to_string()), Some("GET".to_string()), Some("".to_string()), None).unwrap();
         assert!(is_valid_endpoint("/test", "GET", &endpoint, Some("body".to_string())).unwrap());
     }
 
@@ -673,7 +682,7 @@ mod test {
         assert!(client.is_ok());
     }
 
-    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]    
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn convert_params_test() {
         let params = vec![("param1".to_string(), "value1".to_string()), ("param2".to_string(), "value2".to_string())];
         let value = "This is a test with ${param1} and ${param2}";

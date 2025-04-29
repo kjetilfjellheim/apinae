@@ -109,7 +109,7 @@ async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), Appli
 }
 
 /**
- * Validate the parameters for the test. 
+ * Validate the parameters for the test.
  * All test parameters must be specified in the arguments.
  *
  * # Arguments
@@ -132,7 +132,7 @@ fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<(), Appl
             return Err(ApplicationError::CouldNotFind(format!("Missing parameter: {param}")));
         }
     }
-    Ok(())    
+    Ok(())
 }
 
 /**
@@ -253,5 +253,4 @@ mod test {
         let args_params_ok = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1", "--param", "param2=2", "--param", "param1=1"]);
         assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_params_ok), Ok(()));
     }
-
 }

@@ -90,7 +90,7 @@ pub struct EndpointRow {
     // The method of the endpoint.
     pub method: Option<String>,
     // The body expression.
-    pub body_expression: Option<String>,    
+    pub body_expression: Option<String>,
     // The mock response of the endpoint.
     pub mock: Option<MockRow>,
     // The route configuration of the endpoint.
@@ -435,7 +435,7 @@ mod test {
      */
     #[test]
     fn test_from_mockrow_to_mockresponseconfiguration_no_header() {
-        let mock_row = MockRow { response: None, status: String::from("200"), headers:String::new(), delay: 0 };
+        let mock_row = MockRow { response: None, status: String::from("200"), headers: String::new(), delay: 0 };
 
         let mock_config = MockResponseConfiguration::from(&mock_row);
 

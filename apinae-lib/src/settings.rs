@@ -58,7 +58,7 @@ impl Settings {
      *
      * # Returns
      * The result of saving the settings.
-     * 
+     *
      * # Errors
      * If any error occurs while saving the settings, an `ApplicationError` will be returned.
      */

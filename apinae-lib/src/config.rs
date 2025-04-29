@@ -1,5 +1,8 @@
 use serde::{Deserialize, Serialize};
-use std::{collections::{HashMap, HashSet}, time::SystemTime};
+use std::{
+    collections::{HashMap, HashSet},
+    time::SystemTime,
+};
 
 use crate::error::ApplicationError;
 
@@ -260,7 +263,16 @@ impl AppConfiguration {
      * An error if the endpoint could not be found.
      */
     #[allow(clippy::too_many_arguments)]
-    pub fn update_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str, path_expression: Option<String>, body_expression: Option<String>, method: Option<String>, endpoint_type: Option<EndpointType>) -> Result<(), ApplicationError> {
+    pub fn update_endpoint(
+        &mut self,
+        test_id: &str,
+        server_id: &str,
+        endpoint_id: &str,
+        path_expression: Option<String>,
+        body_expression: Option<String>,
+        method: Option<String>,
+        endpoint_type: Option<EndpointType>,
+    ) -> Result<(), ApplicationError> {
         let endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
         endpoint.path_expression = path_expression;
         endpoint.method = method;
@@ -271,10 +283,10 @@ impl AppConfiguration {
 
     /**
      * Add parameter to the test.
-     * 
+     *
      * `test_id` The id of the test.
      * `param` The parameter to add.
-     * 
+     *
      * # Errors
      * An error if the test could not be found.
      */
@@ -286,10 +298,10 @@ impl AppConfiguration {
 
     /**
      * Remove parameter from the test.
-     * 
+     *
      * `test_id` The id of the test.
      * `param` The parameter to remove.
-     * 
+     *
      * # Errors
      * An error if the test could not be found.
      */
@@ -373,7 +385,7 @@ impl TestConfiguration {
 
     /**
      * Add a parameter to the test.
-     * 
+     *
      * `param` The parameter to add.
      */
     pub fn add_param(&mut self, param: String) {
@@ -387,7 +399,7 @@ impl TestConfiguration {
     }
     /**
      * Delete a parameter from the test.
-     * 
+     *
      * `param` The parameter to delete.
      */
     pub fn remove_param(&mut self, param: &str) {
@@ -398,7 +410,6 @@ impl TestConfiguration {
             }
         }
     }
-
 }
 
 /**
@@ -664,7 +675,6 @@ pub struct MockResponseConfiguration {
     pub delay: u64,
 }
 
-
 impl MockResponseConfiguration {
     /**
      * Create a new mock response configuration.
@@ -852,11 +862,11 @@ mod test {
                         Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None) }),
                     )
                     .unwrap()],
-                    None,                    
+                    None,
                 )
                 .unwrap()],
                 Vec::new(),
-                None
+                None,
             )
             .unwrap()],
         );
@@ -933,7 +943,7 @@ mod test {
                         Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), String::from("200"), HashMap::new(), 0) }),
                     )
                     .unwrap()],
-                    None,                    
+                    None,
                 )
                 .unwrap()],
                 Vec::new(),
