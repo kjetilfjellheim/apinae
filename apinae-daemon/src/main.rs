@@ -130,8 +130,8 @@ fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<(), Appl
         return Ok(());
     }
     for param in test_params {
-        if !args.param.iter().find(|(key, _)| key.eq(param)).is_none() {
-            return Err(ApplicationError::CouldNotFind(format!("Missing parameter: {}", param)));
+        if !args.param.iter().any(|(key, _)| key.eq(param)) {
+            return Err(ApplicationError::CouldNotFind(format!("Missing parameter: {param}")));
         }
     }
     Ok(())    
