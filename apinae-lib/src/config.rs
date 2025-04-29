@@ -56,10 +56,11 @@ impl AppConfiguration {
      * # Errors
      * An error if the test could not be found.
      */
-    pub fn update_test(&mut self, test_id: &str, name: &str, description: &str) -> Result<(), ApplicationError> {
+    pub fn update_test(&mut self, test_id: &str, name: &str, description: &str, params: Option<HashSet<String>>) -> Result<(), ApplicationError> {
         let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
         test.name = name.to_string();
         test.description = description.to_string();
+        test.params = params;
         Ok(())
     }
 

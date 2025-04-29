@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion};
 
 /**
@@ -14,6 +16,8 @@ pub struct TestRow {
     pub description: String,
     // The process id of the test.
     pub process_id: Option<u32>,
+    // The parameters of the test.
+    pub params: Option<HashSet<String>>
 }
 
 impl TestRow {
@@ -25,12 +29,13 @@ impl TestRow {
      * `name` - The name of the test.
      * `description` - The description of the test.
      * `process_id` - The process id of the test.
+     * `params` - The parameters of the test.
      *
      * # Returns
      * `TestRow` - The test row.
      */
-    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>) -> Self {
-        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id }
+    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>, params: Option<HashSet<String>>) -> Self {
+        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id , params}
     }
 }
 
@@ -39,7 +44,7 @@ impl From<TestConfiguration> for TestRow {
      * Convert a test configuration to a test row.
      */
     fn from(test: TestConfiguration) -> Self {
-        Self { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None }
+        Self { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None, params: test.params }
     }
 }
 

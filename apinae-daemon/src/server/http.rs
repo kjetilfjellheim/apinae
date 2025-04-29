@@ -664,7 +664,7 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_generate_mock_response() {
         let mock_response = MockResponseConfiguration::new(Some("Test".to_owned()), String::from("200"), HashMap::new(), 0);
-        let response = generate_mock_response(&mock_response, &Vec::new()).await;
+        let response = generate_mock_response(&mock_response, Vec::new()).await;
         assert!(response.is_ok());
     }
 

@@ -194,7 +194,7 @@ pub async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
 #[tauri::command]
 pub async fn update_test(app_data: State<'_, AppData>, testid: &str, test: TestRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.update_test(testid, test.name.as_str(), test.description.as_str()).map_err(|err| err.to_string())?;
+    data.update_test(testid, test.name.as_str(), test.description.as_str(), test.params.clone()).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -524,7 +524,7 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
     let test = app_config.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
     let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
     if let Some(process_data) = process_data.get(testid) {
-        Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: Some(process_data.process_id) })
+        Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: Some(process_data.process_id), params: test.params.clone() })
     } else {
         let file_path = get_current_file_path(&app_data)?;
         let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
@@ -533,7 +533,7 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
             std::process::Command::new(app_path).arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(testid).current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
         let process_id = process.id();
         process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
-        Ok(TestRow::new(test.id.as_str(), test.name.as_str(), test.description.as_str(), Some(process_id)))
+        Ok(TestRow::new(test.id.as_str(), test.name.as_str(), test.description.as_str(), Some(process_id), test.params.clone()))
     }
 }
 
@@ -561,9 +561,9 @@ pub async fn stop_test(app_data: State<'_, AppData>, testid: &str) -> Result<Tes
         Some(process_data) => {
             process_data.process.kill().map_err(|err| err.to_string())?;
             processes_data.remove(testid);
-            Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None })
+            Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None, params: test.params.clone() })
         }
-        None => Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None }),
+        None => Ok(TestRow { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None, params: test.params.clone() }),
     }
 }
 
