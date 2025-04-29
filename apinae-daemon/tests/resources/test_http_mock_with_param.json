@@ -6,6 +6,7 @@
             "id": "1",
             "name": "Test",
             "description": "Test Description",
+            "params": ["param1", "param2"],
             "servers": [
                 {
                     "id": "1",
@@ -29,25 +30,7 @@
                                     }
                                 }
                             }
-                        },
-                        {
-                            "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-                            "pathExpression": "^\/test$",
-                            "method": "POST",
-                            "soapAction": null,
-                            "endpointType": {
-                                "mock": {
-                                    "configuration": {
-                                        "response": "{ \"test\": \"Success http\" }",
-                                        "status": "200",
-                                        "headers": {
-                                            "Content-Type": "application/json"
-                                        },
-                                        "delay": 0
-                                    }
-                                }
-                            }
-                        }                        
+                        }                      
                     ]
                 }
             ],

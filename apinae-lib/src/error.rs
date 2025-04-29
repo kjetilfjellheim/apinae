@@ -1,7 +1,7 @@
 /**
  * This module contains the error type for the application.
  */
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ApplicationError {
     FileError(String),
     MissingId(String),

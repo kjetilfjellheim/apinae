@@ -3,6 +3,8 @@ use std::rc::Rc;
 use apinae_lib::{config::TestConfiguration, error::ApplicationError};
 use tokio::sync::RwLock;
 
+use crate::args::Args;
+
 use super::{common::StartableServer, http::AppServer, tcp::AppListener};
 
 /**
@@ -26,10 +28,10 @@ impl ServerSetup {
     /**
      * Setup the test with the specified configuration. This also initalizes the app servers.
      */
-    pub async fn setup_test(&mut self, test_configuration: &TestConfiguration) {
+    pub async fn setup_test(&mut self, test_configuration: &TestConfiguration, args: Args) {
         log::info!("Setting up test with id {}", test_configuration.id);
         let servers: Vec<Box<dyn StartableServer>> =
-            test_configuration.servers.iter().map(|server_configuration| Box::new(AppServer::new(server_configuration.clone())) as Box<dyn StartableServer>).collect();
+            test_configuration.servers.iter().map(|server_configuration| Box::new(AppServer::new(server_configuration.clone(), args.param.clone())) as Box<dyn StartableServer>).collect();
         let listeners: Vec<Box<dyn StartableServer>> = test_configuration.listeners.iter().map(|tcp_listener_data| Box::new(AppListener::new(tcp_listener_data)) as Box<dyn StartableServer>).collect();
         self.servers.write().await.extend(servers);
         self.servers.write().await.extend(listeners);
@@ -57,9 +59,11 @@ impl ServerSetup {
 mod tests {
     use super::*;
     use apinae_lib::config::ServerConfiguration;
+    use clap::Parser;
 
     #[tokio::test]
     async fn test_setup_test() {
+        let args: Args = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1"]);
         let mut server_setup = ServerSetup::new();
         let test_configuration = TestConfiguration {
             id: "test".to_string(),
@@ -69,7 +73,7 @@ mod tests {
             listeners: vec![],
             params: None,
         };
-        server_setup.setup_test(&test_configuration).await;
+        server_setup.setup_test(&test_configuration, args).await;
         let servers = server_setup.start_servers().await;
         assert!(servers.is_ok());
     }

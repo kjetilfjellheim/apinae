@@ -274,6 +274,9 @@ impl AppConfiguration {
      * 
      * `test_id` The id of the test.
      * `param` The parameter to add.
+     * 
+     * # Errors
+     * An error if the test could not be found.
      */
     pub fn add_param(&mut self, test_id: &str, param: String) -> Result<(), ApplicationError> {
         let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
@@ -286,6 +289,9 @@ impl AppConfiguration {
      * 
      * `test_id` The id of the test.
      * `param` The parameter to remove.
+     * 
+     * # Errors
+     * An error if the test could not be found.
      */
     pub fn remove_param(&mut self, test_id: &str, param: &str) -> Result<(), ApplicationError> {
         let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
@@ -651,7 +657,7 @@ pub struct MockResponseConfiguration {
     // The response to return when the mock is called.
     pub response: Option<String>,
     // The status code to return when the mock is called.
-    pub status: u16,
+    pub status: String,
     // The headers to return when the mock is called.
     pub headers: HashMap<String, String>,
     // Time to wait in milliseconds before returning the response.
@@ -671,7 +677,7 @@ impl MockResponseConfiguration {
      * The mock response configuration.
      */
     #[must_use]
-    pub fn new(response: Option<String>, status: u16, headers: HashMap<String, String>, delay: u64) -> Self {
+    pub fn new(response: Option<String>, status: String, headers: HashMap<String, String>, delay: u64) -> Self {
         MockResponseConfiguration { response, status, headers, delay }
     }
 }
@@ -891,7 +897,7 @@ mod test {
                         Some("/test".to_string()),
                         Some("".to_string()),
                         Some("GET".to_string()),
-                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
+                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), String::from("200"), HashMap::new(), 0) }),
                     )
                     .unwrap()],
                     None,
@@ -924,7 +930,7 @@ mod test {
                         Some("/test".to_string()),
                         Some("".to_string()),
                         Some("GET".to_string()),
-                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), 200, HashMap::new(), 0) }),
+                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), String::from("200"), HashMap::new(), 0) }),
                     )
                     .unwrap()],
                     None,                    

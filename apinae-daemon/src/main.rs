@@ -1,8 +1,6 @@
 mod args;
 mod server;
 
-use std::collections::HashSet;
-
 use clap::Parser;
 
 use apinae_lib::{
@@ -105,7 +103,7 @@ async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), Appli
     let test = get_test(test_id.as_str(), config)?;
     validate_parameters(test, &args)?;
     let mut server_setup = ServerSetup::new();
-    server_setup.setup_test(test).await;
+    server_setup.setup_test(test, args).await;
     server_setup.start_servers().await.map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
     Ok(())
 }
@@ -125,7 +123,7 @@ async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), Appli
  * An error if the parameters are invalid.
  */
 fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<(), ApplicationError> {
-    let test_params = &test.params.clone().unwrap_or(HashSet::new());
+    let test_params = &test.params.clone().unwrap_or_default();
     if test_params.is_empty() {
         return Ok(());
     }
@@ -244,4 +242,16 @@ mod test {
         let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
         list_tests(&config);
     }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_validate_parameters() {
+        let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock_with_param.json").unwrap();
+        let args_missing_param = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1"]);
+        assert!(validate_parameters(config.tests.first().unwrap(), &args_missing_param).is_err());
+        let args_missing_param1 = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1", "--param", "param2=2"]);
+        assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_missing_param1), Err(ApplicationError::CouldNotFind("Missing parameter: param1".to_string())));
+        let args_params_ok = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1", "--param", "param2=2", "--param", "param1=1"]);
+        assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_params_ok), Ok(()));
+    }
+
 }

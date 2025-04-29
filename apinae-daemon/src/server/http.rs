@@ -1,4 +1,4 @@
-use std::{fs::File, io::BufReader, sync::Arc, time::Duration};
+use std::{fs::File, io::BufReader, str::FromStr, sync::Arc, time::Duration};
 
 use actix_web::{http::StatusCode, middleware::Logger, web, App, HttpRequest, HttpResponse, HttpServer};
 use apinae_lib::{
@@ -28,6 +28,8 @@ const KEYVALUESEPARATOR: char = '=';
 pub struct AppServer {
     // Server configuration
     server_configuration: ServerConfiguration,
+    // Parameters
+    params: Vec<(String, String)>,
 }
 
 impl AppServer {
@@ -40,8 +42,8 @@ impl AppServer {
      * # Returns
      * The created `AppServer`.
      */
-    pub fn new(server_configuration: ServerConfiguration) -> Self {
-        AppServer { server_configuration }
+    pub fn new(server_configuration: ServerConfiguration, params: Vec<(String, String)>) -> Self {
+        AppServer { server_configuration, params }
     }
 
     /**
@@ -56,7 +58,7 @@ impl AppServer {
     pub fn start_server_http(&mut self) -> Result<(), ApplicationError> {
         if let Some(http_port) = self.server_configuration.http_port {
             log::info!("Starting http server on port: {http_port}");
-            let appstate = web::Data::new(self.server_configuration.clone());
+            let appstate = web::Data::new(AppState::new(self.server_configuration.clone(), self.params.clone()));
             let server = HttpServer::new(move || App::new().wrap(Logger::default()).app_data(appstate.clone()).default_service(web::to(request_handler)))
                 .bind(("127.0.0.1", http_port))
                 .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to create http server: {err}")))?;
@@ -87,7 +89,7 @@ impl AppServer {
         if let Some(https_config) = config.https_config {
             log::info!("Starting https server on port: {}", https_config.https_port);
             let ssl_builder = ssl_builder(&https_config)?;
-            let appstate = web::Data::new(self.server_configuration.clone());
+            let appstate = web::Data::new(AppState::new(self.server_configuration.clone(), self.params.clone()));
             let server = HttpServer::new(move || App::new().wrap(Logger::default()).app_data(appstate.clone()).default_service(web::to(request_handler)))
                 .bind_rustls_0_23("127.0.0.1:".to_owned() + https_config.https_port.to_string().as_str(), ssl_builder)
                 .map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to create https server: {err}")))?;
@@ -113,11 +115,11 @@ impl AppServer {
  * # Returns
  * The response.
  */
-async fn request_handler(server_configuration: web::Data<ServerConfiguration>, req: HttpRequest, payload: Option<web::Payload>) -> HttpResponse {
+async fn request_handler(app_state: web::Data<AppState>, req: HttpRequest, payload: Option<web::Payload>) -> HttpResponse {
     let payload_string: Option<String> = get_body_as_string(payload).await;
-    for endpoint in &server_configuration.endpoints {               
+    for endpoint in &app_state.server_configuration.endpoints {               
         match is_valid_endpoint(req.path(), req.method().as_str(), endpoint, payload_string.clone()) {
-            Ok(true) => match handle_endpoint(endpoint, req, payload_string).await {
+            Ok(true) => match handle_endpoint(endpoint, req, payload_string, app_state.params.clone()).await {
                 Ok(response) => return response,
                 Err(err) => {
                     error!("Error handling request: {err}. Returning not implemented");
@@ -214,11 +216,11 @@ fn check_regexp(regexp: Option<String>, data: Option<String>) -> Result<bool, Ap
  * # Errors
  * An error if the status code is invalid.
  */
-async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, payload: Option<String>) -> Result<HttpResponse, ApplicationError> {
+async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, payload: Option<String>, params: Vec<(String, String)>) -> Result<HttpResponse, ApplicationError> {
     if let Some(endpoint_type) = &endpoint.endpoint_type {
         match endpoint_type {
             EndpointType::Mock { configuration } => {
-                return generate_mock_response(configuration).await;
+                return generate_mock_response(configuration, params).await;
             }
             EndpointType::Route { configuration } => {
                 return route_request(configuration, req, payload.clone()).await;
@@ -408,22 +410,43 @@ fn get_request(req: &HttpRequest, payload: Option<String>, url: String) -> Resul
  * # Errors
  * An error if the status code is invalid.
  */
-async fn generate_mock_response(mock_response: &MockResponseConfiguration) -> Result<HttpResponse, ApplicationError> {
+async fn generate_mock_response(mock_response: &MockResponseConfiguration, params: Vec<(String, String)>) -> Result<HttpResponse, ApplicationError> {
     if mock_response.delay > 0 {
         log::debug!("Waiting {}ms for mock response", mock_response.delay);
         tokio::time::sleep(Duration::from_millis(mock_response.delay)).await;
     }
     log::debug!("Generating mock response");
-    let mut response_builder: actix_web::HttpResponseBuilder = HttpResponse::build(StatusCode::from_u16(mock_response.status).map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?);
+    let mut response_builder: actix_web::HttpResponseBuilder = HttpResponse::build(StatusCode::from_str(convert_params(mock_response.status.as_str(), &params).as_str()).map_err(|err| ApplicationError::ConfigurationError(err.to_string()))?);
     for (key, value) in &mock_response.headers {
-        response_builder.append_header((key.as_str(), value.as_str()));
+        response_builder.append_header((convert_params(key.as_str(), &params), convert_params(value.as_str(), &params)));
     }
     if let Some(response) = &mock_response.response {
-        return Ok(response_builder.body(response.clone()));
+        return Ok(response_builder.body(convert_params(response.clone().as_str(), &params)));
     }
     Ok(response_builder.finish())
 }
 
+/**
+ * Convert parameters to string.
+ *
+ * # Arguments
+ * `value`: The value to convert.
+ * `params`: The parameters.
+ *
+ * # Returns
+ * The converted value.
+ */
+fn convert_params(value: &str, params: &Vec<(String, String)>) -> String {
+    let mut result = value.to_string();
+    for (key, value) in params {
+        let key = format!("${{{key}}}");
+        if result.contains(&key) {
+            result = result.replace(&key, value);
+        }
+
+    }
+    result
+}
 /**
  * Create a new SSL builder.
  *
@@ -533,6 +556,17 @@ impl StartableServer for AppServer {
     }
 }
 
+struct AppState {
+    server_configuration: ServerConfiguration,
+    params: Vec<(String, String)>,
+}
+
+impl AppState {
+    fn new(server_configuration: ServerConfiguration, params: Vec<(String, String)>) -> Self {
+        AppState { server_configuration, params }
+    }
+}
+
 #[cfg(test)]
 mod test {
 
@@ -620,9 +654,9 @@ mod test {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_generate_mock_response() {
-        let mock_response = MockResponseConfiguration::new(Some("Test".to_owned()), 200, HashMap::new(), 0);
-        let response = generate_mock_response(&mock_response);
-        assert!(response.await.is_ok());
+        let mock_response = MockResponseConfiguration::new(Some("Test".to_owned()), String::from("200"), HashMap::new(), 0);
+        let response = generate_mock_response(&mock_response, &Vec::new()).await;
+        assert!(response.is_ok());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
@@ -637,5 +671,13 @@ mod test {
         let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), Some("http_//proxy.com:9999".to_owned()), None, false, false, false, None, None, None, None);
         let client = get_client(&route_configuration);
         assert!(client.is_ok());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]    
+    async fn convert_params_test() {
+        let params = vec![("param1".to_string(), "value1".to_string()), ("param2".to_string(), "value2".to_string())];
+        let value = "This is a test with ${param1} and ${param2}";
+        let result = convert_params(value, &params);
+        assert_eq!(result, "This is a test with value1 and value2");
     }
 }

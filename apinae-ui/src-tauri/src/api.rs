@@ -19,7 +19,7 @@ const DEFAULT_NAME: &str = "Untitled";
 /**
  * Default status code for new mock responses.
  */
-const DEFAULT_STATUS_CODE: u16 = 200;
+const DEFAULT_STATUS_CODE: &str = "200";
 /**
  * Default delay for new mock responses.
  */
@@ -415,7 +415,7 @@ pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: 
             Some("/".to_owned()),
             Some("GET".to_owned()),
             Some(String::new()),
-            Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, DEFAULT_STATUS_CODE, HashMap::new(), DEFAULT_DELAY) }),
+            Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, DEFAULT_STATUS_CODE.to_string(), HashMap::new(), DEFAULT_DELAY) }),
         )
         .map_err(|err| err.to_string())?,
     );
