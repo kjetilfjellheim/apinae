@@ -113,7 +113,7 @@ const addParameter = () => {
             editTestData.value.params = [];
         }
         editTestData.value.params.push(editAddParameter.value);
-        editAddParameter.value = "";
+        editAddParameter.value = "";        
     }
 }
 
@@ -275,7 +275,7 @@ const removeParameter = (param) => {
                         </div>                                                
                         <template v-if="editTestData.params">
                             <template v-for="param in editTestData.params" :key="param">
-                                <button type="button" class="btn btn-sm btn-info small" @click="removeParameter(param)">{{ param }}</button>&nbsp;
+                                <button type="button" class="btn btn-sm btn-outline-primary small" @click="removeParameter(param)">{{ param }}</button>
                             </template>
                         </template>
                     </div>
