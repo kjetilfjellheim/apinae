@@ -1,7 +1,7 @@
 {
   "name": "apinae-ui",
   "private": true,
-  "version": "0.1.7",
+  "version": "0.1.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -15,15 +15,15 @@
     "@fortawesome/free-solid-svg-icons": "6.7.2",
     "@fortawesome/vue-fontawesome": "3.0.8",
     "@popperjs/core": "2.11.8",
-    "@tauri-apps/api": "2.4.0",
+    "@tauri-apps/api": "2.5.0",
     "@tauri-apps/plugin-opener": "2.2.6",
-    "bootstrap": "5.3.3",
+    "bootstrap": "5.3.5",
     "vue": "3.5.13",
-    "vue-router": "4.5.0"
+    "vue-router": "4.5.1"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "2.4.0",
+    "@tauri-apps/cli": "2.5.0",
     "@vitejs/plugin-vue": "5.2.3",
-    "vite": "6.2.3"
+    "vite": "6.3.4"
   }
 }
