@@ -22,6 +22,10 @@ pub struct Args {
     /// This is a key-value pair separated by `=`. For example: `key=value`.
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub param: Vec<(String, String)>,
+
+    /// List all parameters for the test.
+    #[arg(long)]
+    pub list_params: bool,
 }
 
 /// Parse a single key-value pair
