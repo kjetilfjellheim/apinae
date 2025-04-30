@@ -21,10 +21,7 @@ async fn main() -> Result<(), ApplicationError> {
     let args = Args::parse();
     let config = read_input_file(&args)?;
     init(args, config).await?;
-    loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        wait_for_terminate().await?;
-    }
+    Ok(())
 }
 
 /**
@@ -63,10 +60,38 @@ fn read_input_file(args: &Args) -> Result<AppConfiguration, ApplicationError> {
 async fn init(args: Args, config: AppConfiguration) -> Result<(), ApplicationError> {
     if args.list {
         list_tests(&config);
+    } else if args.list_params{
+        list_params(&config, args.id);
     } else {
         start_daemon(args, &config).await?;
     }
     Ok(())
+}
+
+/**
+ * List the available parameters for the specified test.
+ *
+ * # Arguments
+ * `config`: The configuration to list the parameters from.
+ * `test_id`: The id of the test to list the parameters for.
+ *
+ */
+fn list_params(config: &AppConfiguration, test_id: Option<String>) {
+    if let Some(test_id) = test_id {
+        let test = get_test(test_id.as_str(), config).unwrap();
+        if let Some(params) = &test.params {
+            println!("Available parameters for test: {}", test.name);
+            println!("Name");
+            for param in params {
+                println!("{param}");
+            }
+        } else {
+            println!("No parameters available for test: {}", test.name);
+        }
+    } else {
+        println!("No test id specified.");
+    }
+    
 }
 
 /**
@@ -105,7 +130,10 @@ async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), Appli
     let mut server_setup = ServerSetup::new();
     server_setup.setup_test(test, args).await;
     server_setup.start_servers().await.map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
-    Ok(())
+    loop {
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        wait_for_terminate().await?;
+    }
 }
 
 /**
