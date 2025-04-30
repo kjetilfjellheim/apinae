@@ -333,7 +333,7 @@ const convertEndpointToRequestObject = (editEndpointData, editMockData, editRout
 
 const convertMockToRequestObject = (mockData) => {
   return {
-    status: mockData.value.status ? parseInt(mockData.value.status) : null,
+    status: mockData.value.status ? mockData.value.status : null,
     headers: mockData.value.headers,
     delay: parseInt(mockData.value.delay),
     response: mockData.value.response
