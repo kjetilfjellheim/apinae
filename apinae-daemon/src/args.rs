@@ -26,6 +26,13 @@ pub struct Args {
     /// List all parameters for the test.
     #[arg(long)]
     pub list_params: bool,
+
+    /// Verify daemon initialization. Stops the server after initialization.
+    /// This is useful for testing the daemon without running it.
+    #[arg(long)]
+    pub verify: bool,
+
+    
 }
 
 /// Parse a single key-value pair
