@@ -62,10 +62,21 @@ const editEndpointModal = ref(null);
 // Reference to the server id for the endpoint being edited. This is used to send the server id
 // to the rust code when updating the endpoint.
 const serverIdEditEndpoint = ref(null);
+//Initializes the data for editing a test. This is called when the user clicks the edit button.
+//The data is copied from the tests object to the editTestData object.
+const editTestData = ref({});
 // Reference to the settings. This is used to set common information in the ui.
 const settingsData = ref({
   bodyHeight: "8pc",
 });
+//Initializes the data for editing a test. This is called when the user clicks the edit button.
+//The data is copied from the tests object to the editTestData object.
+const editTest = () => {
+    editTestData.value = { ...test.value };
+}
+// Parameter data for adding a new parameter to the test.
+//This is called when the user clicks the add button in the edit test modal.
+const editAddParameter = ref("");
 //Refreshes the test data, tcp listeners and http servers. This is called when the page is loaded
 //and when the user updates the data. This is because when updating the data we only update the
 //remote rust data, not the local data. This is so that we only have one source of truth for the data.
@@ -93,6 +104,18 @@ const refresh = (testId) => {
       settingsData.value.bodyHeight = message.bodyHeight;
     })
     .catch((error) => window.alert(error));
+}
+
+//Updates the test by calling the update_test function in the backend.
+//This is called when the user clicks the Ok button in the edit test modal.
+//The editTestData object is passed to the backend to update the test. The 
+//refresh function is called to update the tests array.
+const updateTest = (test) => {
+    invoke("update_test", { testid: test.id, test: test })
+        .then((message) => {
+            refresh(test.id);
+        })
+        .catch((error) => window.alert(error));
 }
 
 //Set the data file for the tcp listener. This is called when the user clicks the select file button.
@@ -407,6 +430,34 @@ onMounted(() => {
   refresh(testId)
 });
 
+// Adds a parameter to the test.
+//This is called when the user clicks the add button in the edit test modal.
+//The parameter is added to the params array of the test. The editAddParameter object is cleared.
+//If the parameter is empty, it is not added to the params array.
+const addParameter = () => {
+    if (editAddParameter.value && editAddParameter.value.length > 0) {
+        if (!editTestData.value.params) {
+            editTestData.value.params = [];
+        }
+        editTestData.value.params.push(editAddParameter.value);
+        editAddParameter.value = "";        
+    }
+}
+
+//Removes a parameter from the test.
+//This is called when the user clicks the remove parameter button in the edit test modal.
+const removeParameter = (param) => {
+    if (editTestData.value.params) {
+        const index = editTestData.value.params.indexOf(param);
+        if (index > -1) {
+            editTestData.value.params.splice(index, 1);
+        }
+        if (editTestData.value.params.length === 0) {
+            editTestData.value.params = null;
+        }
+    }
+}
+
 //Verify that string input is filled out. 
 const validateStringRequired = (str) => {
   if (str && str.length > 0) {
@@ -477,6 +528,10 @@ const validateNumberOptional = (str) => {
         <li class="breadcrumb-item">{{ test?.name }}</li>
       </ol>
       <div class="btn-group btn-group-sm align-middle small me-2" role="group">
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="editTest()" data-bs-toggle="modal"
+        data-bs-target="#idEditTestModel"><i
+            class="fa-solid fa-pen-to-square">
+          </i>&nbsp;Edit test</button>
         <button type="button" class="btn btn-sm btn-outline-primary" @click="addHttpServer()"><i
             class="fa-solid fa-plus">
           </i>&nbsp;Add http server</button>
@@ -506,14 +561,22 @@ const validateNumberOptional = (str) => {
       tabindex="0">
       <div class="container-fluid main-content p-0 m-0">
         <div class="row p-0 m-0">
-          <div class="col-12">
+          <div class="col-8">
             <dl class="row p-0 m-0">
-              <dt class="col-sm-3 small p-0 m-0 text-light">Id</dt>
-              <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.id }}</dd>
-              <dt class="col-sm-3 small p-0 m-0 text-light">Name</dt>
-              <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.name }}</dd>
-              <dt class="col-sm-3 small p-0 m-0 text-light">Description</dt>
-              <dd class="col-sm-9 small p-0 m-0 text-light">{{ test?.description }}</dd>
+              <dt class="col-sm-3 small p-1 m-0 text-light">Id</dt>
+              <dd class="col-sm-9 small p-1 m-0 text-light">{{ test?.id }}</dd>
+              <dt class="col-sm-3 small p-1 m-0 text-light">Name</dt>
+              <dd class="col-sm-9 small p-1 m-0 text-light">{{ test?.name }}</dd>
+              <dt class="col-sm-3 small p-1 m-0 text-light">Description</dt>
+              <dd class="col-sm-9 small p-1 m-0 text-light">{{ test?.description }}</dd>
+              <dt class="col-sm-3 small p-1 m-0 text-light">Parameters</dt>
+              <dd class="col-sm-9 small p-1 m-0 text-light">
+                <template v-if="test.params">
+                  <template v-for="param in test.params" :key="param">
+                    <span class="badge bg-info-subtle text-primary small">{{ param }}</span>&nbsp;
+                  </template>
+                </template>                
+              </dd>              
             </dl>
           </div>
         </div>
@@ -1079,4 +1142,51 @@ const validateNumberOptional = (str) => {
       </div>
     </div>
   </div>
+    <!-- 
+     Edit test modal.
+     TODO: Move this to a separate component.
+    -->
+    <div class="modal fade" id="idEditTestModel" tabindex="-1" aria-labelledby="editTestLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h6 class="modal-title fs-5 small" id="editTestLabel">Edit test</h6>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="idEditId" class="form-label small">Id</label>
+                        <label class="form-control form-control-sm" id="idEditId" readonly>{{ editTestData.id }}</label>
+                    </div>
+                    <div class="mb-3">
+                        <label for="idEditName" class="form-label small">Name</label>
+                        <input type="text" class="form-control form-control-sm" id="idEditName"
+                            v-model="editTestData.name" :class="validateStringRequired(editTestData.name)">
+                    </div>
+                    <div class="mb-3">
+                        <label for="idEditDescription" class="form-label small">Description</label>
+                        <textarea class="form-control form-control-sm is-valid" id="idEditDescription" rows="3"
+                            v-model="editTestData.description"></textarea>
+                    </div>
+                    <div class="mb-3">                        
+                        <label for="idEditParams" class="form-label small">Parameters</label>
+                        <div class="input-group mb-3">
+                            <input type="text" class="form-control is-valid" placeholder="Parameter" aria-label="Parameter" v-model="editAddParameter">
+                            <button class="btn btn-outline-primary" type="button" id="addParameter" @click="addParameter()">Add</button>
+                        </div>                                                
+                        <template v-if="editTestData.params">
+                            <template v-for="param in editTestData.params" :key="param">
+                                <button type="button" class="btn btn-sm btn-outline-primary small" @click="removeParameter(param)">{{ param }}</button>
+                            </template>
+                        </template>
+                    </div>
+                </div>
+                <div class="modal-footer bg-primary-subtle">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
+                        data-bs-target="#idEditTestModel">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal"
+                        data-bs-target="#idEditTestModel" @click="updateTest(editTestData)">Ok</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>
