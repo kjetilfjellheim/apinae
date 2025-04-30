@@ -60,7 +60,7 @@ fn read_input_file(args: &Args) -> Result<AppConfiguration, ApplicationError> {
 async fn init(args: Args, config: AppConfiguration) -> Result<(), ApplicationError> {
     if args.list {
         list_tests(&config);
-    } else if args.list_params{
+    } else if args.list_params {
         list_params(&config, args.id);
     } else {
         start_daemon(args, &config).await?;
@@ -91,7 +91,6 @@ fn list_params(config: &AppConfiguration, test_id: Option<String>) {
     } else {
         println!("No test id specified.");
     }
-    
 }
 
 /**

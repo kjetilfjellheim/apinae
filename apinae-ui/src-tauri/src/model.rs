@@ -17,7 +17,7 @@ pub struct TestRow {
     // The process id of the test.
     pub process_id: Option<u32>,
     // The parameters of the test.
-    pub params: Option<Vec<String>>
+    pub params: Option<Vec<String>>,
 }
 
 impl TestRow {
@@ -44,11 +44,16 @@ impl From<TestConfiguration> for TestRow {
      * Convert a test configuration to a test row.
      */
     fn from(test: TestConfiguration) -> Self {
-        Self { id: test.id.clone(), name: test.name.clone(), description: test.description.clone(), process_id: None, params: test.params.map(|f| {
-            let mut params = f.iter().cloned().collect::<Vec<_>>();
-            params.sort();
-            params
-        }) 
+        Self {
+            id: test.id.clone(),
+            name: test.name.clone(),
+            description: test.description.clone(),
+            process_id: None,
+            params: test.params.map(|f| {
+                let mut params = f.iter().cloned().collect::<Vec<_>>();
+                params.sort();
+                params
+            }),
         }
     }
 }
