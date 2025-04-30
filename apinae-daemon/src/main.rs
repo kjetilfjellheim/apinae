@@ -127,11 +127,14 @@ async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), Appli
     let test = get_test(test_id.as_str(), config)?;
     validate_parameters(test, &args)?;
     let mut server_setup = ServerSetup::new();
-    server_setup.setup_test(test, args).await;
+    server_setup.setup_test(test, args.clone()).await;
     server_setup.start_servers().await.map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
+    if args.verify {
+        return Ok(());
+    }
     loop {
-        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
-        wait_for_terminate().await?;
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;        
+        wait_for_terminate().await?;                
     }
 }
 
@@ -258,9 +261,9 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_start_daemon() {
         let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
-        let args = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1"]);
+        let args = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1", "--verify"]);
         let _ = start_daemon(args, &config).await.is_ok();
-        let args = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "2"]);
+        let args = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "2", "--verify"]);
         assert!(start_daemon(args, &config).await.is_err());
     }
 
