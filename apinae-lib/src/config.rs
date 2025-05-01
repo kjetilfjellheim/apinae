@@ -331,6 +331,8 @@ pub struct TestConfiguration {
     pub listeners: Vec<TcpListenerData>,
     // The parameters to pass to the test.
     pub params: Option<HashSet<String>>,
+    // Predefined sets of parameters.
+    pub predefined_params: Option<Vec<PredefinedSet>>,
 }
 
 impl TestConfiguration {
@@ -340,13 +342,16 @@ impl TestConfiguration {
      * `name` The name of the test.
      * `description` The description of the test.
      * `servers` The server configurations.
+     * `listeners` The TCP listeners.
+     * `params` The parameters to pass to the test.
+     * `predefined_params` The predefined sets of parameters.
      *
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>, params: Option<HashSet<String>>) -> Result<Self, ApplicationError> {
+    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>, params: Option<HashSet<String>>, predefined_params: Option<Vec<PredefinedSet>>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(TestConfiguration { id, name, description, servers, listeners, params })
+        Ok(TestConfiguration { id, name, description, servers, listeners, params, predefined_params })
     }
 
     /**
@@ -411,6 +416,17 @@ impl TestConfiguration {
             }
         }
     }
+}
+
+/**
+ * Predefined parameters.
+ */
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct PredefinedSet {
+    // Name of the predefined set.
+    pub name: String,
+    pub values: HashMap<String, String>,
 }
 
 /**
@@ -863,10 +879,11 @@ mod test {
                         Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None) }),
                     )
                     .unwrap()],
-                    None,
+                    None,                    
                 )
                 .unwrap()],
                 Vec::new(),
+                None,
                 None,
             )
             .unwrap()],
@@ -916,6 +933,7 @@ mod test {
                 .unwrap()],
                 Vec::new(),
                 None,
+                None,
             )
             .unwrap()],
         );
@@ -948,6 +966,7 @@ mod test {
                 )
                 .unwrap()],
                 Vec::new(),
+                None,
                 None,
             )
             .unwrap()],
