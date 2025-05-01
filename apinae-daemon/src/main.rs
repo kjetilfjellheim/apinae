@@ -176,7 +176,7 @@ fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<Vec<(Str
         }
     }
     if test_params_required.len() != test_params.len() {
-        return Err(ApplicationError::CouldNotFind(format!("Missing parameters: {:?}", test_params_required)));
+        return Err(ApplicationError::CouldNotFind(format!("Missing parameters: {test_params_required:?}")));
     }
     Ok(test_params)
 }
