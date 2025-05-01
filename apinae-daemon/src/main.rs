@@ -125,9 +125,9 @@ fn list_tests(config: &AppConfiguration) {
 async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), ApplicationError> {
     let test_id = args.clone().id.ok_or(ApplicationError::CouldNotFind("Missing id".to_string()))?;
     let test = get_test(test_id.as_str(), config)?;
-    validate_parameters(test, &args)?;
+    let params = validate_parameters(test, &args)?;
     let mut server_setup = ServerSetup::new();
-    server_setup.setup_test(test, args.clone()).await;
+    server_setup.setup_test(test, params).await?;
     server_setup.start_servers().await.map_err(|err| ApplicationError::ServerStartUpError(format!("Server startup failed: {err}")))?;
     if args.verify {
         return Ok(());
@@ -152,17 +152,33 @@ async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), Appli
  * # Errors
  * An error if the parameters are invalid.
  */
-fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<(), ApplicationError> {
-    let test_params = &test.params.clone().unwrap_or_default();
-    if test_params.is_empty() {
-        return Ok(());
-    }
-    for param in test_params {
-        if !args.param.iter().any(|(key, _)| key.eq(param)) {
-            return Err(ApplicationError::CouldNotFind(format!("Missing parameter: {param}")));
+fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<Vec<(String, String)>, ApplicationError> {
+    let test_params_required = &test.params.clone().unwrap_or_default();
+    let mut test_params = Vec::new();
+    if let Some(predefined_set_name) = &args.predefined_set {
+        log::info!("Using predefined set {predefined_set_name}");
+        let predefined_set = get_predefined_set(test, predefined_set_name)?;
+        test_params.extend(predefined_set.values.iter().map(|(k, v)| (k.clone(), v.clone())));
+    }    
+    for (key, value) in &args.param {
+        if test_params_required.iter().any(|param| param.eq(key)) {
+            test_params.push((key.clone(), value.clone()));
+        } else {
+            return Err(ApplicationError::CouldNotFind(format!("Parameter {key} not found in test {}", test.id)));
         }
     }
-    Ok(())
+    if test_params_required.is_empty() {
+        return Ok(Vec::new());
+    }    
+    for required_param in test_params_required {
+        if !args.param.iter().any(|(key, _)| key.eq(required_param)) {
+            return Err(ApplicationError::CouldNotFind(format!("Missing parameter: {required_param}")));
+        }
+    }
+    if test_params_required.len() != test_params.len() {
+        return Err(ApplicationError::CouldNotFind(format!("Missing parameters: {test_params_required:?}")));
+    }
+    Ok(test_params)
 }
 
 /**
@@ -184,6 +200,26 @@ fn get_test<'a>(id: &str, config: &'a AppConfiguration) -> Result<&'a TestConfig
         Some(test) => Ok(test),
         None => Err(ApplicationError::CouldNotFind(format!("No test with id: {id}"))),
     }
+}
+
+/**
+ * Get predefined set for a test.
+ *
+ * # Arguments
+ * `test_configuration`: The test configuration to get the predefined set from.
+ * `predefined_set_name`: The name of the predefined set to get.
+ *
+ * # Returns
+ * Ok if the predefined set was found.
+ *
+ * # Errors
+ * An error if the predefined set was not found.
+ */
+fn get_predefined_set(test_configuration: &TestConfiguration, predefined_set_name: &String) -> Result<apinae_lib::config::PredefinedSet, ApplicationError> {
+    let predefined_set = test_configuration.clone().predefined_params
+        .and_then(|f| f.iter().find(|p| p.name == *predefined_set_name).cloned())
+        .ok_or_else(|| ApplicationError::CouldNotFind("Predefined set not found".to_string()))?;
+    Ok(predefined_set)
 }
 
 /**
@@ -281,6 +317,6 @@ mod test {
         let args_missing_param1 = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1", "--param", "param2=2"]);
         assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_missing_param1), Err(ApplicationError::CouldNotFind("Missing parameter: param1".to_string())));
         let args_params_ok = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1", "--param", "param2=2", "--param", "param1=1"]);
-        assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_params_ok), Ok(()));
+        assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_params_ok), Ok(vec![("param2".to_string(), "2".to_string()), ("param1".to_string(), "1".to_string())]));
     }
 }

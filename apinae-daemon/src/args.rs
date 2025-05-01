@@ -32,7 +32,10 @@ pub struct Args {
     #[arg(long)]
     pub verify: bool,
 
-    
+    /// Use this predefined set of parameters for the test.
+    #[arg(long)]
+    pub predefined_set: Option<String>,
+
 }
 
 /// Parse a single key-value pair

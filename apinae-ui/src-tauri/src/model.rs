@@ -352,7 +352,7 @@ mod test {
 
     #[test]
     fn test_test_row_from_test_configuration() {
-        let test_config = TestConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new(), None).unwrap();
+        let test_config = TestConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new(), None, None).unwrap();
 
         let test_row = TestRow::from(test_config);
 

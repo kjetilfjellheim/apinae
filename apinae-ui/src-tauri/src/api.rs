@@ -176,7 +176,7 @@ pub async fn get_test(app_data: State<'_, AppData>, testid: &str) -> Result<Test
 #[tauri::command]
 pub async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.tests.push(TestConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new(), Vec::new(), None).map_err(|err| err.to_string())?);
+    data.tests.push(TestConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new(), Vec::new(), None, None).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
