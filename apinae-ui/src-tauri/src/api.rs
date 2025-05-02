@@ -1,6 +1,7 @@
 use std::collections::HashSet;
 use std::{collections::HashMap, path::Path};
 
+use crate::model::PredefinedSet;
 use crate::AppData;
 use crate::{
     model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow},
@@ -216,6 +217,33 @@ pub async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(
     data.delete_test(testid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
+}
+
+/**
+ * Gets the predefined sets.
+ *
+ * `app_data` The application data.
+ * `testid` The test id.
+ *
+ * Returns:
+ * The predefined sets.
+ *
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ */
+#[tauri::command]
+pub async fn get_predefined_sets(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<PredefinedSet>, String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.get_test(testid).ok_or("Test not found")?;
+    let mut sets: Vec<PredefinedSet> = Vec::new();    
+    if let Some(predefined_params) = &test.predefined_params {
+        for predefined_set in predefined_params {
+            let set = PredefinedSet::new(&predefined_set.name.clone(), predefined_set.values.clone());
+            sets.push(set);
+        }
+    }
+    Ok(sets)
 }
 
 /**

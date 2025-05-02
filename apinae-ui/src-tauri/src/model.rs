@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion};
 
@@ -17,7 +17,7 @@ pub struct TestRow {
     // The process id of the test.
     pub process_id: Option<u32>,
     // The parameters of the test.
-    pub params: Option<Vec<String>>,
+    pub params: Option<Vec<String>>,    
 }
 
 impl TestRow {
@@ -53,8 +53,36 @@ impl From<TestConfiguration> for TestRow {
                 let mut params = f.iter().cloned().collect::<Vec<_>>();
                 params.sort();
                 params
-            }),
+            })        
         }
+    }
+}
+
+/**
+ * Predefined parameters.
+ */
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PredefinedSet {
+    // Name of the predefined set.
+    pub name: String,
+    // Parameters of the predefined set.
+    pub values: HashMap<String, String>,
+}
+
+impl PredefinedSet {
+    /**
+     * Create a new predefined set.
+     *
+     * # Arguments
+     * `name` - The name of the predefined set.
+     * `values` - The parameters of the predefined set.
+     *
+     * # Returns
+     * `PredefinedSet` - The predefined set.
+     */
+    pub fn new(name: &str, values: HashMap<String, String>) -> Self {
+        Self { name: name.to_string(), values }
     }
 }
 

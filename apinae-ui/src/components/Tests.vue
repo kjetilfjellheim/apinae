@@ -218,7 +218,7 @@ const removeParameter = (param) => {
                                                     role="group">
                                                     <button class="btn btn-sm btn-outline-danger text-decoration-none"
                                                         @click="confirmDelete(test)"><i
-                                                            class="fa-solid fa-minus"></i></button>
+                                                            class="fa-solid fa-trash"></i></button>
                                                 </div>
                                             </div>
                                         </span>
