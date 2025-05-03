@@ -1,6 +1,6 @@
 [package]
 name = "apinae-daemon"
-version = "0.1.9"
+version = "0.1.10"
 edition = "2021"
 description = "An application for testing apis."
 license = "Apache 2.0"
