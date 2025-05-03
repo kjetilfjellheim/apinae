@@ -60,10 +60,43 @@ fn read_input_file(args: &Args) -> Result<AppConfiguration, ApplicationError> {
 async fn init(args: Args, config: AppConfiguration) -> Result<(), ApplicationError> {
     if args.list {
         list_tests(&config);
+    } else if args.list_predefined_sets {
+        list_predefined_sets(&config, args.id)?;
     } else if args.list_params {
-        list_params(&config, args.id);
+        list_params(&config, args.id)?;
     } else {
         start_daemon(args, &config).await?;
+    }
+    Ok(())
+}
+
+/**
+ * List the available predefined sets for the specified test.
+ *
+ * # Arguments
+ * `config`: The configuration to list the predefined sets from.
+ * `test_id`: The id of the test to list the predefined sets for.
+ *
+ * # Returns
+ * Ok if the predefined sets were listed successfully.
+ *
+ * # Errors
+ * An error if the test is not found.
+ */
+fn list_predefined_sets(config: &AppConfiguration, test_id: Option<String>)  -> Result<(), ApplicationError> {
+    if let Some(test_id) = test_id {
+        let test = get_test(test_id.as_str(), config)?;
+        println!("Available predefined sets for configuration: {}", config.name);
+        println!("Name");
+        if let Some(predefined_sets) = &test.predefined_params {
+            for predefined_set in predefined_sets {
+                println!("{}", predefined_set.name);
+            }
+        } else {
+            println!("No predefined sets available for test: {}", test.name);
+        }    
+    } else {
+        println!("No test id specified.");
     }
     Ok(())
 }
@@ -74,11 +107,17 @@ async fn init(args: Args, config: AppConfiguration) -> Result<(), ApplicationErr
  * # Arguments
  * `config`: The configuration to list the parameters from.
  * `test_id`: The id of the test to list the parameters for.
+ * 
+ * # Returns
+ * Ok if the parameters were listed successfully.
+ * 
+ * # Errors
+ * An error if the test is not found.
  *
  */
-fn list_params(config: &AppConfiguration, test_id: Option<String>) {
+fn list_params(config: &AppConfiguration, test_id: Option<String>) -> Result<(), ApplicationError> {
     if let Some(test_id) = test_id {
-        let test = get_test(test_id.as_str(), config).unwrap();
+        let test = get_test(test_id.as_str(), config)?;
         if let Some(params) = &test.params {
             println!("Available parameters for test: {}", test.name);
             println!("Name");
@@ -91,6 +130,7 @@ fn list_params(config: &AppConfiguration, test_id: Option<String>) {
     } else {
         println!("No test id specified.");
     }
+    Ok(())
 }
 
 /**

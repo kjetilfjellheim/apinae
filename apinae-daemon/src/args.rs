@@ -36,6 +36,9 @@ pub struct Args {
     #[arg(long)]
     pub predefined_set: Option<String>,
 
+    /// List all predefined sets.
+    #[arg(long)]
+    pub list_predefined_sets: bool,
 }
 
 /// Parse a single key-value pair
