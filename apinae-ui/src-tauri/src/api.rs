@@ -247,6 +247,69 @@ pub async fn get_predefined_sets(app_data: State<'_, AppData>, testid: &str) -> 
 }
 
 /**
+ * Adds a predefined set.
+ * 
+ * `app_data` The application data.
+ * `testid` The test id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the predefined set could not be added.
+ */
+#[tauri::command]
+pub async fn add_predefined_set(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.get_test(testid).ok_or("Test not found")?;
+    test.add_new_predefined_param_set().map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(data))?;
+    Ok(()) 
+}
+
+/**
+ * Deletes a predefined set.
+ *
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `name` The name of the predefined set.
+ *
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the predefined set could not be deleted.
+ */
+#[tauri::command]
+pub fn delete_predefined_set(app_data: State<'_, AppData>, testid: &str, name: &str) -> Result<(), String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.get_test(testid).ok_or("Test not found")?;
+    test.delete_predefined_param_set(name).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(data))?;
+    Ok(())
+}
+
+/**
+ * Updates a predefined set.
+ *
+ * `app_data` The application data.
+ * `testid` The test id.
+ * `old_name` The old name of the predefined set.
+ * `predified_set` The predefined set.
+ *
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the test could not be found.
+ * If the predefined set could not be updated.
+ */
+#[tauri::command]
+pub fn update_predefined_set(app_data: State<'_, AppData>, testid: &str, old_name: &str, predefined_set: PredefinedSet) -> Result<(), String> {
+    let mut data = get_configuration_data(&app_data)?;
+    let test = data.get_test(testid).ok_or("Test not found")?;
+    test.update_predefined_param_set(old_name, &predefined_set.name, predefined_set.values.clone()).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(data))?;
+    Ok(())
+}
+
+/**
  * Gets the servers.
  *
  * `app_data` The application data.
