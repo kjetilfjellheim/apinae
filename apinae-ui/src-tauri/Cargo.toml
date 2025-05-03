@@ -1,6 +1,6 @@
 [package]
 name = "apinae-ui"
-version = "0.1.8"
+version = "0.1.9"
 description = "UI for Apinae"
 edition = "2021"
 
