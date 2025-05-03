@@ -52,6 +52,7 @@ impl AppConfiguration {
      * `test_id` The id of the test.
      * `name` The name of the test.
      * `description` The description of the test.
+     * `params` The parameters to pass to the test.
      *
      * # Errors
      * An error if the test could not be found.
@@ -60,7 +61,8 @@ impl AppConfiguration {
         let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
         test.name = name.to_string();
         test.description = description.to_string();
-        test.params = params;
+        test.params = params.clone();
+        test.update_predefined_params(params);
         Ok(())
     }
 
@@ -396,11 +398,16 @@ impl TestConfiguration {
      */
     pub fn add_param(&mut self, param: String) {
         if let Some(params) = &mut self.params {
-            params.insert(param);
+            params.insert(param.clone());
         } else {
             let mut params = HashSet::new();
-            params.insert(param);
+            params.insert(param.clone());
             self.params = Some(params);
+        }
+        if let Some(predefined_params) = &mut self.predefined_params {
+            predefined_params.iter_mut().for_each(|f| {
+                f.values.insert(param.clone(), String::new());
+            });                        
         }
     }
     /**
@@ -415,6 +422,96 @@ impl TestConfiguration {
                 self.params = None;
             }
         }
+        if let Some(predefined_params) = &mut self.predefined_params {
+            predefined_params.iter_mut().for_each(|f| {
+                f.values.remove(param);
+            });                        
+        }
+    }
+
+    /**
+     * Update predefined parameters.
+     *
+     * `params` The parameters to update.
+     */
+    pub fn update_predefined_params(&mut self, params: Option<HashSet<String>>) {
+        if let Some(predefined_params) = &mut self.predefined_params {
+            predefined_params.iter_mut().for_each(|f| {
+                if let Some(params) = &params {
+                    for param in params.iter() {
+                       if !f.values.contains_key(param) {
+                            f.values.insert(param.clone(), String::new());
+                        } 
+                    }
+                    let values = &mut f.values;
+                    for param in values.clone().keys() {
+                        if !params.contains(param) {
+                            values.remove(param);
+                        }
+                    }
+                }
+            });
+        }
+    }
+
+    /**
+     * Add a predefined parameter set.
+     *
+     * # Errors
+     * An error if the predefined set could not be created.
+     */
+    pub fn add_new_predefined_param_set(&mut self) -> Result<(), ApplicationError> {
+        let values = if let Some(params) = &self.params {
+            params.iter().map(|param| (param.clone(), String::new())).collect::<HashMap<String, String>>()
+        } else {
+            HashMap::<String, String>::new()
+        };        
+        let predefined_set = PredefinedSet::new(values)?;
+        if let Some(predefined_params) = &mut self.predefined_params {
+            predefined_params.push(predefined_set);
+        } else {
+            let predefined_params = vec![predefined_set];
+            self.predefined_params = Some(predefined_params);
+        }
+        Ok(())
+    }
+
+    /**
+     * Delete a predefined parameter set.
+     *
+     * `name` The name to delete
+     *
+     * # Errors
+     * An error if the predefined set could not be found.
+     */
+    pub fn delete_predefined_param_set(&mut self, name: &str) -> Result<(), ApplicationError> {
+        if let Some(predefined_params) = &mut self.predefined_params {
+            let index = predefined_params.iter().position(|f| f.name == name).ok_or_else(|| ApplicationError::CouldNotFind(format!("Predefined set with name {name} not found.")))?;
+            predefined_params.remove(index);
+        }
+        Ok(())
+    }
+
+    /**
+     * Update a predefined parameter set.
+     *
+     * `old_name` The name of the predefined set to update.
+     * `new_name` The new name of the predefined set.
+     * `values` The values of the predefined set.
+     *
+     * # Errors
+     * An error if the predefined set could not be found.
+     */
+    pub fn update_predefined_param_set(&mut self, old_name: &str, new_name: &str, values: HashMap<String, String>) -> Result<(), ApplicationError> {
+        if let Some(predefined_params) = &mut self.predefined_params {
+            let index = predefined_params.iter().position(|f| f.name == old_name).ok_or_else(|| ApplicationError::CouldNotFind(format!("Predefined set with name {old_name} not found.")))?;
+            let mut predefined_set = predefined_params.get(index).unwrap().clone();
+            predefined_set.name = new_name.to_string();
+            predefined_set.values = values;
+            predefined_params.remove(index);
+            predefined_params.push(predefined_set);
+        }
+        Ok(())
     }
 }
 
@@ -426,7 +523,30 @@ impl TestConfiguration {
 pub struct PredefinedSet {
     // Name of the predefined set.
     pub name: String,
+    // The values of the predefined set.
     pub values: HashMap<String, String>,
+}
+
+impl PredefinedSet {
+
+    /**
+     * Create a new predefined set.
+     *
+     * `name` The name of the predefined set.
+     * `values` The values of the predefined set.
+     *
+     * # Returns
+     * The predefined set.
+     * 
+     * # Errors
+     * An error if the identifier could not be generated.
+     */
+    pub fn new(values: HashMap<String, String>) -> Result<Self, ApplicationError> {
+        let mut name = String::from("Untitled_");
+        let identifier = get_identifier()?;
+        name.push_str(identifier.as_str());
+        Ok(PredefinedSet { name, values })
+    }
 }
 
 /**

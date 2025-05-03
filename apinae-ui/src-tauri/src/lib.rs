@@ -2,11 +2,12 @@ mod api;
 mod model;
 mod state;
 
+use api::update_predefined_set;
 use state::AppData;
 
 use crate::api::{
     add_endpoint, add_listener, add_server, add_test, clean, confirm_dialog, delete_endpoint, delete_listener, delete_server, delete_test, get_listeners, get_servers, get_test, get_tests, load,
-    load_settings, open_dialog, save, save_as, save_settings, start_test, stop_test, update_endpoint, update_listener, update_server, update_test,
+    load_settings, open_dialog, save, save_as, save_settings, start_test, stop_test, update_endpoint, update_listener, update_server, update_test, get_predefined_sets, add_predefined_set, delete_predefined_set,
 };
 
 /**
@@ -62,6 +63,10 @@ pub fn run() {
             update_listener,
             add_listener,
             delete_listener,
+            get_predefined_sets,
+            add_predefined_set,
+            delete_predefined_set,
+            update_predefined_set,
             add_endpoint,
             delete_endpoint,
             update_endpoint,

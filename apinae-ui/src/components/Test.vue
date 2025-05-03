@@ -17,6 +17,8 @@ const test = ref([]);
 const tcpListeners = ref([]);
 // Array of all http servers for the test
 const httpServers = ref([]);
+// Array of all predefined sets for the test.
+const predefinedSets = ref([]);
 // Data for editing a tcp listener. Data is copied from the tcpListener 
 // object to this object when the user clicks the edit button
 const editTcpListenerData = ref({});
@@ -62,9 +64,14 @@ const editEndpointModal = ref(null);
 // Reference to the server id for the endpoint being edited. This is used to send the server id
 // to the rust code when updating the endpoint.
 const serverIdEditEndpoint = ref(null);
-//Initializes the data for editing a test. This is called when the user clicks the edit button.
-//The data is copied from the tests object to the editTestData object.
+// Initializes the data for editing a test. This is called when the user clicks the edit button.
+// The data is copied from the tests object to the editTestData object.
 const editTestData = ref({});
+// Initializes the data for editing a predefined set. This is called when the user clicks the edit button.
+// The data is copied from the predefined set object to the editSelectedPredefinedSet object.
+const editSelectedPredefinedSet = ref({});
+// Reference to the selected predefined parameter set.
+const selectedPredefinedSet = ref(null);
 // Reference to the settings. This is used to set common information in the ui.
 const settingsData = ref({
   bodyHeight: "8pc",
@@ -72,7 +79,7 @@ const settingsData = ref({
 //Initializes the data for editing a test. This is called when the user clicks the edit button.
 //The data is copied from the tests object to the editTestData object.
 const editTest = () => {
-    editTestData.value = { ...test.value };
+  editTestData.value = { ...test.value };
 }
 // Parameter data for adding a new parameter to the test.
 //This is called when the user clicks the add button in the edit test modal.
@@ -99,6 +106,18 @@ const refresh = (testId) => {
       tcpListeners.value = message;
     })
     .catch((error) => window.alert(error));
+  invoke("get_predefined_sets", { testid: testId })
+    .then((message) => {
+      predefinedSets.value = message;
+      //Updates the selected predefined set if it is not null. This done to update the selected display when refreshing the data.
+      for (let i = 0; i < predefinedSets.value.length; i++) {
+        if (selectedPredefinedSet && selectedPredefinedSet.value && predefinedSets.value[i].name === selectedPredefinedSet?.value?.name) {
+          selectedPredefinedSet.value = predefinedSets.value[i];
+          break;
+        }
+      }
+    })
+    .catch((error) => window.alert(error));
   invoke("load_settings", {})
     .then((message) => {
       settingsData.value.bodyHeight = message.bodyHeight;
@@ -111,11 +130,11 @@ const refresh = (testId) => {
 //The editTestData object is passed to the backend to update the test. The 
 //refresh function is called to update the tests array.
 const updateTest = (test) => {
-    invoke("update_test", { testid: test.id, test: test })
-        .then((message) => {
-            refresh(test.id);
-        })
-        .catch((error) => window.alert(error));
+  invoke("update_test", { testid: test.id, test: test })
+    .then((message) => {
+      refresh(test.id);
+    })
+    .catch((error) => window.alert(error));
 }
 
 //Set the data file for the tcp listener. This is called when the user clicks the select file button.
@@ -430,32 +449,74 @@ onMounted(() => {
   refresh(testId)
 });
 
+//Adds a predefined set to the test. This is called when the user clicks the add button.
+//The predefined set is added to the test and the data is refreshed.
+const addPredefinedSet = () => {
+  invoke("add_predefined_set", { testid: test.value.id })
+    .then((message) => {
+      refresh(test.value.id);
+    })
+    .catch((error) => window.alert(error));
+}
+
+//Deletes a predefined set from the test. This is called when the user clicks the delete button.
+//The predefined set is deleted from the test and the data is refreshed. The user is asked to confirm
+//the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
+const deletePredefinedSet = (name) => {
+  invoke("confirm_dialog", {})
+    .then((confirm) => {
+      if (confirm) {
+        invoke("delete_predefined_set", { testid: test.value.id, name: name })
+          .then((message) => {
+            refresh(test.value.id);
+          }).catch((error) => window.alert(error));
+      }
+    }).catch((error) => console.error(error));
+}
+
+//Updates a predefined set in the test. This is called when the user clicks the Ok button in the edit modal.
+//The data on the editSelectedPredefinedSet object is sent to the rust code to update the predefined set.
+//If successful the modal is hidden and the data is refreshed.
+const updatePredefinedSet = (oldName, newPredefinedSet) => {
+  invoke("update_predefined_set", { testid: test.value.id, oldName: oldName, predefinedSet: newPredefinedSet })
+    .then((message) => {      
+      refresh(test.value.id);
+    })
+    .catch((error) => window.alert(error));
+}
+
+//Initializes the data for editing a predefined set. This is called when the user clicks the edit button.
+//The data is copied from the predefined set object to the editSelectedPredefinedSet object.
+const editPredefinedSet = () => {
+  editSelectedPredefinedSet.value = { ...selectedPredefinedSet.value };
+}
+
 // Adds a parameter to the test.
 //This is called when the user clicks the add button in the edit test modal.
 //The parameter is added to the params array of the test. The editAddParameter object is cleared.
 //If the parameter is empty, it is not added to the params array.
 const addParameter = () => {
-    if (editAddParameter.value && editAddParameter.value.length > 0) {
-        if (!editTestData.value.params) {
-            editTestData.value.params = [];
-        }
-        editTestData.value.params.push(editAddParameter.value);
-        editAddParameter.value = "";        
+  if (editAddParameter.value && editAddParameter.value.length > 0) {
+    if (!editTestData.value.params) {
+      editTestData.value.params = [];
     }
+    editTestData.value.params.push(editAddParameter.value);
+    editAddParameter.value = "";
+  }
 }
 
 //Removes a parameter from the test.
 //This is called when the user clicks the remove parameter button in the edit test modal.
 const removeParameter = (param) => {
-    if (editTestData.value.params) {
-        const index = editTestData.value.params.indexOf(param);
-        if (index > -1) {
-            editTestData.value.params.splice(index, 1);
-        }
-        if (editTestData.value.params.length === 0) {
-            editTestData.value.params = null;
-        }
+  if (editTestData.value.params) {
+    const index = editTestData.value.params.indexOf(param);
+    if (index > -1) {
+      editTestData.value.params.splice(index, 1);
     }
+    if (editTestData.value.params.length === 0) {
+      editTestData.value.params = null;
+    }
+  }
 }
 
 //Verify that string input is filled out. 
@@ -481,6 +542,12 @@ const validateNumberOptional = (str) => {
   }
   return "is-invalid";
 }
+
+//Set selected predefined set. 
+const setSelectedPredefinedSet = (predefinedSet) => {
+  selectedPredefinedSet.value = predefinedSet;
+}
+
 </script>
 <style scoped>
 /* The max height is full view height minus (top bar, menu bar and status bar + margins) */
@@ -529,8 +596,7 @@ const validateNumberOptional = (str) => {
       </ol>
       <div class="btn-group btn-group-sm align-middle small me-2" role="group">
         <button type="button" class="btn btn-sm btn-outline-primary" @click="editTest()" data-bs-toggle="modal"
-        data-bs-target="#idEditTestModel"><i
-            class="fa-solid fa-pen-to-square">
+          data-bs-target="#idEditTestModel"><i class="fa-solid fa-pen-to-square">
           </i>&nbsp;Edit test</button>
         <button type="button" class="btn btn-sm btn-outline-primary" @click="addHttpServer()"><i
             class="fa-solid fa-plus">
@@ -554,6 +620,10 @@ const validateNumberOptional = (str) => {
       <button class="nav-link" id="httpserver-tab" data-bs-toggle="tab" data-bs-target="#httpserver-tab-pane"
         type="button" role="tab" aria-controls="httpserver-tab-pane" aria-selected="false">Http server</button>
     </li>
+    <li class="nav-item" role="presentation">
+      <button class="nav-link" id="predefined-tab" data-bs-toggle="tab" data-bs-target="#predefined-tab-pane"
+        type="button" role="tab" aria-controls="predefined-tab-pane" aria-selected="false">Predefined sets</button>
+    </li>
   </ul>
 
   <div class="tab-content" id="contentTab">
@@ -575,8 +645,8 @@ const validateNumberOptional = (str) => {
                   <template v-for="param in test.params" :key="param">
                     <span class="badge bg-info-subtle text-primary small">{{ param }}</span>&nbsp;
                   </template>
-                </template>                
-              </dd>              
+                </template>
+              </dd>
             </dl>
           </div>
         </div>
@@ -670,8 +740,7 @@ const validateNumberOptional = (str) => {
                   :aria-labelledby="'httpServer' + httpServer.id" data-bs-parent="#accordionHttpServer">
                   <div class="accordion-body">
                     <div class="btn-accordion-buttons">
-                      <div
-                        class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
+                      <div class="btn-group btn-group-sm align-middle small me-2 m-0 p-0 button-position-right"
                         role="group">
                         <button type="button" class="btn btn-sm btn-outline-primary align-middle"
                           @click="editHttpServer(httpServer)" data-bs-toggle="modal"
@@ -733,7 +802,7 @@ const validateNumberOptional = (str) => {
                                     <dt class="col-sm-12 small">Method</dt>
                                     <dd class="col-sm-12 small">{{ endpoint.method }}</dd>
                                     <dt class="col-sm-12 small">Body</dt>
-                                    <dd class="col-sm-12 small">{{ endpoint.bodyExpression }}</dd>                                    
+                                    <dd class="col-sm-12 small">{{ endpoint.bodyExpression }}</dd>
                                     <dt class="col-sm-12 small"></dt>
                                     <dd class="col-sm-12 small">
                                       <div class="btn-group btn-group-sm align-middle small" role="group">
@@ -810,8 +879,65 @@ const validateNumberOptional = (str) => {
           </div>
         </div>
       </div>
-
-
+    </div>
+    <div class="tab-pane fade" id="predefined-tab-pane" role="tabpanel" aria-labelledby="predefined-tab-pane"
+      tabindex="0">
+      <div class="container-fluid main-content p-0 m-0">
+        <div class="row p-0 m-0">
+          <div class="col-3" style="border-style: inset; height: calc(100vh - 123px);">
+            <button type="button" class="btn btn-sm btn-outline-primary" @click="addPredefinedSet()"><i
+                class="fa-solid fa-plus"></i>&nbsp;Add</button>
+            <div class="container-fluid p-0 m-0">
+              <template v-for="predefSet in predefinedSets" :key="predefSet.name">
+                <div class="row">
+                  <div class="col-8"><a href="#" class="text-start"
+                      :class="predefSet.name === selectedPredefinedSet?.name ? 'text-info' : 'link-primary'"
+                      style="width: 100%;" @click="setSelectedPredefinedSet(predefSet)">{{ predefSet.name }}</a></div>
+                  <div class="col-4"><button class="btn btn-sm btn-outline-danger align-middle float-end"
+                      @click="deletePredefinedSet(predefSet.name)"><i class="fa-solid fa-trash"></i></button></div>
+                </div>
+              </template>
+            </div>
+          </div>
+          <div class="col-9 p-1">
+            <template v-if="selectedPredefinedSet">
+              <div class="container-fluid text-start ">
+                <div class="row d-flex align-items-center">
+                  <div class="col-2 d-flex align-items-center">
+                    <label for="idSelectedName " class="text-info">Name</label>
+                  </div>
+                  <div class="col-4 d-flex align-items-center">
+                    <label class="text-primary d-flex align-items-center" id="idSelectedName"
+                      aria-describedby="basic-addon3 basic-addon4">{{ selectedPredefinedSet.name }}</label>&nbsp;
+                  </div>
+                  <div class="col-6 d-flex align-items-center">
+                    <button type="button" class="btn btn-sm btn-outline-primary d-flex align-items-center" data-bs-toggle="modal"
+                      data-bs-target="#idEditPredefinedSetModel" @click="editPredefinedSet()"><i
+                        class="fa-solid fa-pen-to-square"></i>&nbsp;Edit</button>
+                  </div>
+                </div>
+              </div>
+              <hr>
+              <table class="table p-1 m-1">
+                <thead>
+                  <tr>
+                    <th scope="col" class="bg-transparent text-info">Key</th>
+                    <th scope="col" class="bg-transparent text-info">Value</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <template v-for="predefKey in Object.keys(selectedPredefinedSet.values)" :key="predefKey">
+                    <tr>
+                      <td class="bg-transparent text-primary">{{ predefKey }}</td>
+                      <td class="bg-transparent text-primary">{{ selectedPredefinedSet.values[predefKey] }}</td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </template>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
   <!--
@@ -834,7 +960,7 @@ const validateNumberOptional = (str) => {
             <div class="col-md-4">
               <label for="idEditTcpListenerId" class="form-label small">Id</label>
               <label class="form-control form-control-sm" id="idEditTcpListenerId" readonly>{{ editTcpListenerData.id
-                }}</label>
+              }}</label>
             </div>
             <div class="col-md-4">
               <label for="idEditPort" class="form-label small">Port</label>
@@ -909,7 +1035,7 @@ const validateNumberOptional = (str) => {
             <div class="col-md-6">
               <label for="idEditHttpServerId" class="form-label small">Id</label>
               <label class="form-control form-control-sm" id="idEditHttpServerId" readonly>{{ editHttpServerData.id
-                }}</label>
+              }}</label>
             </div>
             <div class="col-md-6">
               <label for="idEditName" class="form-label small">Name</label>
@@ -1052,7 +1178,7 @@ const validateNumberOptional = (str) => {
               <label for="idEditBodyExpression" class="form-label small">Body expression</label>
               <input type="text" class="form-control form-control-sm is-valid" id="idEditBodyExpression"
                 v-model="editEndpointData.bodyExpression">
-            </div>            
+            </div>
             <div class="col-md-6" v-if="showEditMockData">
               <label for="idEditStatus" class="form-label small">Status</label>
               <input type="text" class="form-control form-control-sm" id="idEditStatus" v-model="editMockData.status"
@@ -1142,51 +1268,102 @@ const validateNumberOptional = (str) => {
       </div>
     </div>
   </div>
-    <!-- 
+  <!-- 
      Edit test modal.
      TODO: Move this to a separate component.
     -->
-    <div class="modal fade" id="idEditTestModel" tabindex="-1" aria-labelledby="editTestLabel" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary">
-                    <h6 class="modal-title fs-5 small" id="editTestLabel">Edit test</h6>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label for="idEditId" class="form-label small">Id</label>
-                        <label class="form-control form-control-sm" id="idEditId" readonly>{{ editTestData.id }}</label>
-                    </div>
-                    <div class="mb-3">
-                        <label for="idEditName" class="form-label small">Name</label>
-                        <input type="text" class="form-control form-control-sm" id="idEditName"
-                            v-model="editTestData.name" :class="validateStringRequired(editTestData.name)">
-                    </div>
-                    <div class="mb-3">
-                        <label for="idEditDescription" class="form-label small">Description</label>
-                        <textarea class="form-control form-control-sm is-valid" id="idEditDescription" rows="3"
-                            v-model="editTestData.description"></textarea>
-                    </div>
-                    <div class="mb-3">                        
-                        <label for="idEditParams" class="form-label small">Parameters</label>
-                        <div class="input-group mb-3">
-                            <input type="text" class="form-control is-valid" placeholder="Parameter" aria-label="Parameter" v-model="editAddParameter">
-                            <button class="btn btn-outline-primary" type="button" id="addParameter" @click="addParameter()">Add</button>
-                        </div>                                                
-                        <template v-if="editTestData.params">
-                            <template v-for="param in editTestData.params" :key="param">
-                                <button type="button" class="btn btn-sm btn-outline-primary small" @click="removeParameter(param)">{{ param }}</button>
-                            </template>
-                        </template>
-                    </div>
-                </div>
-                <div class="modal-footer bg-primary-subtle">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
-                        data-bs-target="#idEditTestModel">Cancel</button>
-                    <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal"
-                        data-bs-target="#idEditTestModel" @click="updateTest(editTestData)">Ok</button>
-                </div>
-            </div>
+  <div class="modal fade" id="idEditTestModel" tabindex="-1" aria-labelledby="editTestLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-primary">
+          <h6 class="modal-title fs-5 small" id="editTestLabel">Edit test</h6>
         </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="idEditId" class="form-label small">Id</label>
+            <label class="form-control form-control-sm" id="idEditId" readonly>{{ editTestData.id }}</label>
+          </div>
+          <div class="mb-3">
+            <label for="idEditName" class="form-label small">Name</label>
+            <input type="text" class="form-control form-control-sm" id="idEditName" v-model="editTestData.name"
+              :class="validateStringRequired(editTestData.name)">
+          </div>
+          <div class="mb-3">
+            <label for="idEditDescription" class="form-label small">Description</label>
+            <textarea class="form-control form-control-sm is-valid" id="idEditDescription" rows="3"
+              v-model="editTestData.description"></textarea>
+          </div>
+          <div class="mb-3">
+            <label for="idEditParams" class="form-label small">Parameters</label>
+            <div class="input-group mb-3">
+              <input type="text" class="form-control is-valid" placeholder="Parameter" aria-label="Parameter"
+                v-model="editAddParameter">
+              <button class="btn btn-outline-primary" type="button" id="addParameter"
+                @click="addParameter()">Add</button>
+            </div>
+            <template v-if="editTestData.params">
+              <template v-for="param in editTestData.params" :key="param">
+                <button type="button" class="btn btn-sm btn-outline-primary small" @click="removeParameter(param)">{{
+                  param }}</button>
+              </template>
+            </template>
+          </div>
+        </div>
+        <div class="modal-footer bg-primary-subtle">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
+            data-bs-target="#idEditTestModel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal" data-bs-target="#idEditTestModel"
+            @click="updateTest(editTestData)">Ok</button>
+        </div>
+      </div>
     </div>
+  </div>
+  <!-- 
+    Edit test modal.
+    TODO: Move this to a separate component.
+  -->
+  <div class="modal fade" id="idEditPredefinedSetModel" tabindex="-1" aria-labelledby="editPredfinedLabel" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header bg-primary">
+          <h6 class="modal-title fs-5 small" id="editTestLabel">Edit Predefined set</h6>
+        </div>
+        <div class="modal-body">
+          <div class="mb-3">
+            <label for="idEditPredefinedSetName" class="form-label small text-primary">Name</label>
+            <input type="text" class="form-control form-control-sm" id="idEditPredefinedSetName"
+              v-model="editSelectedPredefinedSet.name" :class="validateStringRequired(editSelectedPredefinedSet.name)">
+          </div>
+          <div class="mb-3">
+            <table class="table table-sm table-striped">
+              <thead>
+                <tr>
+                  <th scope="col" class="bg-transparent text-primary">Key</th>
+                  <th scope="col" class="bg-transparent text-primary">Value</th>
+                </tr>
+              </thead>
+              <tbody>
+                <template v-if="editSelectedPredefinedSet.values">                  
+                  <template v-for="predefKey in Object.keys(editSelectedPredefinedSet.values)" :key="predefKey">
+                    <tr>
+                      <td class="bg-transparent text-primary">{{ predefKey }}</td>
+                      <td class="bg-transparent text-primary">
+                        <input type="text" class="form-control form-control-sm" v-model="editSelectedPredefinedSet.values[predefKey]">
+                      </td>
+                    </tr>
+                  </template>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="modal-footer bg-primary-subtle">
+          <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
+            data-bs-target="#idEditPredefinedSetModel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal" data-bs-target="#idEditPredefinedSetModel"
+          @click="updatePredefinedSet(selectedPredefinedSet.name, editSelectedPredefinedSet)">Ok</button>
+        </div>
+      </div>
+    </div>
+  </div>  
 </template>
