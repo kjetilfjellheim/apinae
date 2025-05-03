@@ -1,0 +1,60 @@
+{
+  "name": "Untitled",
+  "description": "",
+  "tests": [
+    {
+      "id": "1746310227365",
+      "name": "Untitled",
+      "description": "",
+      "servers": [
+        {
+          "id": "1746310308559",
+          "name": "error_system",
+          "httpPort": 8080,
+          "endpoints": [
+            {
+              "id": "1746310334217",
+              "pathExpression": "/",
+              "bodyExpression": null,
+              "method": "GET",
+              "endpointType": {
+                "mock": {
+                  "configuration": {
+                    "response": "{\n \"code\": \"${errorcode}\",\n \"text\": \"${}\"\n}",
+                    "status": "200",
+                    "headers": {
+                      "X-FD-ERRORCODE": "${errorcode}"
+                    },
+                    "delay": 0
+                  }
+                }
+              }
+            }
+          ],
+          "httpsConfig": null
+        }
+      ],
+      "listeners": [],
+      "params": [
+        "errorcode",
+        "errortext"
+      ],
+      "predefinedParams": [
+        {
+          "name": "not_found",
+          "values": {
+            "errortext": "Not found",
+            "errorcode": "10"
+          }
+        },
+        {
+          "name": "technical_error",
+          "values": {
+            "errortext": "Internal server error",
+            "errorcode": "80"
+          }
+        }
+      ]
+    }
+  ]
+}

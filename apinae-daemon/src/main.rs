@@ -171,7 +171,7 @@ fn validate_parameters(test: &TestConfiguration, args: &Args) -> Result<Vec<(Str
         return Ok(Vec::new());
     }    
     for required_param in test_params_required {
-        if !args.param.iter().any(|(key, _)| key.eq(required_param)) {
+        if !test_params.iter().any(|(key, _)| key.eq(required_param)) {
             return Err(ApplicationError::CouldNotFind(format!("Missing parameter: {required_param}")));
         }
     }
@@ -318,5 +318,14 @@ mod test {
         assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_missing_param1), Err(ApplicationError::CouldNotFind("Missing parameter: param1".to_string())));
         let args_params_ok = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_http_mock.json", "--id", "1", "--param", "param2=2", "--param", "param1=1"]);
         assert_eq!(validate_parameters(config.tests.first().unwrap(), &args_params_ok), Ok(vec![("param2".to_string(), "2".to_string()), ("param1".to_string(), "1".to_string())]));
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_validate_parameter_set() {
+        let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_predefined_set.json").unwrap();
+        let args_missing_param = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_predefined_set.json", "--id", "1"]);
+        assert!(validate_parameters(config.tests.first().unwrap(), &args_missing_param).is_err());
+        let args_missing_param1 = Args::parse_from(["apinae-daemon", "--file", "./tests/resources/test_predefined_set.json", "--id", "1", "--predefined-set", "not_found"]);
+        assert!(validate_parameters(config.tests.first().unwrap(), &args_missing_param1).is_ok());
     }
 }
