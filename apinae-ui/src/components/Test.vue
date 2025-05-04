@@ -99,13 +99,13 @@ const refresh = (testId) => {
     .then((message) => {
       httpServers.value = message;
     })
-    .catch((error) => window.alert(error));
+    .catch((error) => console.log(error));
 
   invoke("get_listeners", { testid: testId })
     .then((message) => {
       tcpListeners.value = message;
     })
-    .catch((error) => window.alert(error));
+    .catch((error) => console.log(error));
   invoke("get_predefined_sets", { testid: testId })
     .then((message) => {
       predefinedSets.value = message;
@@ -117,12 +117,12 @@ const refresh = (testId) => {
         }
       }
     })
-    .catch((error) => window.alert(error));
+    .catch((error) => console.log(error));
   invoke("load_settings", {})
     .then((message) => {
       settingsData.value.bodyHeight = message.bodyHeight;
     })
-    .catch((error) => window.alert(error));
+    .catch((error) => console.log(error));
 }
 
 //Updates the test by calling the update_test function in the backend.
