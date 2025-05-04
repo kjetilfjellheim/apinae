@@ -527,8 +527,14 @@ const validateStringRequired = (str) => {
   return "is-invalid";
 }
 
+// Matches ${PARAM} in the string used for parameters.
+const REGEXP_PARAM = new RegExp("\\$\\{.*\\}", "g");
+
 //Verify that input is a number. 
 const validateNumberRequired = (str) => {
+  if (str && str.match(REGEXP_PARAM)) {
+    return "is-valid";
+  }
   if (typeof str === "number" || (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str))))) {
     return "is-valid";
   }
