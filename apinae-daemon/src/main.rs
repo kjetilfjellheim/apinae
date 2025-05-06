@@ -164,7 +164,7 @@ fn list_tests(config: &AppConfiguration) {
  */
 async fn start_daemon(args: Args, config: &AppConfiguration) -> Result<(), ApplicationError> {
     let test_id = args.clone().id.ok_or(ApplicationError::CouldNotFind("Missing id".to_string()))?;
-    log::info!("Starting daemon with id: {} and args {:?}", test_id, args);
+    log::info!("Starting daemon with id: {test_id} and args {args:?}");
     let test = get_test(test_id.as_str(), config)?;
     let params = validate_parameters(test, &args)?;
     let mut server_setup = ServerSetup::new();
