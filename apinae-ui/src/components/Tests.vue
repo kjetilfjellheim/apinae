@@ -1,4 +1,6 @@
 <script setup>
+//Required for showing editing modals.
+import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
 //Required for showing the test data and updating the test data.
 import { ref, onMounted } from "vue";
 //Required for calling the rust code.
@@ -14,6 +16,13 @@ const editTestData = ref({});
 // Parameter data for adding a new parameter to the test.
 //This is called when the user clicks the add button in the edit test modal.
 const editAddParameter = ref("");
+
+//Modal for editing the run parameters of the test.
+const editRunParameterModal = ref(null);
+
+// Parameter data for the test.
+//This is called when the user clicks the play button and the test requires parameters.
+const editRunParameterData = ref({});
 
 //Refreshes the tests array by calling the get_tests function in the backend.
 //This is called when the component is mounted and when a test is added, updated, or deleted.
@@ -71,11 +80,23 @@ const addTest = () => {
         .catch((error) => window.alert(error));
 }
 
+// Shows the parameter dialog if the test has parameters else starts the test.
+//This is called when the user clicks the play button. The processId is set to the
+//processId returned by the backend. The test is started with the parameters passed to it.
+const initTest = (test) => {
+    if (test.params) {
+        showParameterDialog(test);
+    } 
+    else {
+        startTest(test, {});
+    }
+}
+
 //Starts the test by calling the start_test function in the backend.
 //This is called when the user clicks the play button. The processId is set to the
 //processId returned by the backend.
-const startTest = (test) => {
-    invoke("start_test", { testid: test.id })
+const startTest = (test, params) => {
+    invoke("start_test", { testid: test.id, params: params })
         .then((message) => {
             test.processId = message.processId
         })
@@ -92,8 +113,22 @@ const stopTest = (test) => {
         .catch((error) => window.alert(error));
 }
 
+//Shows the parameter dialog so that the user can select the parameters for the test.
+//This is called when the user clicks the play button. The parameters are passed to the start_test function.
+const showParameterDialog = (test) => {
+    editRunParameterData.value.test = test;
+    editRunParameterData.value.params = {};
+    for (const param of test.params) {        
+        editRunParameterData.value.params[param] = "";
+    }  
+    editRunParameterModal.value.show();
+}
+
 //Refreshes the tests array when the component is mounted.
-onMounted(() => refresh());
+onMounted(() => {
+    editRunParameterModal.value = new Modal('#idRunParameterModel', { keyboard: false });
+    refresh()
+});
 
 //Verify that string input is filled out. 
 const validateStringRequired = (str) => {
@@ -226,7 +261,7 @@ const removeParameter = (param) => {
                                     <td class="align-middle">
                                         <span class="align-middle">
                                             <button type="button" class="btn btn-sm btn-warning"
-                                                @click="startTest(test)" v-if="test.processId === null">
+                                                @click="initTest(test)" v-if="test.processId === null">
                                                 <i class="fa-solid fa-play"></i></button>
                                             <button type="button" class="btn btn-sm btn-success" @click="stopTest(test)"
                                                 v-else>
@@ -235,8 +270,7 @@ const removeParameter = (param) => {
                                     </td>
                                 </tr>
                             </tbody>
-                        </table>
-                        
+                        </table>                        
                     </div>
                 </div>
             </div>
@@ -289,5 +323,39 @@ const removeParameter = (param) => {
             </div>
         </div>
     </div>
-
+    <div class="modal fade" id="idRunParameterModel" tabindex="-1" aria-labelledby="parameterModel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary">
+                    <h6 class="modal-title fs-5 small" id="editTestLabel">Run test</h6>
+                </div>
+                <div class="modal-body">
+                    <table class="table table-sm table-striped table-bordered table-primary m-0 p-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">Parameter</th>
+                                <th scope="col">Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <template v-if="editRunParameterData.params">
+                                <tr v-for="paramKey in Object.keys(editRunParameterData.params)" :key="paramKey">
+                                    <td class="align-middle"><label class="align-middle small">{{ paramKey }}</label></td>
+                                    <td class="align-middle">
+                                        <input type="text" class="form-control form-control-sm" v-model="editRunParameterData.params[paramKey]"
+                                            :class="validateStringRequired(editRunParameterData.params[paramKey])">
+                                    </td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="modal-footer bg-primary-subtle">
+                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
+                        data-bs-target="#idRunParameterModel">Cancel</button>
+                    <button type="button" class="btn btn-sm btn-primary" @click="startTest(editRunParameterData.test, editRunParameterData.params)">Run</button>
+                </div>
+            </div>
+        </div>
+    </div>
 </template>

@@ -611,7 +611,7 @@ pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option
  * If the test could not be started.
  */
 #[tauri::command]
-pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<TestRow, String> {
+pub async fn start_test(app_data: State<'_, AppData>, testid: &str, params: HashMap<String, String>) -> Result<TestRow, String> {
     let app_config = get_configuration_data(&app_data)?;
     let test = app_config.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
     let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
@@ -627,8 +627,12 @@ pub async fn start_test(app_data: State<'_, AppData>, testid: &str) -> Result<Te
         let file_path = get_current_file_path(&app_data)?;
         let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
         let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
-        let process =
-            std::process::Command::new(app_path).arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(testid).current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
+        let mut process = std::process::Command::new(app_path);
+        let mut process = process.arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(testid);
+        for (key, value) in params {
+            process = process.arg("--param").arg(format!("{key}={value}"));
+        }
+        let process = process.current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
         let process_id = process.id();
         process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
         Ok(TestRow::new(test.id.as_str(), test.name.as_str(), test.description.as_str(), Some(process_id), test.params.clone()))
