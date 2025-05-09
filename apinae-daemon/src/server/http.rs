@@ -258,7 +258,7 @@ async fn route_request(route_configuration: &RouteConfiguration, req: HttpReques
     let client = get_client(route_configuration)?;
 
     if let Some(delay_before) = route_configuration.delay_before {
-        log::debug!("Waiting {}ms before request", delay_before);
+        log::debug!("Waiting {delay_before}ms before request");
         tokio::time::sleep(Duration::from_millis(delay_before)).await;
     }
 
@@ -267,7 +267,7 @@ async fn route_request(route_configuration: &RouteConfiguration, req: HttpReques
     let response = get_response(response).await?;
 
     if let Some(delay_after) = route_configuration.delay_after {
-        log::debug!("Waiting {}ms after request", delay_after);
+        log::debug!("Waiting {delay_after}ms after request");
         tokio::time::sleep(Duration::from_millis(delay_after)).await;
     }
 
