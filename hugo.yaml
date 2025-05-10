@@ -1,52 +1,102 @@
-theme: E25DX
+# hugo server --minify --themesDir ../.. --baseURL=http://0.0.0.0:1313/theme/hugo-book/
 
+baseURL: https://example.com/
+title: Apinae
+theme: hugo-book
+
+# Book configuration
+disablePathToLower: true
 enableGitInfo: true
 
-defaultContentLanguage: en
-
-languages:
-  en:
-    weight: 1
-    languageName: English
-    languageCode: en-US
-    contentDir: content/en
-    title: Apinae
-    params:
-      description: API testing utility
-
-# To omit the Google Analytics script, put a ~ in place of the G-XXXXXXXXXX below.
-services:
-  googleAnalytics:
-    ID: ~
-
+# Needed for mermaid/katex shortcodes
 markup:
-  highlight:
-    noClasses: false
   goldmark:
     renderer:
       unsafe: true
-    parser:
-      attribute:
-        block: true
-        title: true
+  tableOfContents:
+    startLevel: 1
+
+languages:
+  en:
+    languageName: English
+    contentDir: content
+    weight: 1
+
+menu:
+  # before: []
+  after:
+    - name: "Project code"
+      url: "https://github.com/kjetilfjellheim/apinae"
+      weight: 10
+    - name: "Repositories"
+      url: "https://github.com/kjetilfjellheim"
+      weight: 20      
 
 params:
-  project:
-    # To omit the startYear, put a ~ in its place.
-    startYear: 2025
-    presentYear: 2025
-    github:
-      repo: kjetilfjellheim/apinae
-    themeColor:
-      light: '#ffffff'
-      dark: '#101010'
+  # (Optional, default light) Sets color theme: light, dark or auto.
+  # Theme 'auto' switches between dark and light modes based on browser/os preferences
+  BookTheme: "dark"
 
-  author:
-    name: Kjetil Fjellheim
-    url: https://github.com/kjetilfjellheim
+  # (Optional, default true) Controls table of contents visibility on right side of pages.
+  # Start and end levels can be controlled with markup.tableOfContents setting.
+  # You can also specify this parameter per page in front matter.
+  BookToC: true
 
-  home:
-    heading: Your next
-    headingSegment2: Theme
-    description: Description
-    getStartedPath: docs/
+  # (Optional, default favicon.png) Set the path to a favicon file.
+  # If the favicon is /static/favicon.png then the path would be favicon.png
+  # BookFavicon: "favicon.png"
+
+  # (Optional, default none) Set the path to a logo for the book.
+  # If the logo is /static/logo.png then the path would be logo.png
+  # BookLogo: /logo.png
+
+  # (Optional, default docs) Specify root page to render child pages as menu.
+  # Page is resoled by .GetPage function: https://gohugo.io/functions/getpage/
+  # For backward compatibility you can set '*' to render all sections to menu. Acts same as '/'
+  BookSection: docs
+
+  # Set source repository location.
+  # Used for 'Last Modified' and 'Edit this page' links.
+  BookRepo: https://github.com/kjetilfjellheim/apinae
+
+  # (Optional, default 'commit') Specifies commit portion of the link to the page's last modified
+  # commit hash for 'doc' page type.
+  # Requires 'BookRepo' param.
+  # Value used to construct a URL consisting of BookRepo/BookCommitPath/<commit-hash>
+  # Github uses 'commit', Bitbucket uses 'commits'
+  # BookCommitPath: commit
+
+  # Enable "Edit this page" links for 'doc' page type.
+  # Disabled by default. Uncomment to enable. Requires 'BookRepo' param.
+  # Edit path must point to root directory of repo.
+  BookEditPath: edit/main/exampleSite
+
+  # Configure the date format used on the pages
+  # - In git information
+  # - In blog posts
+  BookDateFormat: "January 2, 2006"
+
+  # (Optional, default true) Enables search function with flexsearch,
+  # Index is built on fly, therefore it might slowdown your website.
+  # Configuration for indexing can be adjusted in i18n folder per language.
+  BookSearch: true
+
+  # (Optional, default true) Enables comments template on pages
+  # By default partals/docs/comments.html includes Disqus template
+  # See https://gohugo.io/content-management/comments/#configure-disqus
+  # Can be overwritten by same param in page frontmatter
+  BookComments: false
+
+  # /!\ This is an experimental feature, might be removed or changed at any time
+  # (Optional, experimental, default false) Enables portable links and link checks in markdown pages.
+  # Portable links meant to work with text editors and let you write markdown without {{< relref >}} shortcode
+  # Theme will print warning if page referenced in markdown does not exists.
+  BookPortableLinks: false
+
+  # /!\ This is an experimental feature, might be removed or changed at any time
+  # (Optional, experimental, default false) Enables service worker that caches visited pages and resources for offline use.
+  BookServiceWorker: false
+
+  # /!\ This is an experimental feature, might be removed or changed at any time
+  # (Optional, experimental, default false) Enables a drop-down menu for translations only if a translation is present.
+  BookTranslatedOnly: false

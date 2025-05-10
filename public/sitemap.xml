@@ -2,10 +2,39 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>/</loc>
+    <loc>http://localhost:1313/posts/first-_documentation_site/</loc>
+    <lastmod>2025-05-10T00:00:00+00:00</lastmod>
   </url><url>
-    <loc>/categories/</loc>
+    <loc>http://localhost:1313/docs/applications/</loc>
   </url><url>
-    <loc>/tags/</loc>
+    <loc>http://localhost:1313/docs/tutorials/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/examples/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/configuration/configuration/</loc>
+  </url><url>
+    <loc>http://localhost:1313/posts/</loc>
+    <lastmod>2025-05-10T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/</loc>
+    <lastmod>2025-05-10T00:00:00+00:00</lastmod>
+  </url><url>
+    <loc>http://localhost:1313/docs/applications/apinae-daemon/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/applications/apinae-ui/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/configuration/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/examples/simple_http_server/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/examples/simple_https_server/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/tutorials/creating_and_running_a_simple_test/</loc>
+  </url><url>
+    <loc>http://localhost:1313/categories/</loc>
+  </url><url>
+    <loc>http://localhost:1313/docs/</loc>
+  </url><url>
+    <loc>http://localhost:1313/tags/</loc>
   </url>
 </urlset>

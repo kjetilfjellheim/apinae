@@ -1,11 +1,61 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
-    <title>Apinae</title>
-    <link>/</link>
-    <description>Recent content on Apinae</description>
+    <title>Introduction on Apinae</title>
+    <link>http://localhost:1313/</link>
+    <description>Recent content in Introduction on Apinae</description>
     <generator>Hugo</generator>
-    <language>en-US</language>
-    <atom:link href="/index.xml" rel="self" type="application/rss+xml" />
+    <language>en</language>
+    <lastBuildDate>Sat, 10 May 2025 00:00:00 +0000</lastBuildDate>
+    <atom:link href="http://localhost:1313/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>First release of documentation page</title>
+      <link>http://localhost:1313/posts/first-_documentation_site/</link>
+      <pubDate>Sat, 10 May 2025 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/posts/first-_documentation_site/</guid>
+      <description>&lt;h1 id=&#34;first-release-of-documentation-page&#34;&gt;&#xA;  First release of documentation page&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#first-release-of-documentation-page&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h1&gt;&#xA;&lt;p&gt;This is the first release of the documentation page. Over time more documentation will be added when I got the time.&lt;/p&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>http://localhost:1313/docs/configuration/configuration/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/docs/configuration/configuration/</guid>
+      <description>&lt;h1 id=&#34;configuration-elements&#34;&gt;&#xA;  Configuration elements&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#configuration-elements&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h1&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>http://localhost:1313/docs/applications/apinae-daemon/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/docs/applications/apinae-daemon/</guid>
+      <description>&lt;h1 id=&#34;apinae-daemon&#34;&gt;&#xA;  Apinae-daemon&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#apinae-daemon&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h1&gt;&#xA;&lt;h2 id=&#34;description&#34;&gt;&#xA;  Description&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#description&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;&#xA;&lt;h2 id=&#34;arguments&#34;&gt;&#xA;  Arguments&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#arguments&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>http://localhost:1313/docs/applications/apinae-ui/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/docs/applications/apinae-ui/</guid>
+      <description>&lt;h1 id=&#34;apinae-ui&#34;&gt;&#xA;  Apinae-ui&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#apinae-ui&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h1&gt;&#xA;&lt;h2 id=&#34;description&#34;&gt;&#xA;  Description&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#description&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h2&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>http://localhost:1313/docs/examples/simple_http_server/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/docs/examples/simple_http_server/</guid>
+      <description>&lt;h1 id=&#34;http-server-setup&#34;&gt;&#xA;  Http server setup&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#http-server-setup&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h1&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>http://localhost:1313/docs/examples/simple_https_server/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/docs/examples/simple_https_server/</guid>
+      <description>&lt;h1 id=&#34;http-server-setup&#34;&gt;&#xA;  Http server setup&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#http-server-setup&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h1&gt;</description>
+    </item>
+    <item>
+      <title></title>
+      <link>http://localhost:1313/docs/tutorials/creating_and_running_a_simple_test/</link>
+      <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
+      <guid>http://localhost:1313/docs/tutorials/creating_and_running_a_simple_test/</guid>
+      <description>&lt;h1 id=&#34;creating-and-running-a-test&#34;&gt;&#xA;  Creating and running a test&#xA;  &lt;a class=&#34;anchor&#34; href=&#34;#creating-and-running-a-test&#34;&gt;#&lt;/a&gt;&#xA;&lt;/h1&gt;</description>
+    </item>
   </channel>
 </rss>
