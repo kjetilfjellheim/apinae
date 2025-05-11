@@ -38,11 +38,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install Node.js dependencies
+        run: |
+          npm --prefix docs/themes/hugo-geekdoc ci -f package-lock.json
+      - name: Setup Pages
+        id: pages
+        uses: actions/configure-pages@v5
+      - name: Configure Git
+        run: git config core.quotepath false
+      - name: Build with Hugo
+        run: |          
+          hugo \
+            --source docs \
+            --gc \
+            --baseURL "${{ steps.pages.outputs.base_url }}/" \
+            --cacheDir "${{ runner.temp }}/hugo_cache"
+      - name: Cache Save
+        id: cache-save
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ${{ runner.temp }}/hugo_cache
+          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: ./docs/public
+          path: ./doc/public
 
+  # Deployment job
   deploy:
     environment:
       name: github-pages
