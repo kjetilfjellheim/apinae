@@ -1,7 +1,7 @@
 <script setup>
 //Required for showing editing modals.
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
-//Required for showing the test data and updating the test data.
+//Required for showing the setup data and updating the setup data.
 import { ref, onMounted } from "vue";
 //Required for getting the route parameters.
 import { useRoute } from 'vue-router'
@@ -11,13 +11,13 @@ import { invoke } from "@tauri-apps/api/core";
 // Required to get the route parameters
 const route = useRoute();
 
-// The test being displayed
-const test = ref([]);
-// Array of all tcp listeners for the test
+// The setup being displayed
+const setup = ref([]);
+// Array of all tcp listeners for the setup
 const tcpListeners = ref([]);
-// Array of all http servers for the test
+// Array of all http servers for the setup
 const httpServers = ref([]);
-// Array of all predefined sets for the test.
+// Array of all predefined sets for the setup.
 const predefinedSets = ref([]);
 // Data for editing a tcp listener. Data is copied from the tcpListener 
 // object to this object when the user clicks the edit button
@@ -64,9 +64,9 @@ const editEndpointModal = ref(null);
 // Reference to the server id for the endpoint being edited. This is used to send the server id
 // to the rust code when updating the endpoint.
 const serverIdEditEndpoint = ref(null);
-// Initializes the data for editing a test. This is called when the user clicks the edit button.
-// The data is copied from the tests object to the editTestData object.
-const editTestData = ref({});
+// Initializes the data for editing a setup. This is called when the user clicks the edit button.
+// The data is copied from the setups object to the editSetupData object.
+const editSetupData = ref({});
 // Initializes the data for editing a predefined set. This is called when the user clicks the edit button.
 // The data is copied from the predefined set object to the editSelectedPredefinedSet object.
 const editSelectedPredefinedSet = ref({});
@@ -76,37 +76,37 @@ const selectedPredefinedSet = ref(null);
 const settingsData = ref({
   bodyHeight: "8pc",
 });
-//Initializes the data for editing a test. This is called when the user clicks the edit button.
-//The data is copied from the tests object to the editTestData object.
-const editTest = () => {
-  editTestData.value = { ...test.value };
+//Initializes the data for editing a setup. This is called when the user clicks the edit button.
+//The data is copied from the setups object to the editSetupData object.
+const editSetup = () => {
+  editSetupData.value = { ...setup.value };
 }
-// Parameter data for adding a new parameter to the test.
-//This is called when the user clicks the add button in the edit test modal.
+//Parameter data for adding a new parameter to the setup.
+//This is called when the user clicks the add button in the edit setup modal.
 const editAddParameter = ref("");
-//Refreshes the test data, tcp listeners and http servers. This is called when the page is loaded
+//Refreshes the setup data, tcp listeners and http servers. This is called when the page is loaded
 //and when the user updates the data. This is because when updating the data we only update the
 //remote rust data, not the local data. This is so that we only have one source of truth for the data.
 //TODO: Only refresh required data, not all data.
-const refresh = (testId) => {
-  invoke("get_test", { testid: testId })
+const refresh = (setupId) => {
+  invoke("get_setup", { setupid: setupId })
     .then((message) => {
-      test.value = message;
+      setup.value = message;
     })
     .catch((error) => window.alert(error));
 
-  invoke("get_servers", { testid: testId })
+  invoke("get_servers", { setupid: setupId })
     .then((message) => {
       httpServers.value = message;
     })
     .catch((error) => console.log(error));
 
-  invoke("get_listeners", { testid: testId })
+  invoke("get_listeners", { setupid: setupId })
     .then((message) => {
       tcpListeners.value = message;
     })
     .catch((error) => console.log(error));
-  invoke("get_predefined_sets", { testid: testId })
+  invoke("get_predefined_sets", { setupid: setupId })
     .then((message) => {
       predefinedSets.value = message;
       //Updates the selected predefined set if it is not null. This done to update the selected display when refreshing the data.
@@ -125,14 +125,14 @@ const refresh = (testId) => {
     .catch((error) => console.log(error));
 }
 
-//Updates the test by calling the update_test function in the backend.
-//This is called when the user clicks the Ok button in the edit test modal.
-//The editTestData object is passed to the backend to update the test. The 
-//refresh function is called to update the tests array.
-const updateTest = (test) => {
-  invoke("update_test", { testid: test.id, test: test })
+//Updates the setup by calling the update_setup function in the backend.
+//This is called when the user clicks the Ok button in the edit setup modal.
+//The editSetupData object is passed to the backend to update the setup. The 
+//refresh function is called to update the setups array.
+const updateSetup = (setup) => {
+  invoke("update_setup", { setupid: setup.id, setup: setup })
     .then((message) => {
-      refresh(test.id);
+      refresh(setup.id);
     })
     .catch((error) => window.alert(error));
 }
@@ -202,26 +202,26 @@ const clearEditHttpsConfigClientCertificate = () => {
   editHttpsConfig.value.clientCertificate = null;
 }
 
-//Add an http server to the test. This is called when the user clicks the add button.
-//The server is added to the test and the data is refreshed.
+//Add an http server to the setup. This is called when the user clicks the add button.
+//The server is added to the setup and the data is refreshed.
 const addHttpServer = () => {
-  invoke("add_server", { testid: test.value.id })
+  invoke("add_server", { setupid: setup.value.id })
     .then((message) => {
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
 
-//Delete an http server from the test. This is called when the user clicks the delete button.
-//The server is deleted from the test and the data is refreshed. The user is asked to confirm
+//Delete an http server from the setup. This is called when the user clicks the delete button.
+//The server is deleted from the setup and the data is refreshed. The user is asked to confirm
 //the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
 const confirmDeleteHttpServer = (serverId) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
       if (confirm) {
-        invoke("delete_server", { testid: test.value.id, serverid: serverId })
+        invoke("delete_server", { setupid: setup.value.id, serverid: serverId })
           .then((message) => {
-            refresh(test.value.id);
+            refresh(setup.value.id);
           })
           .catch((error) => window.alert(error));
       }
@@ -230,12 +230,12 @@ const confirmDeleteHttpServer = (serverId) => {
     .catch((error) => window.error(error));
 }
 
-//Add a tcp listener to the test. This is called when the user clicks the add button.
-//The listener is added to the test and the data is refreshed.
+//Add a tcp listener to the setup. This is called when the user clicks the add button.
+//The listener is added to the setup and the data is refreshed.
 const addTcpListener = () => {
-  invoke("add_listener", { testid: test.value.id })
+  invoke("add_listener", { setupid: setup.value.id })
     .then((message) => {
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
@@ -243,9 +243,9 @@ const addTcpListener = () => {
 //Add an endpoint to the http server. This is called when the user clicks the add button.
 //The endpoint is added to the http server and the data is refreshed.
 const addEndpoint = (httpServer) => {
-  invoke("add_endpoint", { testid: test.value.id, serverid: httpServer.id })
+  invoke("add_endpoint", { setupid: setup.value.id, serverid: httpServer.id })
     .then((message) => {
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
@@ -257,9 +257,9 @@ const confirmDeleteEndpoint = (httpServer, endpoint) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
       if (confirm) {
-        invoke("delete_endpoint", { testid: test.value.id, serverid: httpServer.id, endpointid: endpoint.id })
+        invoke("delete_endpoint", { setupid: setup.value.id, serverid: httpServer.id, endpointid: endpoint.id })
           .then((message) => {
-            refresh(test.value.id);
+            refresh(setup.value.id);
           })
           .catch((error) => window.alert(error));
       }
@@ -268,16 +268,16 @@ const confirmDeleteEndpoint = (httpServer, endpoint) => {
     .catch((error) => console.error(error));
 }
 
-//Delete a tcp listener from the test. This is called when the user clicks the delete button.
-//The listener is deleted from the test and the data is refreshed. The user is asked to confirm
+//Delete a tcp listener from the setup. This is called when the user clicks the delete button.
+//The listener is deleted from the setup and the data is refreshed. The user is asked to confirm
 //the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
 const confirmDeleteTcpListener = (listenerid) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
       if (confirm) {
-        invoke("delete_listener", { testid: test.value.id, listenerid: listenerid })
+        invoke("delete_listener", { setupid: setup.value.id, listenerid: listenerid })
           .then((message) => {
-            refresh(test.value.id);
+            refresh(setup.value.id);
           })
           .catch((error) => window.alert(error));
       }
@@ -328,10 +328,10 @@ const editHttpServer = (httpServer) => {
 //The data on the editTcpListenerData object is sent to the rust code to update the tcp listener.
 //If successful the modal is hidden and the data is refreshed.
 const updateTcpListener = (tcpListener) => {
-  invoke("update_listener", { testid: test.value.id, listenerid: tcpListener.id, tcplistener: convertTcpListenerToRequestObject(tcpListener) })
+  invoke("update_listener", { setupid: setup.value.id, listenerid: tcpListener.id, tcplistener: convertTcpListenerToRequestObject(tcpListener) })
     .then((message) => {
       editTcpListenerModal.value.hide();
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
@@ -341,10 +341,10 @@ const updateTcpListener = (tcpListener) => {
 //to the rust code to update the http server.
 //If successful the modal is hidden and the data is refreshed.
 const updateHttpServer = (httpServer, httpsConfig, supportedTlsVersions) => {
-  invoke("update_server", { testid: test.value.id, serverid: httpServer.id, httpserver: convertHttpServerToRequestObject(httpServer, httpsConfig, supportedTlsVersions) })
+  invoke("update_server", { setupid: setup.value.id, serverid: httpServer.id, httpserver: convertHttpServerToRequestObject(httpServer, httpsConfig, supportedTlsVersions) })
     .then((message) => {
       editHttpServerModal.value.hide();
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
@@ -353,14 +353,16 @@ const updateHttpServer = (httpServer, httpsConfig, supportedTlsVersions) => {
 //The data on the editEndpointData object is sent to the rust code to update the endpoint.
 //If successful the modal is hidden and the data is refreshed.
 const updateEndpoint = (endpoint) => {
-  invoke("update_endpoint", { testid: test.value.id, serverid: serverIdEditEndpoint.value, endpointid: endpoint.id, endpoint: convertEndpointToRequestObject(editEndpointData, editMockData, editRouteData) })
+  invoke("update_endpoint", { setupid: setup.value.id, serverid: serverIdEditEndpoint.value, endpointid: endpoint.id, endpoint: convertEndpointToRequestObject(editEndpointData, editMockData, editRouteData) })
     .then((message) => {
       editEndpointModal.value.hide();
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
 
+//Converts the endpoint object to a request object that can be sent to the rust code.
+//This is used when updating the endpoint. 
 const convertEndpointToRequestObject = (editEndpointData, editMockData, editRouteData) => {
   console.log("showEditMockData:" + showEditMockData.value);
   return {
@@ -373,6 +375,8 @@ const convertEndpointToRequestObject = (editEndpointData, editMockData, editRout
   }
 }
 
+//Converts the mock data object to a request object that can be sent to the rust code.
+//This is used when updating the endpoint.
 const convertMockToRequestObject = (mockData) => {
   return {
     status: mockData.value.status ? mockData.value.status : null,
@@ -382,6 +386,8 @@ const convertMockToRequestObject = (mockData) => {
   }
 }
 
+//Converts the route data object to a request object that can be sent to the rust code.
+//This is used when updating the endpoint.
 const convertRouteToRequestObject = (routeData) => {
   return {
     url: routeData.value.url,
@@ -445,42 +451,42 @@ onMounted(() => {
   editEndpointModal.value = new Modal('#idEditEndpointModel', { keyboard: false });
   editHttpServerModal.value = new Modal('#idEditHttpServerModel', { keyboard: false });
   editTcpListenerModal.value = new Modal('#idEditTcpListenerModel', { keyboard: false });
-  const testId = route.params.testid
-  refresh(testId)
+  const setupId = route.params.setupid
+  refresh(setupId)
 });
 
-//Adds a predefined set to the test. This is called when the user clicks the add button.
-//The predefined set is added to the test and the data is refreshed.
+//Adds a predefined set to the setup. This is called when the user clicks the add button.
+//The predefined set is added to the setup and the data is refreshed.
 const addPredefinedSet = () => {
-  invoke("add_predefined_set", { testid: test.value.id })
+  invoke("add_predefined_set", { setupid: setup.value.id })
     .then((message) => {
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
 
-//Deletes a predefined set from the test. This is called when the user clicks the delete button.
-//The predefined set is deleted from the test and the data is refreshed. The user is asked to confirm
+//Deletes a predefined set from the setup. This is called when the user clicks the delete button.
+//The predefined set is deleted from the setup and the data is refreshed. The user is asked to confirm
 //the deletion first. This uses the rust confirm_dialog function to display a dialog to the user.
 const deletePredefinedSet = (name) => {
   invoke("confirm_dialog", {})
     .then((confirm) => {
       if (confirm) {
-        invoke("delete_predefined_set", { testid: test.value.id, name: name })
+        invoke("delete_predefined_set", { setupid: setup.value.id, name: name })
           .then((message) => {
-            refresh(test.value.id);
+            refresh(setup.value.id);
           }).catch((error) => window.alert(error));
       }
     }).catch((error) => console.error(error));
 }
 
-//Updates a predefined set in the test. This is called when the user clicks the Ok button in the edit modal.
+//Updates a predefined set in the setup. This is called when the user clicks the Ok button in the edit modal.
 //The data on the editSelectedPredefinedSet object is sent to the rust code to update the predefined set.
 //If successful the modal is hidden and the data is refreshed.
 const updatePredefinedSet = (oldName, newPredefinedSet) => {
-  invoke("update_predefined_set", { testid: test.value.id, oldName: oldName, predefinedSet: newPredefinedSet })
+  invoke("update_predefined_set", { setupid: setup.value.id, oldName: oldName, predefinedSet: newPredefinedSet })
     .then((message) => {      
-      refresh(test.value.id);
+      refresh(setup.value.id);
     })
     .catch((error) => window.alert(error));
 }
@@ -491,30 +497,30 @@ const editPredefinedSet = () => {
   editSelectedPredefinedSet.value = { ...selectedPredefinedSet.value };
 }
 
-// Adds a parameter to the test.
-//This is called when the user clicks the add button in the edit test modal.
-//The parameter is added to the params array of the test. The editAddParameter object is cleared.
+// Adds a parameter to the setup.
+//This is called when the user clicks the add button in the edit setup modal.
+//The parameter is added to the params array of the setup. The editAddParameter object is cleared.
 //If the parameter is empty, it is not added to the params array.
 const addParameter = () => {
   if (editAddParameter.value && editAddParameter.value.length > 0) {
-    if (!editTestData.value.params) {
-      editTestData.value.params = [];
+    if (!editSetupData.value.params) {
+      editSetupData.value.params = [];
     }
-    editTestData.value.params.push(editAddParameter.value);
+    editSetupData.value.params.push(editAddParameter.value);
     editAddParameter.value = "";
   }
 }
 
-//Removes a parameter from the test.
-//This is called when the user clicks the remove parameter button in the edit test modal.
+//Removes a parameter from the setup.
+//This is called when the user clicks the remove parameter button in the edit setup modal.
 const removeParameter = (param) => {
-  if (editTestData.value.params) {
-    const index = editTestData.value.params.indexOf(param);
+  if (editSetupData.value.params) {
+    const index = editSetupData.value.params.indexOf(param);
     if (index > -1) {
-      editTestData.value.params.splice(index, 1);
+      editSetupData.value.params.splice(index, 1);
     }
-    if (editTestData.value.params.length === 0) {
-      editTestData.value.params = null;
+    if (editSetupData.value.params.length === 0) {
+      editSetupData.value.params = null;
     }
   }
 }
@@ -598,12 +604,12 @@ const setSelectedPredefinedSet = (predefinedSet) => {
     <div class="container-fluid">
       <ol class="breadcrumb  m-0 p-0 align-middle">
         <li class="breadcrumb-item"><router-link to="/"><i class="fas fa-house"></i></router-link></li>
-        <li class="breadcrumb-item">{{ test?.name }}</li>
+        <li class="breadcrumb-item">{{ setup?.name }}</li>
       </ol>
       <div class="btn-group btn-group-sm align-middle small me-2" role="group">
-        <button type="button" class="btn btn-sm btn-outline-primary" @click="editTest()" data-bs-toggle="modal"
-          data-bs-target="#idEditTestModel"><i class="fa-solid fa-pen-to-square">
-          </i>&nbsp;Edit test</button>
+        <button type="button" class="btn btn-sm btn-outline-primary" @click="editSetup()" data-bs-toggle="modal"
+          data-bs-target="#idEditSetupModel"><i class="fa-solid fa-pen-to-square">
+          </i>&nbsp;Edit setup</button>
         <button type="button" class="btn btn-sm btn-outline-primary" @click="addHttpServer()"><i
             class="fa-solid fa-plus">
           </i>&nbsp;Add http server</button>
@@ -640,15 +646,15 @@ const setSelectedPredefinedSet = (predefinedSet) => {
           <div class="col-8">
             <dl class="row p-0 m-0">
               <dt class="col-sm-3 small p-1 m-0 text-light">Id</dt>
-              <dd class="col-sm-9 small p-1 m-0 text-light">{{ test?.id }}</dd>
+              <dd class="col-sm-9 small p-1 m-0 text-light">{{ setup?.id }}</dd>
               <dt class="col-sm-3 small p-1 m-0 text-light">Name</dt>
-              <dd class="col-sm-9 small p-1 m-0 text-light">{{ test?.name }}</dd>
+              <dd class="col-sm-9 small p-1 m-0 text-light">{{ setup?.name }}</dd>
               <dt class="col-sm-3 small p-1 m-0 text-light">Description</dt>
-              <dd class="col-sm-9 small p-1 m-0 text-light">{{ test?.description }}</dd>
+              <dd class="col-sm-9 small p-1 m-0 text-light">{{ setup?.description }}</dd>
               <dt class="col-sm-3 small p-1 m-0 text-light">Parameters</dt>
               <dd class="col-sm-9 small p-1 m-0 text-light">
-                <template v-if="test.params">
-                  <template v-for="param in test.params" :key="param">
+                <template v-if="setup.params">
+                  <template v-for="param in setup.params" :key="param">
                     <span class="badge bg-info-subtle text-primary small">{{ param }}</span>&nbsp;
                   </template>
                 </template>
@@ -947,7 +953,7 @@ const setSelectedPredefinedSet = (predefinedSet) => {
     </div>
   </div>
   <!--
-    Show the test data.
+    Show the setup data.
   -->
   <!--
     Edit modals for editing the tcp listener.
@@ -1261,7 +1267,7 @@ const setSelectedPredefinedSet = (predefinedSet) => {
             </div>
             <div class="col-md-6" v-if="!showEditMockData">
               <label class="form-label small" for="idEditConnectTimeout">Connect timeout</label>
-              <input class="form-control form-control-sm" type="test" id="idEditConnectTimeout"
+              <input class="form-control form-control-sm" type="text" id="idEditConnectTimeout"
                 v-model="editRouteData.connectTimeout" :class="validateNumberOptional(editRouteData.connectTimeout)">
             </div>
           </form>
@@ -1275,29 +1281,29 @@ const setSelectedPredefinedSet = (predefinedSet) => {
     </div>
   </div>
   <!-- 
-     Edit test modal.
+     Edit setup modal.
      TODO: Move this to a separate component.
     -->
-  <div class="modal fade" id="idEditTestModel" tabindex="-1" aria-labelledby="editTestLabel" aria-hidden="true">
+  <div class="modal fade" id="idEditSetupModel" tabindex="-1" aria-labelledby="editSetupLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-primary">
-          <h6 class="modal-title fs-5 small" id="editTestLabel">Edit test</h6>
+          <h6 class="modal-title fs-5 small" id="editSetupLabel">Edit setup</h6>
         </div>
         <div class="modal-body">
           <div class="mb-3">
             <label for="idEditId" class="form-label small">Id</label>
-            <label class="form-control form-control-sm" id="idEditId" readonly>{{ editTestData.id }}</label>
+            <label class="form-control form-control-sm" id="idEditId" readonly>{{ editSetupData.id }}</label>
           </div>
           <div class="mb-3">
             <label for="idEditName" class="form-label small">Name</label>
-            <input type="text" class="form-control form-control-sm" id="idEditName" v-model="editTestData.name"
-              :class="validateStringRequired(editTestData.name)">
+            <input type="text" class="form-control form-control-sm" id="idEditName" v-model="editSetupData.name"
+              :class="validateStringRequired(editSetupData.name)">
           </div>
           <div class="mb-3">
             <label for="idEditDescription" class="form-label small">Description</label>
             <textarea class="form-control form-control-sm is-valid" id="idEditDescription" rows="3"
-              v-model="editTestData.description"></textarea>
+              v-model="editSetupData.description"></textarea>
           </div>
           <div class="mb-3">
             <label for="idEditParams" class="form-label small">Parameters</label>
@@ -1307,8 +1313,8 @@ const setSelectedPredefinedSet = (predefinedSet) => {
               <button class="btn btn-outline-primary" type="button" id="addParameter"
                 @click="addParameter()">Add</button>
             </div>
-            <template v-if="editTestData.params">
-              <template v-for="param in editTestData.params" :key="param">
+            <template v-if="editSetupData.params">
+              <template v-for="param in editSetupData.params" :key="param">
                 <button type="button" class="btn btn-sm btn-outline-primary small" @click="removeParameter(param)">{{
                   param }}</button>
               </template>
@@ -1317,22 +1323,22 @@ const setSelectedPredefinedSet = (predefinedSet) => {
         </div>
         <div class="modal-footer bg-primary-subtle">
           <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal"
-            data-bs-target="#idEditTestModel">Cancel</button>
-          <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal" data-bs-target="#idEditTestModel"
-            @click="updateTest(editTestData)">Ok</button>
+            data-bs-target="#idEditSetupModel">Cancel</button>
+          <button type="button" class="btn btn-sm btn-primary" data-bs-dismiss="modal" data-bs-target="#idEditSetupModel"
+            @click="updateSetup(editSetupData)">Ok</button>
         </div>
       </div>
     </div>
   </div>
   <!-- 
-    Edit test modal.
+    Edit setup modal.
     TODO: Move this to a separate component.
   -->
   <div class="modal fade" id="idEditPredefinedSetModel" tabindex="-1" aria-labelledby="editPredfinedLabel" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">
         <div class="modal-header bg-primary">
-          <h6 class="modal-title fs-5 small" id="editTestLabel">Edit Predefined set</h6>
+          <h6 class="modal-title fs-5 small" id="editSetupLabel">Edit Predefined set</h6>
         </div>
         <div class="modal-body">
           <div class="mb-3">

@@ -9,8 +9,8 @@ import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
 import { fas } from '@fortawesome/free-solid-svg-icons'
 import { far } from '@fortawesome/free-regular-svg-icons';
 
-import Tests from "./components/Tests.vue";
-import Test from "./components/Test.vue";
+import Setups from "./components/Setups.vue";
+import Setup from "./components/Setup.vue";
 
 //Add the required icons to the library. This allows you to 
 //use them in your components without having to import them
@@ -27,13 +27,13 @@ import { createRouter, createWebHistory } from 'vue-router'
 const routes = [
     {
         path: '/',
-        name: 'Tests',
-        component: Tests
+        name: 'Setups',
+        component: Setups
     },
     {
-        path: '/:testid',
-        name: 'Test',
-        component: Test
+        path: '/:setupid',
+        name: 'Setup',
+        component: Setup
     }
 ]
 
