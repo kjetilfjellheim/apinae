@@ -15,10 +15,6 @@ permissions:
   contents: read
   pages: write
   id-token: write
-  packages: read
-
-env:
-  NODE_AUTH_TOKEN: ${{ github.token }}
 
 # Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
 # However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
@@ -51,13 +47,12 @@ jobs:
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          registry-url: https://npm.pkg.github.com/
 
       - name: Install Node.js dependencies
         run: |
+          "curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash"
+          "\. "$HOME/.nvm/nvm.sh"
+          "nvm install 22"
           "npm --version"
           "npm --prefix docs/themes/hugo-geekdoc ci -f package-lock.json || true"
       - name: Configure Git
