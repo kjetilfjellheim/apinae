@@ -12,7 +12,7 @@ categories = ["testing", "api"]
 
 [dependencies]
 apinae-lib = { path = "../apinae-lib" }
-clap = { version = "4.5.37", features = ["derive"] }
+clap = { version = "4.5.38", features = ["derive"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = { version = "1.0.140" }
 tokio = { version = "1.45.0", features = ["full"] }
