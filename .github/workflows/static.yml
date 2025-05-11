@@ -36,53 +36,9 @@ jobs:
       HUGO_ENVIRONMENT: production
       TZ: America/Los_Angeles
     steps:
-      - name: Install Hugo CLI
-        run: |
-          wget -O ${{ runner.temp }}/hugo.deb https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_linux-amd64.deb \
-          && sudo dpkg -i ${{ runner.temp }}/hugo.deb
-      - name: Install Dart Sass
-        run: sudo snap install dart-sass
       - name: Checkout
         uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-      - name: Install Node.js dependencies
-        run: |
-          "npm --version"
-          "npm --prefix docs/themes/hugo-geekdoc ci -f package-lock.json || true"
-      - name: Setup Pages
-        id: pages
-        uses: actions/configure-pages@v5
-      - name: Configure Git
-        run: git config core.quotepath false
-      - name: Build with Hugo
-        run: |          
-          hugo \
-            --source docs \
-            --gc \
-            --baseURL "${{ steps.pages.outputs.base_url }}/" \
-            --cacheDir "${{ runner.temp }}/hugo_cache"
-      - name: Cache Save
-        id: cache-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ runner.temp }}/hugo_cache
-          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./doc/public
-
-  # Deployment job
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
