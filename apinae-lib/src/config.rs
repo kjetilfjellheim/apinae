@@ -1031,7 +1031,7 @@ mod test {
         assert_eq!(configuration.setups[0].servers[0].endpoints[0].body_expression, Some("Body".to_owned()));
         assert_eq!(
             configuration.setups[0].servers[0].endpoints[0].endpoint_type,
-            Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None,) })
+            Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None, Some(10), Some(100)) })
         );
     }
 
