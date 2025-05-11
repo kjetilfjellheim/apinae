@@ -1,4 +1,4 @@
 User-agent: *
 Disallow: /tags/*
 
-Sitemap: https://kjetilfjellheim.github.io/apinae/sitemap.xml
+Sitemap: http://localhost:1313/sitemap.xml
