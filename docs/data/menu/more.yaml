@@ -1,0 +1,10 @@
+---
+more:
+  - name: Releases
+    ref: "https://github.com/kjetilfjellheim/apinae/releases"
+    external: true
+    icon: "gdoc_download"
+  - name: View Source
+    ref: "https://github.com/kjetilfjellheim/apinae"
+    external: true
+    icon: "gdoc_github"
