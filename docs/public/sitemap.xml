@@ -2,45 +2,45 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
   xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>http://localhost/applications/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/applications/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/posts/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/posts/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/tutorials/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/tutorials/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/examples/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/examples/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/configuration/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/configuration/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/configuration/elements/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/configuration/elements/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/applications/apinae-daemon/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/applications/apinae-daemon/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/applications/apinae-ui/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/applications/apinae-ui/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/examples/simple_http_server/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/examples/simple_http_server/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/examples/simple_https_server/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/examples/simple_https_server/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/posts/test1/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/posts/test1/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/tutorials/creating_and_running_a_simple_test/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/tutorials/creating_and_running_a_simple_test/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/</loc>
     <lastmod>2025-05-11T15:31:06+02:00</lastmod>
   </url><url>
-    <loc>http://localhost/tags/</loc>
+    <loc>https://kjetilfjellheim.github.io/apinae/tags/</loc>
   </url>
 </urlset>

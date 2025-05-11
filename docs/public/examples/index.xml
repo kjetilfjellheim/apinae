@@ -2,24 +2,24 @@
 <rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
   <channel>
     <title>Apinae</title>
-    <link>http://localhost/examples/</link>
+    <link>https://kjetilfjellheim.github.io/apinae/examples/</link>
     <description>Recent content on Apinae</description>
     <generator>Hugo</generator>
     <language>en</language>
-    <atom:link href="http://localhost/examples/index.xml" rel="self" type="application/rss+xml" />
+    <atom:link href="https://kjetilfjellheim.github.io/apinae/examples/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title></title>
-      <link>http://localhost/examples/simple_http_server/</link>
+      <link>https://kjetilfjellheim.github.io/apinae/examples/simple_http_server/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>http://localhost/examples/simple_http_server/</guid>
-      <description>&lt;div class=&#34;flex align-center gdoc-page__anchorwrap&#34;&gt;&#xA;    &lt;h1 id=&#34;http-server-setup&#34;&#xA;    &gt;&#xA;        Http server setup&#xA;    &lt;/h1&gt;&#xA;    &lt;a data-clipboard-text=&#34;http://localhost/examples/simple_http_server/#http-server-setup&#34; class=&#34;gdoc-page__anchor clip flex align-center&#34; title=&#34;Anchor to: Http server setup&#34; aria-label=&#34;Anchor to: Http server setup&#34; href=&#34;#http-server-setup&#34;&gt;&#xA;        &lt;svg class=&#34;gdoc-icon gdoc_link&#34;&gt;&lt;use xlink:href=&#34;#gdoc_link&#34;&gt;&lt;/use&gt;&lt;/svg&gt;&#xA;    &lt;/a&gt;&#xA;&lt;/div&gt;</description>
+      <guid>https://kjetilfjellheim.github.io/apinae/examples/simple_http_server/</guid>
+      <description>&lt;div class=&#34;flex align-center gdoc-page__anchorwrap&#34;&gt;&#xA;    &lt;h1 id=&#34;http-server-setup&#34;&#xA;    &gt;&#xA;        Http server setup&#xA;    &lt;/h1&gt;&#xA;    &lt;a data-clipboard-text=&#34;https://kjetilfjellheim.github.io/apinae/examples/simple_http_server/#http-server-setup&#34; class=&#34;gdoc-page__anchor clip flex align-center&#34; title=&#34;Anchor to: Http server setup&#34; aria-label=&#34;Anchor to: Http server setup&#34; href=&#34;#http-server-setup&#34;&gt;&#xA;        &lt;svg class=&#34;gdoc-icon gdoc_link&#34;&gt;&lt;use xlink:href=&#34;#gdoc_link&#34;&gt;&lt;/use&gt;&lt;/svg&gt;&#xA;    &lt;/a&gt;&#xA;&lt;/div&gt;</description>
     </item>
     <item>
       <title></title>
-      <link>http://localhost/examples/simple_https_server/</link>
+      <link>https://kjetilfjellheim.github.io/apinae/examples/simple_https_server/</link>
       <pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate>
-      <guid>http://localhost/examples/simple_https_server/</guid>
-      <description>&lt;div class=&#34;flex align-center gdoc-page__anchorwrap&#34;&gt;&#xA;    &lt;h1 id=&#34;http-server-setup&#34;&#xA;    &gt;&#xA;        Http server setup&#xA;    &lt;/h1&gt;&#xA;    &lt;a data-clipboard-text=&#34;http://localhost/examples/simple_https_server/#http-server-setup&#34; class=&#34;gdoc-page__anchor clip flex align-center&#34; title=&#34;Anchor to: Http server setup&#34; aria-label=&#34;Anchor to: Http server setup&#34; href=&#34;#http-server-setup&#34;&gt;&#xA;        &lt;svg class=&#34;gdoc-icon gdoc_link&#34;&gt;&lt;use xlink:href=&#34;#gdoc_link&#34;&gt;&lt;/use&gt;&lt;/svg&gt;&#xA;    &lt;/a&gt;&#xA;&lt;/div&gt;</description>
+      <guid>https://kjetilfjellheim.github.io/apinae/examples/simple_https_server/</guid>
+      <description>&lt;div class=&#34;flex align-center gdoc-page__anchorwrap&#34;&gt;&#xA;    &lt;h1 id=&#34;http-server-setup&#34;&#xA;    &gt;&#xA;        Http server setup&#xA;    &lt;/h1&gt;&#xA;    &lt;a data-clipboard-text=&#34;https://kjetilfjellheim.github.io/apinae/examples/simple_https_server/#http-server-setup&#34; class=&#34;gdoc-page__anchor clip flex align-center&#34; title=&#34;Anchor to: Http server setup&#34; aria-label=&#34;Anchor to: Http server setup&#34; href=&#34;#http-server-setup&#34;&gt;&#xA;        &lt;svg class=&#34;gdoc-icon gdoc_link&#34;&gt;&lt;use xlink:href=&#34;#gdoc_link&#34;&gt;&lt;/use&gt;&lt;/svg&gt;&#xA;    &lt;/a&gt;&#xA;&lt;/div&gt;</description>
     </item>
   </channel>
 </rss>
