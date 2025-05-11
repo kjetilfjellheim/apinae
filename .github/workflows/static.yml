@@ -52,7 +52,7 @@ jobs:
         uses: actions/configure-pages@v5
       - name: Install Node.js dependencies
         run: |          
-          "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && (cd docs/themes/hugo-geekdoc && npm ci) || true"
+          "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm --prefix docs/themes/hugo-geekdoc ci || true"
       - name: Configure Git
         run: git config core.quotepath false
       - name: Build with Hugo
