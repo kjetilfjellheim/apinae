@@ -51,15 +51,14 @@ jobs:
         id: pages
         uses: actions/configure-pages@v5
       - name: Install Node.js dependencies
-        run: |
-          cd docs/themes/hugo-geekdoc
-          "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm ci || true"
+        run: |          
+          "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && (cd docs/themes/hugo-geekdoc && npm ci) || true"
       - name: Configure Git
         run: git config core.quotepath false
       - name: Build with Hugo
         run: |
-          cd docs
           hugo \
+            --source docs \
             --gc \
             --baseURL "${{ steps.pages.outputs.base_url }}/" \
             --cacheDir "${{ runner.temp }}/hugo_cache"
