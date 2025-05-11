@@ -52,9 +52,7 @@ jobs:
           node-version: 20
       - name: Install Node.js dependencies
         run: |
-          "pwd"
-          "ls -la"
-          "[[ -f package-lock.json || -f npm-shrinkwrap.json ]] && npm --prefix docs/themes/hugo-geekdoc ci || true"
+          "npm --prefix docs/themes/hugo-geekdoc ci -f package-lock.json || true"
       - name: Configure Git
         run: git config core.quotepath false
       - name: Build with Hugo
