@@ -242,6 +242,10 @@ pub struct RouteRow {
     pub read_timeout: Option<u64>,
     // The connect timeout.
     pub connect_timeout: Option<u64>,
+    // The delay before the request.
+    pub delay_before: Option<u64>,
+    // The delay after the request.
+    pub delay_after: Option<u64>,
 }
 
 impl From<&RouteConfiguration> for RouteRow {
@@ -259,6 +263,8 @@ impl From<&RouteConfiguration> for RouteRow {
             max_tls_version: route.max_tls_version.clone().map(String::from),
             read_timeout: route.read_timeout,
             connect_timeout: route.connect_timeout,
+            delay_before: route.delay_before,
+            delay_after: route.delay_after,
         }
     }
 }
@@ -279,6 +285,8 @@ impl From<&RouteRow> for RouteConfiguration {
             route.max_tls_version.clone().map(TlsVersion::from),
             route.read_timeout,
             route.connect_timeout,
+            route.delay_before,
+            route.delay_after,
         )
     }
 }
@@ -425,7 +433,7 @@ mod test {
 
     #[test]
     fn test_route_row_from_route_configuration() {
-        let route_config = RouteConfiguration::new("url".to_owned(), None, None, false, false, false, Some(TlsVersion::TLSv1_2), Some(TlsVersion::TLSv1_1), None, None);
+        let route_config = RouteConfiguration::new("url".to_owned(), None, None, false, false, false, Some(TlsVersion::TLSv1_2), Some(TlsVersion::TLSv1_1), None, None, Some(10), Some(20));
 
         let route_row = RouteRow::from(&route_config);
 
@@ -438,6 +446,9 @@ mod test {
         assert_eq!(route_row.max_tls_version, Some("TLSv1.1".to_owned()));
         assert_eq!(route_row.read_timeout, None);
         assert_eq!(route_row.connect_timeout, None);
+        assert_eq!(route_row.delay_before, Some(10));
+        assert_eq!(route_row.delay_after, Some(20));
+
     }
 
     /**

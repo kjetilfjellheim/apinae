@@ -900,6 +900,10 @@ pub struct RouteConfiguration {
     pub read_timeout: Option<u64>,
     // Connect timeout
     pub connect_timeout: Option<u64>,
+    // Delay before request in milliseconds
+    pub delay_before: Option<u64>,
+    // Delay after request in milliseconds
+    pub delay_after: Option<u64>,    
 }
 
 impl RouteConfiguration {
@@ -916,6 +920,8 @@ impl RouteConfiguration {
      * `max_tls_version` Maximum TLS version
      * `read_timeout` Read timeout
      * `connect_timeout` Connect timeout
+     * `delay_before` Delay before request in milliseconds
+     * `delay_after` Delay after request in milliseconds
      *
      */
     #[allow(clippy::too_many_arguments)]
@@ -932,8 +938,10 @@ impl RouteConfiguration {
         max_tls_version: Option<TlsVersion>,
         read_timeout: Option<u64>,
         connect_timeout: Option<u64>,
+        delay_before: Option<u64>,
+        delay_after: Option<u64>,
     ) -> Self {
-        RouteConfiguration { url, proxy_url, log, http1_only, accept_invalid_certs, accept_invalid_hostnames, min_tls_version, max_tls_version, read_timeout, connect_timeout }
+        RouteConfiguration { url, proxy_url, log, http1_only, accept_invalid_certs, accept_invalid_hostnames, min_tls_version, max_tls_version, read_timeout, connect_timeout, delay_before, delay_after }
     }
 }
 
@@ -996,7 +1004,7 @@ mod test {
                         Some("/test".to_string()),
                         Some("GET".to_string()),
                         Some("Body".to_string()),
-                        Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None) }),
+                        Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None, Some(10), Some(100)) }),
                     )
                     .unwrap()],
                     None,                    

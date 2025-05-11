@@ -398,7 +398,9 @@ const convertRouteToRequestObject = (routeData) => {
     minTlsVersion: routeData.value.minTlsVersion,
     maxTlsVersion: routeData.value.maxTlsVersion,
     readTimeout: routeData.value.readTimeout ? parseInt(routeData.value.readTimeout) : null,
-    connectTimeout: routeData.value.connectTimeout ? parseInt(routeData.value.connectTimeout) : null
+    connectTimeout: routeData.value.connectTimeout ? parseInt(routeData.value.connectTimeout) : null,
+    delayBefore: routeData.value.delayBefore ? parseInt(routeData.value.delayBefore) : null,
+    delayAfter: routeData.value.delayAfter ? parseInt(routeData.value.delayAfter) : null,
   }
 }
 
@@ -874,6 +876,10 @@ const setSelectedPredefinedSet = (predefinedSet) => {
                                         <dd class="col-sm-4 small">{{ endpoint.route?.readTimeout }}</dd>
                                         <dt class="col-sm-2 small">Connect timeout</dt>
                                         <dd class="col-sm-4 small">{{ endpoint.route?.connectTimeout }}</dd>
+                                        <dt class="col-sm-2 small">Delay before request (ms)</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.delayBefore }}</dd>
+                                        <dt class="col-sm-2 small">Delay after request (ms)</dt>
+                                        <dd class="col-sm-4 small">{{ endpoint.route?.delayAfter }}</dd>                                        
                                       </dl>
                                     </div>
                                   </div>
@@ -1243,8 +1249,6 @@ const setSelectedPredefinedSet = (predefinedSet) => {
               </div>
             </div>
             <div class="col-md-6" v-if="!showEditMockData">
-            </div>
-            <div class="col-md-6" v-if="!showEditMockData">
               <label for="idEditMinTlsVersion" class="form-label small">Min Tls version&nbsp;</label>
               <select id="idEditMinTlsVersion" class="form-select form-select-sm is-valid"
                 v-model="editRouteData.minTlsVersion">
@@ -1269,7 +1273,17 @@ const setSelectedPredefinedSet = (predefinedSet) => {
               <label class="form-label small" for="idEditConnectTimeout">Connect timeout</label>
               <input class="form-control form-control-sm" type="text" id="idEditConnectTimeout"
                 v-model="editRouteData.connectTimeout" :class="validateNumberOptional(editRouteData.connectTimeout)">
+            </div>        
+            <div class="col-md-6" v-if="!showEditMockData">
+              <label class="form-label small" for="idEditBeforeDelay">Delay before request (ms)</label>
+              <input class="form-control form-control-sm" type="text" id="idEditBeforeDelay"
+                v-model="editRouteData.delayBefore" :class="validateNumberOptional(editRouteData.delayBefore)">
             </div>
+            <div class="col-md-6" v-if="!showEditMockData">
+              <label class="form-label small" for="idEditAfterDelay">Delay before after (ms)</label>
+              <input class="form-control form-control-sm" type="test" id="idEditAfterDelay"
+                v-model="editRouteData.delayAfter" :class="validateNumberOptional(editRouteData.delayAfter)">
+            </div>                                  
           </form>
         </div>
         <div class="modal-footer bg-primary-subtle">
