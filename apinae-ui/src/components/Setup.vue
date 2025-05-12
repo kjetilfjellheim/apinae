@@ -489,6 +489,7 @@ const updatePredefinedSet = (oldName, newPredefinedSet) => {
   invoke("update_predefined_set", { setupid: setup.value.id, oldName: oldName, predefinedSet: newPredefinedSet })
     .then((message) => {      
       refresh(setup.value.id);
+      selectedPredefinedSet.value = newPredefinedSet;
     })
     .catch((error) => window.alert(error));
 }
@@ -540,10 +541,13 @@ const REGEXP_PARAM = new RegExp("\\$\\{.*\\}", "g");
 
 //Verify that input is a number. 
 const validateNumberRequired = (str) => {
-  if (str && str.match(REGEXP_PARAM)) {
-    return "is-valid";
+  if (!str || str === undefined || str === null) {
+    return "is-invalid";
   }
   if (typeof str === "number" || (str && (Number.isInteger(str) || (str.length > 0 && !isNaN(str))))) {
+    return "is-valid";
+  }
+  if (str.match(REGEXP_PARAM)) {
     return "is-valid";
   }
   return "is-invalid";
