@@ -6,8 +6,8 @@ use api::update_predefined_set;
 use state::AppData;
 
 use crate::api::{
-    add_endpoint, add_listener, add_server, add_test, clean, confirm_dialog, delete_endpoint, delete_listener, delete_server, delete_test, get_listeners, get_servers, get_test, get_tests, load,
-    load_settings, open_dialog, save, save_as, save_settings, start_test, stop_test, update_endpoint, update_listener, update_server, update_test, get_predefined_sets, add_predefined_set, delete_predefined_set,
+    add_endpoint, add_listener, add_server, add_setup, clean, confirm_dialog, delete_endpoint, delete_listener, delete_server, delete_setup, get_listeners, get_servers, get_setup, get_setups, load,
+    load_settings, open_dialog, save, save_as, save_settings, start_setup, stop_setup, update_endpoint, update_listener, update_server, update_setup, get_predefined_sets, add_predefined_set, delete_predefined_set,
 };
 
 /**
@@ -50,11 +50,11 @@ pub fn run() {
             save,
             save_as,
             clean,
-            get_tests,
-            get_test,
-            update_test,
-            add_test,
-            delete_test,
+            get_setups,
+            get_setup,
+            update_setup,
+            add_setup,
+            delete_setup,
             get_servers,
             update_server,
             add_server,
@@ -72,8 +72,8 @@ pub fn run() {
             update_endpoint,
             confirm_dialog,
             open_dialog,
-            start_test,
-            stop_test,
+            start_setup,
+            stop_setup,
             save_settings,
             load_settings
         ])

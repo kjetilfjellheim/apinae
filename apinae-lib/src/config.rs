@@ -16,8 +16,8 @@ pub struct AppConfiguration {
     pub name: String,
     // The description of the configuration.
     pub description: String,
-    // The test configurations.
-    pub tests: Vec<TestConfiguration>,
+    // the setup configurations.
+    pub setups: Vec<SetupConfiguration>,
 }
 
 impl AppConfiguration {
@@ -26,13 +26,13 @@ impl AppConfiguration {
      *
      * `name` The name of the configuration.
      * `description` The description of the configuration.
-     * `tests` The test configurations.
+     * `setups` The setup configurations.
      *
      * The configuration.
      */
     #[must_use]
-    pub fn new(name: String, description: String, tests: Vec<TestConfiguration>) -> Self {
-        AppConfiguration { name, description, tests }
+    pub fn new(name: String, description: String, setups: Vec<SetupConfiguration>) -> Self {
+        AppConfiguration { name, description, setups }
     }
 
     /**
@@ -49,16 +49,16 @@ impl AppConfiguration {
     /**
      * Update test.
      *
-     * `test_id` The id of the test.
-     * `name` The name of the test.
-     * `description` The description of the test.
-     * `params` The parameters to pass to the test.
+     * `setup_id` The id of the setup.
+     * `name` The name of the setup.
+     * `description` The description of the setup.
+     * `params` The parameters to pass to the setup.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      */
-    pub fn update_test(&mut self, test_id: &str, name: &str, description: &str, params: Option<HashSet<String>>) -> Result<(), ApplicationError> {
-        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+    pub fn update_setup(&mut self, setup_id: &str, name: &str, description: &str, params: Option<HashSet<String>>) -> Result<(), ApplicationError> {
+        let test = self.get_setup(setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
         test.name = name.to_string();
         test.description = description.to_string();
         test.params = params.clone();
@@ -98,65 +98,65 @@ impl AppConfiguration {
     }
 
     /**
-     * Get a test by its ID.
+     * Get a setup by its ID.
      *
-     * `id` The ID of the test.
+     * `id` The ID of the setup.
      *
-     * The test configuration.
+     * The setup configuration.
      */
     #[must_use]
-    pub fn get_test(&mut self, test_id: &str) -> Option<&mut TestConfiguration> {
-        self.tests.iter_mut().find(|test| test.id == test_id)
+    pub fn get_setup(&mut self, setup_id: &str) -> Option<&mut SetupConfiguration> {
+        self.setups.iter_mut().find(|test| test.id == setup_id)
     }
 
     /**
-     * Delete test by id.
+     * Delete setup by id.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      */
-    pub fn delete_test(&mut self, test_id: &str) -> Result<(), ApplicationError> {
-        let index = self.tests.iter().position(|test| test.id == test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
-        self.tests.remove(index);
+    pub fn delete_setup(&mut self, setup_id: &str) -> Result<(), ApplicationError> {
+        let index = self.setups.iter().position(|setup| setup.id == setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Setup with id {setup_id} not found.")))?;
+        self.setups.remove(index);
         Ok(())
     }
 
     /**
      * Get a new listener.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `listener_id` The id of the listener.
      *
      * The listener configuration.
      */
-    pub fn get_listener(&mut self, test_id: &str, listener_id: &str) -> Option<TcpListenerData> {
-        self.get_test(test_id).and_then(|test| test.listeners.iter_mut().find(|listener| listener.id == listener_id).cloned())
+    pub fn get_listener(&mut self, setup_id: &str, listener_id: &str) -> Option<TcpListenerData> {
+        self.get_setup(setup_id).and_then(|setup| setup.listeners.iter_mut().find(|listener| listener.id == listener_id).cloned())
     }
 
     /**
      * Delete listener by id.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `listener_id` The id of the listener.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      * An error if the listener could not be found.
      *
      */
-    pub fn delete_listener(&mut self, test_id: &str, listener_id: &str) -> Result<(), ApplicationError> {
-        let test: &mut TestConfiguration = self.get_test(test_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
-        let index = test.listeners.iter().position(|listener| listener.id == listener_id).ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
-        test.listeners.remove(index);
+    pub fn delete_listener(&mut self, setup_id: &str, listener_id: &str) -> Result<(), ApplicationError> {
+        let setup: &mut SetupConfiguration = self.get_setup(setup_id).ok_or(ApplicationError::CouldNotFind(format!("Setup with id {setup_id} not found.")))?;
+        let index = setup.listeners.iter().position(|listener| listener.id == listener_id).ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
+        setup.listeners.remove(index);
         Ok(())
     }
 
     /**
      * Update the listener configuration.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `listener_id` The id of the listener.
      * `file` The file to read from.
      * `data` The data to return. If this is set, the file will be ignored.
@@ -171,7 +171,7 @@ impl AppConfiguration {
     #[allow(clippy::too_many_arguments)]
     pub fn update_listener(
         &mut self,
-        test_id: &str,
+        setup_id: &str,
         listener_id: &str,
         file: Option<String>,
         data: Option<String>,
@@ -181,7 +181,7 @@ impl AppConfiguration {
         close_connection: CloseConnectionWhen,
     ) -> Result<(), ApplicationError> {
         let listener = self
-            .get_test(test_id)
+            .get_setup(setup_id)
             .and_then(|test| test.listeners.iter_mut().find(|listener| listener.id == listener_id))
             .ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
         listener.file = file;
@@ -196,63 +196,63 @@ impl AppConfiguration {
     /**
      * Get a server by its ID.
      *
-     * `test_id` The ID of the test.
+     * `setup_id` The ID of the setup.
      * `server_id` The ID of the server.
      *
      * The server configuration.
      */
-    pub fn get_server(&mut self, test_id: &str, server_id: &str) -> Option<&mut ServerConfiguration> {
-        self.get_test(test_id).and_then(|test| test.get_server(server_id))
+    pub fn get_server(&mut self, setup_id: &str, server_id: &str) -> Option<&mut ServerConfiguration> {
+        self.get_setup(setup_id).and_then(|test| test.get_server(server_id))
     }
 
     /**
      * Delete server by id.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `server_id` The id of the server.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      */
-    pub fn delete_server(&mut self, test_id: &str, server_id: &str) -> Result<(), ApplicationError> {
-        let test: &mut TestConfiguration = self.get_test(test_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+    pub fn delete_server(&mut self, setup_id: &str, server_id: &str) -> Result<(), ApplicationError> {
+        let test: &mut SetupConfiguration = self.get_setup(setup_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
         test.delete_server(server_id)
     }
 
     /**
      * Get an endpoint by its ID.
      *
-     * `test_id` The ID of the test.
+     * `setup_id` The ID of the setup.
      * `server_id` The ID of the server.
      * `endpoint_id` The ID of the endpoint.
      *
      * The endpoint configuration.
      */
-    pub fn get_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Option<&mut EndpointConfiguration> {
-        self.get_server(test_id, server_id).and_then(|server| server.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id))
+    pub fn get_endpoint(&mut self, setup_id: &str, server_id: &str, endpoint_id: &str) -> Option<&mut EndpointConfiguration> {
+        self.get_server(setup_id, server_id).and_then(|server| server.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id))
     }
 
     /**
      * Delete endpoint by id.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `server_id` The id of the server.
      * `endpoint_id` The id of the endpoint.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      * An error if the server could not be found.
      * An error if the endpoint could not be found.
      */
-    pub fn delete_endpoint(&mut self, test_id: &str, server_id: &str, endpoint_id: &str) -> Result<(), ApplicationError> {
-        let server: &mut ServerConfiguration = self.get_server(test_id, server_id).ok_or(ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
+    pub fn delete_endpoint(&mut self, setup_id: &str, server_id: &str, endpoint_id: &str) -> Result<(), ApplicationError> {
+        let server: &mut ServerConfiguration = self.get_server(setup_id, server_id).ok_or(ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
         server.delete_endpoint(endpoint_id)
     }
 
     /**
      * Update the server configuration.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `server_id` The id of the server.
      * `endpoint_id` The id of the endpoint.
      * `path_expression` The path expression for the apinae API. This is a regular expression.
@@ -261,14 +261,14 @@ impl AppConfiguration {
      * `route` The route configuration.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      * An error if the server could not be found.
      * An error if the endpoint could not be found.
      */
     #[allow(clippy::too_many_arguments)]
     pub fn update_endpoint(
         &mut self,
-        test_id: &str,
+        setup_id: &str,
         server_id: &str,
         endpoint_id: &str,
         path_expression: Option<String>,
@@ -276,7 +276,7 @@ impl AppConfiguration {
         method: Option<String>,
         endpoint_type: Option<EndpointType>,
     ) -> Result<(), ApplicationError> {
-        let endpoint = self.get_endpoint(test_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
+        let endpoint = self.get_endpoint(setup_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
         endpoint.path_expression = path_expression;
         endpoint.method = method;
         endpoint.endpoint_type = endpoint_type;
@@ -285,31 +285,31 @@ impl AppConfiguration {
     }
 
     /**
-     * Add parameter to the test.
+     * Add parameter to the setup.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `param` The parameter to add.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      */
-    pub fn add_param(&mut self, test_id: &str, param: String) -> Result<(), ApplicationError> {
-        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+    pub fn add_param(&mut self, setup_id: &str, param: String) -> Result<(), ApplicationError> {
+        let test = self.get_setup(setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
         test.add_param(param);
         Ok(())
     }
 
     /**
-     * Remove parameter from the test.
+     * Remove parameter from the setup.
      *
-     * `test_id` The id of the test.
+     * `setup_id` The id of the setup.
      * `param` The parameter to remove.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      */
-    pub fn remove_param(&mut self, test_id: &str, param: &str) -> Result<(), ApplicationError> {
-        let test = self.get_test(test_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {test_id} not found.")))?;
+    pub fn remove_param(&mut self, setup_id: &str, param: &str) -> Result<(), ApplicationError> {
+        let test = self.get_setup(setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
         test.remove_param(param);
         Ok(())
     }
@@ -320,32 +320,32 @@ impl AppConfiguration {
  */
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
-pub struct TestConfiguration {
-    // The ID of the test. This is a UUID automatically generated.
+pub struct SetupConfiguration {
+    // The ID of the setup. This is a UUID automatically generated.
     pub id: String,
-    // The name of the test.
+    // The name of the setup.
     pub name: String,
-    // The description of the test.
+    // The description of the setup.
     pub description: String,
     // The server configurations.
     pub servers: Vec<ServerConfiguration>,
     // TCP listeners
     pub listeners: Vec<TcpListenerData>,
-    // The parameters to pass to the test.
+    // The parameters to pass to the setup.
     pub params: Option<HashSet<String>>,
     // Predefined sets of parameters.
     pub predefined_params: Option<Vec<PredefinedSet>>,
 }
 
-impl TestConfiguration {
+impl SetupConfiguration {
     /**
      * Create a new test configuration.
      *
-     * `name` The name of the test.
-     * `description` The description of the test.
+     * `name` The name of the setup.
+     * `description` The description of the setup.
      * `servers` The server configurations.
      * `listeners` The TCP listeners.
-     * `params` The parameters to pass to the test.
+     * `params` The parameters to pass to the setup.
      * `predefined_params` The predefined sets of parameters.
      *
      * # Errors
@@ -353,14 +353,14 @@ impl TestConfiguration {
      */
     pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>, params: Option<HashSet<String>>, predefined_params: Option<Vec<PredefinedSet>>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(TestConfiguration { id, name, description, servers, listeners, params, predefined_params })
+        Ok(SetupConfiguration { id, name, description, servers, listeners, params, predefined_params })
     }
 
     /**
-     * Update the test configuration.
+     * Update the setup configuration.
      *
-     * `name` The name of the test.
-     * `description` The description of the test.
+     * `name` The name of the setup.
+     * `description` The description of the setup.
      */
     pub fn update(&mut self, name: String, description: String) {
         self.name = name;
@@ -382,7 +382,7 @@ impl TestConfiguration {
      * `server_id` The id of the server.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      * An error if the server could not be found.
      */
     pub fn delete_server(&mut self, server_id: &str) -> Result<(), ApplicationError> {
@@ -392,7 +392,7 @@ impl TestConfiguration {
     }
 
     /**
-     * Add a parameter to the test.
+     * Add a parameter to the setup.
      *
      * `param` The parameter to add.
      */
@@ -411,7 +411,7 @@ impl TestConfiguration {
         }
     }
     /**
-     * Delete a parameter from the test.
+     * Delete a parameter from the setup.
      *
      * `param` The parameter to delete.
      */
@@ -590,7 +590,7 @@ impl HttpsConfiguration {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ServerConfiguration {
-    // The ID of the test. This is a UUID automatically generated.
+    // The ID of the setup. This is a UUID automatically generated.
     pub id: String,
     // The name of the server.
     pub name: String,
@@ -636,7 +636,7 @@ impl ServerConfiguration {
      * `endpoint_id` The id of the endpoint.
      *
      * # Errors
-     * An error if the test could not be found.
+     * An error if the setup could not be found.
      * An error if the server could not be found.
      * An error if the endpoint could not be found.
      */
@@ -653,7 +653,7 @@ impl ServerConfiguration {
 #[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EndpointConfiguration {
-    // The ID of the test. This is a UUID automatically generated.
+    // The ID of the setup. This is a UUID automatically generated.
     pub id: String,
     // Path expression for the apinae API. This is a regular expression.
     pub path_expression: Option<String>,
@@ -994,7 +994,7 @@ mod test {
         let configuration = AppConfiguration::new(
             "Test Configuration".to_string(),
             "Test Configuration Description".to_string(),
-            vec![TestConfiguration::new(
+            vec![SetupConfiguration::new(
                 "Test".to_string(),
                 "Test Description".to_string(),
                 vec![ServerConfiguration::new(
@@ -1019,18 +1019,18 @@ mod test {
 
         assert_eq!(configuration.name, "Test Configuration");
         assert_eq!(configuration.description, "Test Configuration Description");
-        assert_eq!(configuration.tests.len(), 1);
-        assert_eq!(configuration.tests[0].name, "Test");
-        assert_eq!(configuration.tests[0].description, "Test Description");
-        assert_eq!(configuration.tests[0].servers.len(), 1);
-        assert_eq!(configuration.tests[0].servers[0].name, "Server");
-        assert_eq!(configuration.tests[0].servers[0].http_port, Some(8080));
-        assert_eq!(configuration.tests[0].servers[0].endpoints.len(), 1);
-        assert_eq!(configuration.tests[0].servers[0].endpoints[0].path_expression, Some("/test".to_owned()));
-        assert_eq!(configuration.tests[0].servers[0].endpoints[0].method, Some("GET".to_owned()));
-        assert_eq!(configuration.tests[0].servers[0].endpoints[0].body_expression, Some("Body".to_owned()));
+        assert_eq!(configuration.setups.len(), 1);
+        assert_eq!(configuration.setups[0].name, "Test");
+        assert_eq!(configuration.setups[0].description, "Test Description");
+        assert_eq!(configuration.setups[0].servers.len(), 1);
+        assert_eq!(configuration.setups[0].servers[0].name, "Server");
+        assert_eq!(configuration.setups[0].servers[0].http_port, Some(8080));
+        assert_eq!(configuration.setups[0].servers[0].endpoints.len(), 1);
+        assert_eq!(configuration.setups[0].servers[0].endpoints[0].path_expression, Some("/test".to_owned()));
+        assert_eq!(configuration.setups[0].servers[0].endpoints[0].method, Some("GET".to_owned()));
+        assert_eq!(configuration.setups[0].servers[0].endpoints[0].body_expression, Some("Body".to_owned()));
         assert_eq!(
-            configuration.tests[0].servers[0].endpoints[0].endpoint_type,
+            configuration.setups[0].servers[0].endpoints[0].endpoint_type,
             Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None, Some(10), Some(100)) })
         );
     }
@@ -1043,7 +1043,7 @@ mod test {
         let configuration = AppConfiguration::new(
             "Test Configuration".to_string(),
             "Test Configuration Description".to_string(),
-            vec![TestConfiguration::new(
+            vec![SetupConfiguration::new(
                 "Test".to_string(),
                 "Test Description".to_string(),
                 vec![ServerConfiguration::new(
@@ -1075,9 +1075,9 @@ mod test {
     #[test]
     fn test_save_load() {
         let configuration = AppConfiguration::new(
-            "Test Configuration".to_string(),
-            "Test Configuration Description".to_string(),
-            vec![TestConfiguration::new(
+            "Setup Configuration".to_string(),
+            "Setup Configuration Description".to_string(),
+            vec![SetupConfiguration::new(
                 "Test".to_string(),
                 "Test Description".to_string(),
                 vec![ServerConfiguration::new(

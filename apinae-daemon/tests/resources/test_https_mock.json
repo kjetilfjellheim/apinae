@@ -1,7 +1,7 @@
 {
   "name": "Test Configuration",
   "description": "Test Configuration Description",
-  "tests": [
+  "setups": [
     {
       "id": "1",
       "name": "Test",

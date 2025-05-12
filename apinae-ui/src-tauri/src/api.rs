@@ -4,18 +4,18 @@ use std::{collections::HashMap, path::Path};
 use crate::model::PredefinedSet;
 use crate::AppData;
 use crate::{
-    model::{EndpointRow, HttpServerRow, TcpListenerRow, TestRow},
+    model::{EndpointRow, HttpServerRow, TcpListenerRow, SetupRow},
     state::ProcessData,
 };
 use apinae_lib::{
-    config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration},
+    config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration},
     settings::Settings,
 };
 use tauri::{AppHandle, State};
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
 /**
- * Default name for new tests, servers, listeners and endpoints.
+ * Default name for new setups, servers, listeners and endpoints.
  */
 const DEFAULT_NAME: &str = "Untitled";
 /**
@@ -120,101 +120,101 @@ pub async fn clean(app: AppHandle, app_data: State<'_, AppData>) -> Result<AppCo
 }
 
 /**
- * Gets the tests.
+ * Gets the setups.
  *
  * `app_data` The application data.
  *
  * Returns:
- * The tests.
+ * The setups.
  *
  * # Errors
  * If the configuration data could not be locked.
  */
 #[tauri::command]
-pub async fn get_tests(app_data: State<'_, AppData>) -> Result<Vec<TestRow>, String> {
+pub async fn get_setups(app_data: State<'_, AppData>) -> Result<Vec<SetupRow>, String> {
     let data = get_configuration_data(&app_data)?;
     let process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    let tests = data
-        .tests
+    let setups = data
+        .setups
         .iter()
-        .map(|test| TestRow::from(test.clone()))
-        .map(|mut test_row| {
-            test_row.process_id = process_data.get(&test_row.id).map(|process_data| process_data.process_id);
-            test_row
+        .map(|setup| SetupRow::from(setup.clone()))
+        .map(|mut setup_row| {
+            setup_row.process_id = process_data.get(&setup_row.id).map(|process_data| process_data.process_id);
+            setup_row
         })
         .collect();
-    Ok(tests)
+    Ok(setups)
 }
 
 /**
- * Gets a test.
+ * Gets a setup.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * Returns:
- * The test.
+ * The setup.
  *
  * # Errors
- * If the test could not be found.
+ * If the setup could not be found.
  */
 #[tauri::command]
-pub async fn get_test(app_data: State<'_, AppData>, testid: &str) -> Result<TestRow, String> {
+pub async fn get_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<SetupRow, String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Could not find test")?;
-    Ok(TestRow::from(test.clone()))
+    let setup = data.get_setup(setupid).ok_or("Could not find setup")?;
+    Ok(SetupRow::from(setup.clone()))
 }
 
 /**
- * Adds a test.
+ * Adds a setup.
  *
  * `app_data` The application data.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be added.
+ * If the setup could not be added.
  */
 #[tauri::command]
-pub async fn add_test(app_data: State<'_, AppData>) -> Result<(), String> {
+pub async fn add_setup(app_data: State<'_, AppData>) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.tests.push(TestConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new(), Vec::new(), None, None).map_err(|err| err.to_string())?);
+    data.setups.push(SetupConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new(), Vec::new(), None, None).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
 /**
- * Updates a test.
+ * Updates a setup.
  *
  * `app_data` The application data.
- * `testid` The test id.
- * `test` The test.
+ * `setupid` The setup id.
+ * `setup` The setup.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be updated.
+ * If the setup could not be updated.
  */
 #[tauri::command]
-pub async fn update_test(app_data: State<'_, AppData>, testid: &str, test: TestRow) -> Result<(), String> {
+pub async fn update_setup(app_data: State<'_, AppData>, setupid: &str, setup: SetupRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.update_test(testid, test.name.as_str(), test.description.as_str(), test.params.map(|f| f.iter().cloned().collect::<HashSet<_>>())).map_err(|err| err.to_string())?;
+    data.update_setup(setupid, setup.name.as_str(), setup.description.as_str(), setup.params.map(|f| f.iter().cloned().collect::<HashSet<_>>())).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
 
 /**
- * Deletes a test.
+ * Deletes a setup.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be deleted.
+ * If the setup could not be deleted.
  */
 #[tauri::command]
-pub async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
+pub async fn delete_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.delete_test(testid).map_err(|err| err.to_string())?;
+    data.delete_setup(setupid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -223,21 +223,21 @@ pub async fn delete_test(app_data: State<'_, AppData>, testid: &str) -> Result<(
  * Gets the predefined sets.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * Returns:
  * The predefined sets.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  */
 #[tauri::command]
-pub async fn get_predefined_sets(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<PredefinedSet>, String> {
+pub async fn get_predefined_sets(app_data: State<'_, AppData>, setupid: &str) -> Result<Vec<PredefinedSet>, String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Test not found")?;
+    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
     let mut sets: Vec<PredefinedSet> = Vec::new();    
-    if let Some(predefined_params) = &test.predefined_params {
+    if let Some(predefined_params) = &setup.predefined_params {
         for predefined_set in predefined_params {
             let set = PredefinedSet::new(&predefined_set.name.clone(), predefined_set.values.clone());
             sets.push(set);
@@ -250,18 +250,18 @@ pub async fn get_predefined_sets(app_data: State<'_, AppData>, testid: &str) -> 
  * Adds a predefined set.
  * 
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * 
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the predefined set could not be added.
  */
 #[tauri::command]
-pub async fn add_predefined_set(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
+pub async fn add_predefined_set(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Test not found")?;
-    test.add_new_predefined_param_set().map_err(|err| err.to_string())?;
+    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
+    setup.add_new_predefined_param_set().map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(()) 
 }
@@ -270,19 +270,19 @@ pub async fn add_predefined_set(app_data: State<'_, AppData>, testid: &str) -> R
  * Deletes a predefined set.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `name` The name of the predefined set.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the predefined set could not be deleted.
  */
 #[tauri::command]
-pub fn delete_predefined_set(app_data: State<'_, AppData>, testid: &str, name: &str) -> Result<(), String> {
+pub fn delete_predefined_set(app_data: State<'_, AppData>, setupid: &str, name: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Test not found")?;
-    test.delete_predefined_param_set(name).map_err(|err| err.to_string())?;
+    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
+    setup.delete_predefined_param_set(name).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -291,20 +291,20 @@ pub fn delete_predefined_set(app_data: State<'_, AppData>, testid: &str, name: &
  * Updates a predefined set.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `old_name` The old name of the predefined set.
  * `predified_set` The predefined set.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the predefined set could not be updated.
  */
 #[tauri::command]
-pub fn update_predefined_set(app_data: State<'_, AppData>, testid: &str, old_name: &str, predefined_set: PredefinedSet) -> Result<(), String> {
+pub fn update_predefined_set(app_data: State<'_, AppData>, setupid: &str, old_name: &str, predefined_set: PredefinedSet) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Test not found")?;
-    test.update_predefined_param_set(old_name, &predefined_set.name, predefined_set.values.clone()).map_err(|err| err.to_string())?;
+    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
+    setup.update_predefined_param_set(old_name, &predefined_set.name, predefined_set.values.clone()).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -313,20 +313,20 @@ pub fn update_predefined_set(app_data: State<'_, AppData>, testid: &str, old_nam
  * Gets the servers.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * Returns:
  * The servers.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  */
 #[tauri::command]
-pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<HttpServerRow>, String> {
+pub async fn get_servers(app_data: State<'_, AppData>, setupid: &str) -> Result<Vec<HttpServerRow>, String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Test not found")?;
-    let http_servers = test.servers.iter().map(HttpServerRow::from).collect();
+    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
+    let http_servers = setup.servers.iter().map(HttpServerRow::from).collect();
     Ok(http_servers)
 }
 
@@ -334,19 +334,19 @@ pub async fn get_servers(app_data: State<'_, AppData>, testid: &str) -> Result<V
  * Updates a server.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `serverid` The server id.
  * `httpserver` The server.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the server could not be updated.
  */
 #[tauri::command]
-pub async fn update_server(app_data: State<'_, AppData>, testid: &str, serverid: &str, httpserver: HttpServerRow) -> Result<(), String> {
+pub async fn update_server(app_data: State<'_, AppData>, setupid: &str, serverid: &str, httpserver: HttpServerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let server = data.get_server(testid, serverid).ok_or("Test not found")?;
+    let server = data.get_server(setupid, serverid).ok_or("Setup not found")?;
     let https_config: Option<HttpsConfiguration> = httpserver.https_config.map(std::convert::Into::into);
     server.update(httpserver.name, httpserver.http_port, https_config);
     update_data(&app_data, Some(data))?;
@@ -357,18 +357,18 @@ pub async fn update_server(app_data: State<'_, AppData>, testid: &str, serverid:
  * Deletes a server.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `serverid` The server id.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the server could not be deleted.
  */
 #[tauri::command]
-pub async fn delete_server(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
+pub async fn delete_server(app_data: State<'_, AppData>, setupid: &str, serverid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.delete_server(testid, serverid).map_err(|err| err.to_string())?;
+    data.delete_server(setupid, serverid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -377,18 +377,18 @@ pub async fn delete_server(app_data: State<'_, AppData>, testid: &str, serverid:
  * Adds a server.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the server could not be added.
  */
 #[tauri::command]
-pub async fn add_server(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
+pub async fn add_server(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Test not found")?;
-    test.servers.push(ServerConfiguration::new(DEFAULT_NAME.to_owned(), None, Vec::new(), None).map_err(|err| err.to_string())?);
+    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
+    setup.servers.push(ServerConfiguration::new(DEFAULT_NAME.to_owned(), None, Vec::new(), None).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -397,20 +397,20 @@ pub async fn add_server(app_data: State<'_, AppData>, testid: &str) -> Result<()
  * Gets the listeners.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * Returns:
  * The listeners.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  */
 #[tauri::command]
-pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result<Vec<TcpListenerRow>, String> {
+pub async fn get_listeners(app_data: State<'_, AppData>, setupid: &str) -> Result<Vec<TcpListenerRow>, String> {
     let data = get_configuration_data(&app_data)?;
-    let test = data.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
-    let tcp_listeners = test.listeners.iter().map(TcpListenerRow::from).collect();
+    let setup = data.setups.iter().find(|t| t.id == setupid).ok_or("Setup not found")?;
+    let tcp_listeners = setup.listeners.iter().map(TcpListenerRow::from).collect();
     Ok(tcp_listeners)
 }
 
@@ -418,20 +418,20 @@ pub async fn get_listeners(app_data: State<'_, AppData>, testid: &str) -> Result
  * Updates a listener.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `listenerid` The listener id.
  * `tcplistener` The listener.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the listener could not be updated.
  */
 #[tauri::command]
-pub async fn update_listener(app_data: State<'_, AppData>, testid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
+pub async fn update_listener(app_data: State<'_, AppData>, setupid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     data.update_listener(
-        testid,
+        setupid,
         listenerid,
         tcplistener.file,
         tcplistener.data,
@@ -449,18 +449,18 @@ pub async fn update_listener(app_data: State<'_, AppData>, testid: &str, listene
  * Deletes a listener.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `listenerid` The listener id.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the listener could not be deleted.
  */
 #[tauri::command]
-pub async fn delete_listener(app_data: State<'_, AppData>, testid: &str, listenerid: &str) -> Result<(), String> {
+pub async fn delete_listener(app_data: State<'_, AppData>, setupid: &str, listenerid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.delete_listener(testid, listenerid).map_err(|err| err.to_string())?;
+    data.delete_listener(setupid, listenerid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -469,18 +469,18 @@ pub async fn delete_listener(app_data: State<'_, AppData>, testid: &str, listene
  * Adds a listener.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the listener could not be added.
  */
 #[tauri::command]
-pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<(), String> {
+pub async fn add_listener(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let test = data.get_test(testid).ok_or("Test not found")?;
-    let () = test.listeners.push(TcpListenerData::new(None, None, None, 8000, false, CloseConnectionWhen::AfterResponse).map_err(|err| err.to_string())?);
+    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
+    let () = setup.listeners.push(TcpListenerData::new(None, None, None, 8000, false, CloseConnectionWhen::AfterResponse).map_err(|err| err.to_string())?);
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -489,19 +489,19 @@ pub async fn add_listener(app_data: State<'_, AppData>, testid: &str) -> Result<
  * Adds an endpoint.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `serverid` The server id.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the server could not be found.
  * If the endpoint could not be added.
  */
 #[tauri::command]
-pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str) -> Result<(), String> {
+pub async fn add_endpoint(app_data: State<'_, AppData>, setupid: &str, serverid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    let server = data.get_server(testid, serverid).ok_or("Server not found")?;
+    let server = data.get_server(setupid, serverid).ok_or("Server not found")?;
     server.endpoints.push(
         EndpointConfiguration::new(
             Some("/".to_owned()),
@@ -519,20 +519,20 @@ pub async fn add_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: 
  * Deletes an endpoint.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `serverid` The server id.
  * `endpointid` The endpoint id.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the server could not be found.
  * If the endpoint could not be deleted.
  */
 #[tauri::command]
-pub async fn delete_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str, endpointid: &str) -> Result<(), String> {
+pub async fn delete_endpoint(app_data: State<'_, AppData>, setupid: &str, serverid: &str, endpointid: &str) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
-    data.delete_endpoint(testid, serverid, endpointid).map_err(|err| err.to_string())?;
+    data.delete_endpoint(setupid, serverid, endpointid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -541,20 +541,20 @@ pub async fn delete_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
  * Updates an endpoint.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  * `serverid` The server id.
  * `endpointid` The endpoint id.
  * `endpoint` The endpoint.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
+ * If the setup could not be found.
  * If the server could not be found.
  * If the endpoint could not be updated.
  */
 #[allow(clippy::manual_map)]
 #[tauri::command]
-pub async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRow) -> Result<(), String> {
+pub async fn update_endpoint(app_data: State<'_, AppData>, setupid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRow) -> Result<(), String> {
     let mut data = get_configuration_data(&app_data)?;
     let endpoint_type = if let Some(mock_response) = &endpoint.mock {
         Some(EndpointType::Mock { configuration: mock_response.into() })
@@ -563,7 +563,7 @@ pub async fn update_endpoint(app_data: State<'_, AppData>, testid: &str, serveri
     } else {
         None
     };
-    data.update_endpoint(testid, serverid, endpointid, endpoint.path_expression, endpoint.body_expression, endpoint.method, endpoint_type).map_err(|err| err.to_string())?;
+    data.update_endpoint(setupid, serverid, endpointid, endpoint.path_expression, endpoint.body_expression, endpoint.method, endpoint_type).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(data))?;
     Ok(())
 }
@@ -597,86 +597,86 @@ pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option
 }
 
 /**
- * Starts a test.
+ * Starts a setup.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * Returns:
- * The test.
+ * The setup.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
- * If the test could not be started.
+ * If the setup could not be found.
+ * If the setup could not be started.
  */
 #[tauri::command]
-pub async fn start_test(app_data: State<'_, AppData>, testid: &str, params: HashMap<String, String>) -> Result<TestRow, String> {
+pub async fn start_setup(app_data: State<'_, AppData>, setupid: &str, params: HashMap<String, String>) -> Result<SetupRow, String> {
     let app_config = get_configuration_data(&app_data)?;
-    let test = app_config.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
+    let setup = app_config.setups.iter().find(|t| t.id == setupid).ok_or("Setup not found")?;
     let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    if let Some(process_data) = process_data.get(testid) {
-        Ok(TestRow {
-            id: test.id.clone(),
-            name: test.name.clone(),
-            description: test.description.clone(),
+    if let Some(process_data) = process_data.get(setupid) {
+        Ok(SetupRow {
+            id: setup.id.clone(),
+            name: setup.name.clone(),
+            description: setup.description.clone(),
             process_id: Some(process_data.process_id),
-            params: test.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
+            params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
         })
     } else {
         let file_path = get_current_file_path(&app_data)?;
         let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
         let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
         let mut process = std::process::Command::new(app_path);
-        let mut process = process.arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(testid);
+        let mut process = process.arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(setupid);
         for (key, value) in params {
             process = process.arg("--param").arg(format!("{key}={value}"));
         }
         let process = process.current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
         let process_id = process.id();
-        process_data.insert(testid.to_owned(), ProcessData::new(process_id, process));
-        Ok(TestRow::new(test.id.as_str(), test.name.as_str(), test.description.as_str(), Some(process_id), test.params.clone()))
+        process_data.insert(setupid.to_owned(), ProcessData::new(process_id, process));
+        Ok(SetupRow::new(setup.id.as_str(), setup.name.as_str(), setup.description.as_str(), Some(process_id), setup.params.clone()))
     }
 }
 
 /**
- * Stops a test.
+ * Stops a setup.
  *
  * `app_data` The application data.
- * `testid` The test id.
+ * `setupid` The setup id.
  *
  * Returns:
- * The test.
+ * The setup.
  *
  * # Errors
  * If the configuration data could not be locked.
- * If the test could not be found.
- * If the test could not be stopped.
+ * If the setup could not be found.
+ * If the setup could not be stopped.
  */
 #[allow(clippy::all)]
 #[tauri::command]
-pub async fn stop_test(app_data: State<'_, AppData>, testid: &str) -> Result<TestRow, String> {
+pub async fn stop_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<SetupRow, String> {
     let app_config = get_configuration_data(&app_data)?;
-    let test = app_config.tests.iter().find(|t| t.id == testid).ok_or("Test not found")?;
+    let setup = app_config.setups.iter().find(|t| t.id == setupid).ok_or("Setup not found")?;
     let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    match processes_data.get_mut(testid) {
+    match processes_data.get_mut(setupid) {
         Some(process_data) => {
             process_data.process.kill().map_err(|err| err.to_string())?;
-            processes_data.remove(testid);
-            Ok(TestRow {
-                id: test.id.clone(),
-                name: test.name.clone(),
-                description: test.description.clone(),
+            processes_data.remove(setupid);
+            Ok(SetupRow {
+                id: setup.id.clone(),
+                name: setup.name.clone(),
+                description: setup.description.clone(),
                 process_id: None,
-                params: test.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
+                params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
             })
         }
-        None => Ok(TestRow {
-            id: test.id.clone(),
-            name: test.name.clone(),
-            description: test.description.clone(),
+        None => Ok(SetupRow {
+            id: setup.id.clone(),
+            name: setup.name.clone(),
+            description: setup.description.clone(),
             process_id: None,
-            params: test.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
+            params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
         }),
     }
 }

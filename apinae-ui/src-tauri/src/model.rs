@@ -1,55 +1,55 @@
 use std::collections::{HashMap, HashSet};
 
-use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, TestConfiguration, TlsVersion};
+use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration, TlsVersion};
 
 /**
- * This struct represents a test row for both request and responses.
+ * This struct represents a setup row for both request and responses.
  */
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct TestRow {
-    // The unique identifier of the test.
+pub struct SetupRow {
+    // The unique identifier of the setup.
     pub id: String,
-    // The name of the test.
+    // The name of the setup.
     pub name: String,
-    // The description of the test.
+    // The description of the setup.
     pub description: String,
-    // The process id of the test.
+    // The process id of the setup.
     pub process_id: Option<u32>,
-    // The parameters of the test.
+    // The parameters of the setup.
     pub params: Option<Vec<String>>,    
 }
 
-impl TestRow {
+impl SetupRow {
     /**
-     * Create a new test row.
+     * Create a new setup row.
      *
      * # Arguments
-     * `id` - The unique identifier of the test.
-     * `name` - The name of the test.
-     * `description` - The description of the test.
-     * `process_id` - The process id of the test.
-     * `params` - The parameters of the test.
+     * `id` - The unique identifier of the setup.
+     * `name` - The name of the setup.
+     * `description` - The description of the setup.
+     * `process_id` - The process id of the setup.
+     * `params` - The parameters of the setup.
      *
      * # Returns
-     * `TestRow` - The test row.
+     * `SetupRow` - The setup row.
      */
     pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>, params: Option<HashSet<String>>) -> Self {
         Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id, params: params.map(|p| p.into_iter().collect()) }
     }
 }
 
-impl From<TestConfiguration> for TestRow {
+impl From<SetupConfiguration> for SetupRow {
     /**
-     * Convert a test configuration to a test row.
+     * Convert a setup configuration to setup setup row.
      */
-    fn from(test: TestConfiguration) -> Self {
+    fn from(setup: SetupConfiguration) -> Self {
         Self {
-            id: test.id.clone(),
-            name: test.name.clone(),
-            description: test.description.clone(),
+            id: setup.id.clone(),
+            name: setup.name.clone(),
+            description: setup.description.clone(),
             process_id: None,
-            params: test.params.map(|f| {
+            params: setup.params.map(|f| {
                 let mut params = f.iter().cloned().collect::<Vec<_>>();
                 params.sort();
                 params
@@ -387,13 +387,13 @@ mod test {
     use super::*;
 
     #[test]
-    fn test_test_row_from_test_configuration() {
-        let test_config = TestConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new(), None, None).unwrap();
+    fn test_setup_row_from_setup_configuration() {
+        let setup_config = SetupConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new(), None, None).unwrap();
 
-        let test_row = TestRow::from(test_config);
+        let setup_row = SetupRow::from(setup_config);
 
-        assert_eq!(test_row.name, "name");
-        assert_eq!(test_row.description, "description");
+        assert_eq!(setup_row.name, "name");
+        assert_eq!(setup_row.description, "description");
     }
 
     #[test]
