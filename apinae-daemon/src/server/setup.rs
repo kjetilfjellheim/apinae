@@ -1,6 +1,6 @@
 use std::rc::Rc;
 
-use apinae_lib::{config::TestConfiguration, error::ApplicationError};
+use apinae_lib::{config::SetupConfiguration, error::ApplicationError};
 use tokio::sync::RwLock;
 
 use super::{common::StartableServer, http::AppServer, tcp::AppListener};
@@ -24,23 +24,23 @@ impl ServerSetup {
     }
 
     /**
-     * Setup the test with the specified configuration. This also initalizes the app servers.
+     * Setup with the specified configuration. This also initalizes the app servers.
      * 
      * # Arguments
-     * * `test_configuration` - The test configuration to use.
+     * * `setup_configuration` - The setup configuration to use.
      * * `args` - The command line arguments.
      * 
      * # Returns
-     * Ok if the test was setup.
+     * Ok if the setup was successful.
      * 
      * # Errors
-     * An error if the test could not be setup.
+     * An error if the setup was not successful.
      */
-    pub async fn setup_test(&mut self, test_configuration: &TestConfiguration, params: Vec<(String, String)>) -> Result<(), ApplicationError> {
-        log::info!("Setting up test with id {}", &test_configuration.id);
+    pub async fn setup(&mut self, setup_configuration: &SetupConfiguration, params: Vec<(String, String)>) -> Result<(), ApplicationError> {
+        log::info!("Setting up setup with id {}", &setup_configuration.id);
         let servers: Vec<Box<dyn StartableServer>> =
-            test_configuration.servers.iter().map(|server_configuration| Box::new(AppServer::new(server_configuration.clone(), params.clone())) as Box<dyn StartableServer>).collect();
-        let listeners: Vec<Box<dyn StartableServer>> = test_configuration.listeners.iter().map(|tcp_listener_data| Box::new(AppListener::new(tcp_listener_data)) as Box<dyn StartableServer>).collect();
+        setup_configuration.servers.iter().map(|server_configuration| Box::new(AppServer::new(server_configuration.clone(), params.clone())) as Box<dyn StartableServer>).collect();
+        let listeners: Vec<Box<dyn StartableServer>> = setup_configuration.listeners.iter().map(|tcp_listener_data| Box::new(AppListener::new(tcp_listener_data)) as Box<dyn StartableServer>).collect();
         self.servers.write().await.extend(servers);
         self.servers.write().await.extend(listeners);
         log::info!("Test setup complete");
@@ -71,9 +71,9 @@ mod tests {
     use apinae_lib::config::ServerConfiguration;
 
     #[tokio::test]
-    async fn test_setup_test() {
+    async fn test_setup() {
         let mut server_setup = ServerSetup::new();
-        let test_configuration = TestConfiguration {
+        let setup_configuration = SetupConfiguration {
             id: "test".to_string(),
             name: "Test".to_string(),
             description: "Test description".to_string(),
@@ -82,7 +82,7 @@ mod tests {
             params: None,
             predefined_params: None,
         };
-        server_setup.setup_test(&test_configuration, Vec::new()).await.unwrap();
+        server_setup.setup(&setup_configuration, Vec::new()).await.unwrap();
         let servers = server_setup.start_servers().await;
         assert!(servers.is_ok());
     }

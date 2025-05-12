@@ -10,20 +10,20 @@ pub struct Args {
     #[arg(long)]
     pub file: String,
 
-    /// This starts the daemon with the specified test from the file.
+    /// This starts the daemon with the specified setup from the file.
     #[arg(long)]
     pub id: Option<String>,
 
-    /// Lists the available tests in the specified file.
+    /// Lists the available setups in the specified file.
     #[arg(long)]
     pub list: bool,
 
-    /// Parameter values for the test. Multiple parameters can be specified.
+    /// Parameter values for the setup. Multiple parameters can be specified.
     /// This is a key-value pair separated by `=`. For example: `key=value`.
     #[arg(long, value_parser = parse_key_val::<String, String>)]
     pub param: Vec<(String, String)>,
 
-    /// List all parameters for the test.
+    /// List all parameters for the setup.
     #[arg(long)]
     pub list_params: bool,
 
@@ -32,7 +32,7 @@ pub struct Args {
     #[arg(long)]
     pub verify: bool,
 
-    /// Use this predefined set of parameters for the test.
+    /// Use this predefined set of parameters for the setup.
     #[arg(long)]
     pub predefined_set: Option<String>,
 

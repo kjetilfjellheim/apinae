@@ -257,9 +257,19 @@ async fn route_request(route_configuration: &RouteConfiguration, req: HttpReques
 
     let client = get_client(route_configuration)?;
 
+    if let Some(delay_before) = route_configuration.delay_before {
+        log::debug!("Waiting {delay_before}ms before request");
+        tokio::time::sleep(Duration::from_millis(delay_before)).await;
+    }
+
     let response = client.execute(request).await.map_err(|err| ApplicationError::RoutingError(format!("Error executing client request: {err}")))?;
 
     let response = get_response(response).await?;
+
+    if let Some(delay_after) = route_configuration.delay_after {
+        log::debug!("Waiting {delay_after}ms after request");
+        tokio::time::sleep(Duration::from_millis(delay_after)).await;
+    }
 
     Ok(response)
 }
@@ -670,14 +680,14 @@ mod test {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_get_client_no_proxy() {
-        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), None, None, false, false, false, None, None, None, None);
+        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), None, None, false, false, false, None, None, None, None, None, Some(10));
         let client = get_client(&route_configuration);
         assert!(client.is_ok());
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_get_client_with_proxy() {
-        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), Some("http_//proxy.com:9999".to_owned()), None, false, false, false, None, None, None, None);
+        let route_configuration = RouteConfiguration::new("http://localhost:8080".to_owned(), Some("http_//proxy.com:9999".to_owned()), None, false, false, false, None, None, None, None, None, Some(100));
         let client = get_client(&route_configuration);
         assert!(client.is_ok());
     }
