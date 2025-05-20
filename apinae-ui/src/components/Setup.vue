@@ -638,7 +638,7 @@ const setSelectedPredefinedSet = (predefinedSet) => {
       <button class="nav-link" id="httpserver-tab" data-bs-toggle="tab" data-bs-target="#httpserver-tab-pane"
         type="button" role="tab" aria-controls="httpserver-tab-pane" aria-selected="false">Http server</button>
     </li>
-    <li class="nav-item" role="presentation">
+    <li class="nav-item" role="presentation" v-if="setup?.params">
       <button class="nav-link" id="predefined-tab" data-bs-toggle="tab" data-bs-target="#predefined-tab-pane"
         type="button" role="tab" aria-controls="predefined-tab-pane" aria-selected="false">Predefined sets</button>
     </li>
@@ -903,7 +903,7 @@ const setSelectedPredefinedSet = (predefinedSet) => {
       </div>
     </div>
     <div class="tab-pane fade" id="predefined-tab-pane" role="tabpanel" aria-labelledby="predefined-tab-pane"
-      tabindex="0">
+      tabindex="0" v-if="setup?.params">
       <div class="container-fluid main-content p-0 m-0">
         <div class="row p-0 m-0">
           <div class="col-3" style="border-style: inset; height: calc(100vh - 123px);">

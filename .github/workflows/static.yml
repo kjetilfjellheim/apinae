@@ -49,7 +49,8 @@ jobs:
           node-version: 22
       - name: Install Node.js dependencies
         run: |
-          npm --prefix docs/themes/hugo-geekdoc ci -f package-lock.json
+          npm --prefix docs/themes/hugo-geekdoc install
+          npm --prefix docs/themes/hugo-geekdoc run build
       - name: Setup Pages
         id: pages
         uses: actions/configure-pages@v5
@@ -60,21 +61,12 @@ jobs:
           hugo \
             --source docs \
             --gc \
-            --baseURL "${{ steps.pages.outputs.base_url }}/" \
-            --cacheDir "${{ runner.temp }}/hugo_cache"
-      - name: Cache Save
-        id: cache-save
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ runner.temp }}/hugo_cache
-          key: ${{ steps.cache-restore.outputs.cache-primary-key }}
+            --baseURL "${{ steps.pages.outputs.base_url }}/"            
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./docs/public
 
-  # Deployment job
   deploy:
     environment:
       name: github-pages
