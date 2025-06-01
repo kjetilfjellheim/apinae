@@ -570,7 +570,7 @@ const setSelectedPredefinedSet = (predefinedSet) => {
 <style scoped>
 /* The max height is full view height minus (top bar, menu bar and status bar + margins) */
 .main-content {
-  max-height: calc(100vh - 93px);
+  height: 85vh;
   overflow-y: scroll;
 }
 

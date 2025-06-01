@@ -47,7 +47,8 @@ function show_settings() {
 
 main {
   background-color: rgb(10, 0, 100);
-  height: 100vh;
+  height: calc(100vh - 30px);
+  overflow-y: hidden;
 }
 
 .container-fluid {
