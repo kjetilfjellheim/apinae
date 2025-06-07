@@ -24,5 +24,8 @@ reqwest = { version = "0.12.18" }
 log = "0.4.27"
 env_logger = { version = "0.11.8"}
 
+[dev-dependencies]
+futures-util = "0.3"
+
 [profile.release]
 lto = true

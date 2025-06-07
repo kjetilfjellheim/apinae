@@ -19,7 +19,13 @@ use tokio::task::JoinHandle;
 
 use super::common::StartableServer;
 
+/**
+ * The character used to separate query parameters in a URL.
+ */
 const QUERYPARAMSEPARATOR: char = '&';
+/**
+ * The character used to separate key and value in a query parameter.
+ */
 const KEYVALUESEPARATOR: char = '=';
 
 /**
@@ -38,6 +44,7 @@ impl AppServer {
      *
      * # Arguments
      * `server_configuration`: The server configuration.
+     * `params`: The parameters to use for the server.
      *
      * # Returns
      * The created `AppServer`.
@@ -76,7 +83,7 @@ impl AppServer {
     }
 
     /**
-     * Start the server with HTTPS.
+     * Start the server with HTTPS. It uses rust tls to create a secure server.
      *
      * # Returns
      * Ok if the server was started.
@@ -106,7 +113,7 @@ impl AppServer {
 }
 
 /**
- * Handle the request.
+ * Handle the request. All request will be handled by this function.
  *
  * # Arguments
  * `server_configuration`: The server configuration.
@@ -117,13 +124,14 @@ impl AppServer {
  */
 async fn request_handler(app_state: web::Data<AppState>, req: HttpRequest, payload: Option<web::Payload>) -> HttpResponse {
     let payload_string: Option<String> = get_body_as_string(payload).await;
-    for endpoint in &app_state.server_configuration.endpoints {
-        match is_valid_endpoint(req.path(), req.method().as_str(), endpoint, payload_string.clone()) {
-            Ok(true) => match handle_endpoint(endpoint, req, payload_string, app_state.params.clone()).await {
+    let path = get_path(&req);
+    for endpoint in &app_state.server_configuration.endpoints {         
+        match is_valid_endpoint(path.as_str(), req.method().as_str(), endpoint, &payload_string) {
+            Ok(true) => match handle_endpoint(endpoint, &req, &payload_string, app_state.params.clone()).await {
                 Ok(response) => return response,
                 Err(err) => {
                     error!("Error handling request: {err}. Returning not implemented");
-                    return HttpResponse::NotImplemented().body("Not implemented");
+                    return get_non_implemented_response();
                 }
             },
             Ok(false) => {}
@@ -134,11 +142,43 @@ async fn request_handler(app_state: web::Data<AppState>, req: HttpRequest, paylo
         }
     }
     info!("No endpoints found: Returning not implemented");
-    HttpResponse::NotImplemented().body("Not implemented")
+    get_non_implemented_response()
 }
 
 /**
- * Get the payload as a string.
+ * Get the not implemented response.
+ * The response will have a status code of 501 Not Implemented and a body with the message "Not implemented".
+ *
+ * # Returns
+ * The not implemented response.
+ */
+fn get_non_implemented_response() -> HttpResponse {
+    HttpResponse::NotImplemented().body("Not implemented")
+}
+/**
+ * Get the request path including query from the request object.
+ * If the query string is not empty and contains more than just an = sign, it will be appended to the path.
+ *
+ * # Arguments
+ * `req`: The request.
+ *
+ * # Returns
+ * The request path.
+ */
+fn get_path(req: &HttpRequest) -> String {
+    let mut path = req.path().to_string();
+    println!("Request path: {path} query: {}", req.query_string());
+    if !req.query_string().is_empty() && req.query_string() != "=" {
+        path.push('?');
+        path.push_str(req.query_string());
+    }
+    path.trim().to_string()
+}
+
+/**
+ * This function will read the payload from the request and convert it to a string.
+ * If the payload is None, it will return None. If the payload is Some, it will read 
+ * the bytes from the payload and convert it to a string.
  *
  * # Arguments
  * `payload`: The payload.
@@ -167,7 +207,8 @@ async fn get_body_as_string(payload: Option<web::Payload>) -> Option<String> {
 }
 
 /**
- * Check if the request is a valid endpoint.
+ * Check if the request is a valid endpoint. This function will check the request path, method, and payload against the endpoint configuration.
+ * If all are true it will return true, otherwise it will return false.
  *
  * # Arguments
  * `request_path`: The request path.
@@ -181,15 +222,19 @@ async fn get_body_as_string(payload: Option<web::Payload>) -> Option<String> {
  * # Errors
  * An error if the endpoint is invalid.
  */
-fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &EndpointConfiguration, payload_string: Option<String>) -> Result<bool, ApplicationError> {
-    let path_result = check_regexp(endpoint.path_expression.clone(), Some(request_path.to_owned()))?;
+fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &EndpointConfiguration, payload_string: &Option<String>) -> Result<bool, ApplicationError> {
+    let path_result = check_regexp(endpoint.path_expression.clone(), &Some(request_path.to_owned()))?;
     let payload_result = check_regexp(endpoint.body_expression.clone(), payload_string)?;
-    let method_result = endpoint.method.as_ref().map_or_else(|| true, |f| f == request_method);
+    let method_result = endpoint.method.clone().map_or_else(|| true, |f| f == request_method);
     Ok(path_result && payload_result && method_result)
 }
 
 /**
- * Check regular expression.
+ * Check regular expression against the specified data.
+ *
+ * If the regular expression is not provided, it will return true.
+ * If the data is not provided, it will return false if a regular expression is defined.
+ * If both are provided, it will check if the data matches the regular expression.
  *
  * # Arguments
  * `regexp`: The regular expression.
@@ -201,20 +246,24 @@ fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &Endpoi
  * # Errors
  * An error if the regular expression is invalid
  */
-fn check_regexp(regexp: Option<String>, data: Option<String>) -> Result<bool, ApplicationError> {
+fn check_regexp(regexp: Option<String>, data: &Option<String>) -> Result<bool, ApplicationError> {
     let regexp = if let Some(regexp) = regexp {
         Regex::new(regexp.as_str()).map_err(|err| ApplicationError::ConfigurationError(format!("Error in regular expression {regexp}: {err}")))?
     } else {
+        // If no regexp is provided, we return true
         return Ok(true);
     };
     let Some(data) = data else {
-        return Ok(true);
+        // If no data is provided, but a regexp is defined, we return false
+        return Ok(false);
     };
-    Ok(regexp.is_match(&data))
+    Ok(regexp.is_match(data))
 }
 
 /**
- * Handle the endpoint.
+ * Handle the endpoint. This function will check the endpoint type and call the appropriate handler either
+ * a mock response or a route request. If it fails to match any endpoint type, it will return a not 
+ * implemented response.
  *
  * # Arguments
  * `endpoint`: The endpoint configuration.
@@ -225,7 +274,7 @@ fn check_regexp(regexp: Option<String>, data: Option<String>) -> Result<bool, Ap
  * # Errors
  * An error if the status code is invalid.
  */
-async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, payload: Option<String>, params: Vec<(String, String)>) -> Result<HttpResponse, ApplicationError> {
+async fn handle_endpoint(endpoint: &EndpointConfiguration, req: &HttpRequest, payload: &Option<String>, params: Vec<(String, String)>) -> Result<HttpResponse, ApplicationError> {
     if let Some(endpoint_type) = &endpoint.endpoint_type {
         match endpoint_type {
             EndpointType::Mock { configuration } => {
@@ -240,7 +289,7 @@ async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, pay
 }
 
 /**
- * Route the request.
+ * Route the request to the configured route configuration.
  *
  * # Arguments
  * `route_configuration`: The route configuration.
@@ -249,11 +298,11 @@ async fn handle_endpoint(endpoint: &EndpointConfiguration, req: HttpRequest, pay
  * # Returns
  * The response.
  */
-async fn route_request(route_configuration: &RouteConfiguration, req: HttpRequest, payload: Option<String>) -> Result<HttpResponse, ApplicationError> {
+async fn route_request(route_configuration: &RouteConfiguration, req: &HttpRequest, payload: Option<String>) -> Result<HttpResponse, ApplicationError> {
     let mut url = route_configuration.url.clone();
     url.push_str(req.path());
 
-    let request = get_request(&req, payload.clone(), url)?;
+    let request = get_request(req, payload.clone(), url)?;
 
     let client = get_client(route_configuration)?;
 
@@ -358,7 +407,7 @@ fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Clien
 }
 
 /**
- * Get request object for client.
+ * Get request object for client. 
  *
  * # Arguments
  * `req`: The original request.
@@ -418,7 +467,9 @@ fn get_request(req: &HttpRequest, payload: Option<String>, url: String) -> Resul
 }
 
 /**
- * Generate a mock response.
+ * Generate a mock response. This function will wait for the specified delay, then build the response based on the 
+ * mock response configuration. It will replace any parameters in the status code, headers, and response body with 
+ * the values from the provided parameters vector.
  *
  * # Arguments
  * `mock_response`: The mock response configuration.
@@ -447,7 +498,8 @@ async fn generate_mock_response(mock_response: &MockResponseConfiguration, param
 }
 
 /**
- * Convert parameters to string.
+ * Convert parameters to string. The parameters are in the format ${key} and will be replaced with the value from 
+ * the parameters vector.
  *
  * # Arguments
  * `value`: The value to convert.
@@ -599,7 +651,7 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_valid_endpoint() {
         let endpoint = EndpointConfiguration::new(Some("^\\/test$".to_string()), Some("GET".to_string()), Some("".to_string()), None).unwrap();
-        assert!(is_valid_endpoint("/test", "GET", &endpoint, Some("body".to_string())).unwrap());
+        assert!(is_valid_endpoint("/test", "GET", &endpoint, &Some("body".to_string())).unwrap());
     }
 
     /**
@@ -699,4 +751,22 @@ mod test {
         let result = convert_params(value, &params);
         assert_eq!(result, "This is a test with value1 and value2");
     }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn check_regexp_test() {
+        assert!(check_regexp(None, &None).unwrap());
+        assert!(check_regexp(None, &Some("123-45-6789".to_string())).unwrap());
+        assert!(!check_regexp(Some(r"^\d{3}-\d{2}-\d{4}$".to_string()), &None).unwrap());
+        assert!(check_regexp(Some(r"^\d{3}-\d{2}-\d{4}$".to_string()), &Some("123-45-6789".to_string())).unwrap());
+        assert!(check_regexp(Some("^\\d{}-\\d{2}-\\d{4}".to_string()), &Some("123-45-6789".to_string())).is_err());
+    }
+
+    #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
+    async fn test_convert_params() {
+        let params = vec![("param1".to_string(), "value1".to_string()), ("param2".to_string(), "value2".to_string())];
+        let value = "This is a test with ${param1} and ${param2}";
+        let result = convert_params(value, &params);
+        assert_eq!(result, "This is a test with value1 and value2");
+    }
+
 }

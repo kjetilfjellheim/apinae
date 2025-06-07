@@ -541,6 +541,9 @@ const REGEXP_PARAM = new RegExp("\\$\\{.*\\}", "g");
 
 //Verify that input is a number. 
 const validateNumberRequired = (str) => {
+  if (typeof str === "number") {
+    return "is-valid";
+  }
   if (!str || str === undefined || str === null) {
     return "is-invalid";
   }

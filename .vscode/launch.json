@@ -4,26 +4,10 @@
             {
                   "type": "lldb",
                   "request": "launch",
-                  "name": "Launch ui",
-                  "program": "${workspaceFolder}/target/debug/apinae-ui",
-                  "args": [],
-                  "cwd": "${workspaceFolder}"
-            },
-            {
-                  "type": "lldb",
-                  "request": "launch",
                   "name": "Debug http",
                   "program": "${workspaceFolder}/target/debug/apinae-daemon",
-                  "args": ["--file", "/home/kjetil/code/apinae/apinae-daemon/tests/resources/test_http_mock_with_proxy.json", "--id", "1"],
+                  "args": ["--file", "/home/kjetil/Documents/test.apinae", "--id", "1748611617048"],
                   "cwd": "${workspaceFolder}"
-            },
-            {
-                  "type": "lldb",
-                  "request": "launch",
-                  "name": "Debug tcp",
-                  "program": "${workspaceFolder}/target/debug/apinae-daemon",
-                  "args": ["--file", "/home/kjetil/code/apinae/apinae-daemon/tests/resources/test_tcp_listener.json", "--id", "1"],
-                  "cwd": "${workspaceFolder}"
-            }            
+            }      
       ]
 }
