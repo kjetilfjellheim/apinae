@@ -573,7 +573,7 @@ const setSelectedPredefinedSet = (predefinedSet) => {
 <style scoped>
 /* The max height is full view height minus (top bar, menu bar and status bar + margins) */
 .main-content {
-  height: 85vh;
+  height: calc(100vh - 150px);
   overflow-y: scroll;
 }
 
@@ -803,97 +803,99 @@ const setSelectedPredefinedSet = (predefinedSet) => {
                                   tlsVersion }}&nbsp;</label>
                             </dd>
                           </dl>
-                        </div>
+                        </div>                    
                         <div class="col-12">
                           <hr class="small">
-                          <div class="btn-group btn-group-sm align-middle small" role="group">
+                        <div class="btn-group btn-group-sm align-middle small" role="group">
                             <button type="button" class="btn btn-sm btn-outline-primary mb-1"
                               @click="addEndpoint(httpServer)"><i class="fa-solid fa-plus"></i>&nbsp;Add
                               endpoint</button>
-                          </div>
-                          <template v-for="endpoint in httpServer.endpoints" :key="endpoint.id">
-                            <div class="card mb-3">
-                              <div class="row g-0">
-                                <div class="col-sm-4 bg-primary-subtle">
-                                  <dl class="row m-0 p-0">
-                                    <dt class="col-sm-12 small">Id</dt>
-                                    <dd class="col-sm-12 small">{{ endpoint.id }}</dd>
-                                    <dt class="col-sm-12 small">Path</dt>
-                                    <dd class="col-sm-12 small">{{ endpoint.pathExpression }}</dd>
-                                    <dt class="col-sm-12 small">Method</dt>
-                                    <dd class="col-sm-12 small">{{ endpoint.method }}</dd>
-                                    <dt class="col-sm-12 small">Body</dt>
-                                    <dd class="col-sm-12 small">{{ endpoint.bodyExpression }}</dd>
-                                    <dt class="col-sm-12 small"></dt>
-                                    <dd class="col-sm-12 small">
-                                      <div class="btn-group btn-group-sm align-middle small" role="group">
-                                        <button type="button" class="btn btn-sm btn-outline-primary"
-                                          @click="editEndpoint(httpServer, endpoint)" data-bs-toggle="modal"
-                                          data-bs-target="#idEditEndpointModel"><i
-                                            class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
-                                        <button class="btn btn-sm btn-outline-danger"
-                                          @click="confirmDeleteEndpoint(httpServer, endpoint)"><i
-                                            class="fa-solid fa-trash"></i>&nbsp;Delete</button>
+                          </div>                              
+                          <div class="accordion accordion-flush" id="accordionHttpServer">
+                            <div class="accordion-item" v-for="endpoint in httpServer.endpoints" :key="endpoint.id"
+                              v-if="httpServer.endpoints?.length > 0">
+                              <h6 class="accordion-header" :id="'endpointHeader' + endpoint.id">
+                                <button class="accordion-button collapsed bg-primary text-light" type="button"
+                                  data-bs-toggle="collapse" :data-bs-target="'#endpoint' + endpoint.id" aria-expanded="false"
+                                  :aria-controls="'endpoint' + endpoint.id">
+                                  <i class="fa-solid fa-cloud"></i>&nbsp;Endpoint: {{ endpoint.id }}&nbsp;&nbsp;&nbsp;Path: {{ endpoint.pathExpression }}&nbsp;&nbsp;&nbsp;Method: {{ endpoint.method }} &nbsp;&nbsp;&nbsp;Body: {{ endpoint.bodyExpression }} 
+                                </button>
+                              </h6>
+                              <div :id="'endpoint' + endpoint.id" class="accordion-collapse collapse"
+                                :aria-labelledby="'endpoint' + endpoint.id" data-bs-parent="#aendpointServer">
+                                <div class="accordion-body">
+                                  <div class="card mb-3">
+                                    <div class="row g-0">
+                                      <div class="col-sm-12">
+                                        <div class="card-body">
+                                          <dd class="col-sm-12 small">
+                                            <div class="btn-group btn-group-sm align-middle small" role="group">
+                                              <button type="button" class="btn btn-sm btn-outline-primary"
+                                                @click="editEndpoint(httpServer, endpoint)" data-bs-toggle="modal"
+                                                data-bs-target="#idEditEndpointModel"><i
+                                                  class="fa-solid fa-file-pen"></i>&nbsp;Edit</button>
+                                              <button class="btn btn-sm btn-outline-danger"
+                                                @click="confirmDeleteEndpoint(httpServer, endpoint)"><i
+                                                  class="fa-solid fa-trash"></i>&nbsp;Delete</button>
+                                            </div>
+                                          </dd>                                    
+                                          <div v-if="endpoint?.mock">
+                                            <dl class="row m-0 p-0">
+                                              <dt class="col-sm-2 col-xl-1 small">Status</dt>
+                                              <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.status }}</dd>
+                                              <dt class="col-sm-2 col-xl-1 small">Delay</dt>
+                                              <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.delay }}</dd>
+                                              <dt class="col-sm-2 col-xl-1 small">Headers</dt>
+                                              <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
+                                                <pre
+                                                  :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'"
+                                                  class="m-0 p-0"
+                                                  style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
+                                              </dd>
+                                              <dt class="col-sm-2  col-xl-1 small" style="height: 8pc;">Body</dt>
+                                              <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
+                                                <pre
+                                                  :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'"
+                                                  class="m-0 p-0"
+                                                  style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
+                                              </dd>
+                                            </dl>
+                                          </div>
+                                          <div v-if="endpoint?.route">
+                                            <dl class="row m-0 p-0">
+                                              <dt class="col-sm-3 col-md-2 col-lg- small">Url</dt>
+                                              <dd class="col-sm-9 col-md-10 col-lg-10 small">&nbsp;{{ endpoint.route?.url }}</dd>
+                                              <dt class="col-sm-3 col-md-2 col-lg- small">Proxy url</dt>
+                                              <dd class="col-sm-9 col-md-10 col-lg-10 small">&nbsp;{{ endpoint.route?.proxyUrl }}</dd>
+                                              <hr class="small">
+                                              <dt class="col-sm-3 col-md-2 col-lg-2 small">Http1 only</dt>
+                                              <dd class="col-sm-9 col-md-10 col-lg-10 small">&nbsp;{{ endpoint.route?.http1Only }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Accept invalid certs</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.acceptInvalidCerts }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Accept invalid hostnames</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.acceptInvalidHostnames }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Min TLS version</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.minTlsVersion }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Max TLS version</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.maxTlsVersion }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Read timeout</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.readTimeout }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Connect timeout</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.connectTimeout }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Delay before request (ms)</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.delayBefore }}</dd>
+                                              <dt class="col-sm-6 col-md-6 col-lg-2 small">Delay after request (ms)</dt>
+                                              <dd class="col-sm-6 col-md-6 col-lg-4 small">&nbsp;{{ endpoint.route?.delayAfter }}</dd>                                        
+                                            </dl>
+                                          </div>
+                                        </div>
                                       </div>
-                                    </dd>
-                                  </dl>
-                                </div>
-                                <div class="col-sm-8">
-                                  <div class="card-body">
-                                    <div v-if="endpoint?.mock">
-                                      <dl class="row m-0 p-0">
-                                        <dt class="col-sm-2 col-xl-1 small">Status</dt>
-                                        <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.status }}</dd>
-                                        <dt class="col-sm-2 col-xl-1 small">Delay</dt>
-                                        <dd class="col-sm-4 col-xl-5 small">{{ endpoint.mock?.delay }}</dd>
-                                        <dt class="col-sm-2 col-xl-1 small">Headers</dt>
-                                        <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre
-                                            :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'"
-                                            class="m-0 p-0"
-                                            style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.headers }}</pre>
-                                        </dd>
-                                        <dt class="col-sm-2  col-xl-1 small" style="height: 8pc;">Body</dt>
-                                        <dd class="col-sm-10  col-xl-5 small shadow-sm bg-body-tertiary rounded">
-                                          <pre
-                                            :style="'max-height:' + settingsData.bodyHeight + '; height: ' + settingsData.bodyHeight + ';'"
-                                            class="m-0 p-0"
-                                            style="overflow-y: scroll; overflow-x: scroll;">{{ endpoint.mock?.response }}</pre>
-                                        </dd>
-                                      </dl>
-                                    </div>
-                                    <div v-if="endpoint?.route">
-                                      <dl class="row m-0 p-0">
-                                        <dt class="col-sm-2 small">Url</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.url }}</dd>
-                                        <dt class="col-sm-2 small">Proxy url</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.proxyUrl }}</dd>
-                                        <dt class="col-sm-2 small">Http1 only</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.http1Only }}</dd>
-                                        <dt class="col-sm-6 small"></dt>
-                                        <dt class="col-sm-2 small">Accept invalid certs</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.acceptInvalidCerts }}</dd>
-                                        <dt class="col-sm-2 small">Accept invalid hostnames</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.acceptInvalidHostnames }}</dd>
-                                        <dt class="col-sm-2 small">Min TLS version</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.minTlsVersion }}</dd>
-                                        <dt class="col-sm-2 small">Max TLS version</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.maxTlsVersion }}</dd>
-                                        <dt class="col-sm-2 small">Read timeout</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.readTimeout }}</dd>
-                                        <dt class="col-sm-2 small">Connect timeout</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.connectTimeout }}</dd>
-                                        <dt class="col-sm-2 small">Delay before request (ms)</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.delayBefore }}</dd>
-                                        <dt class="col-sm-2 small">Delay after request (ms)</dt>
-                                        <dd class="col-sm-4 small">{{ endpoint.route?.delayAfter }}</dd>                                        
-                                      </dl>
                                     </div>
                                   </div>
-                                </div>
+                                </div> 
                               </div>
                             </div>
-                          </template>
+                          </div>            
                         </div>
                       </div>
                     </div>
