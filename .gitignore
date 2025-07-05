@@ -3,3 +3,4 @@ apinae-ui/node_modules/**
 apinae-ui/dist/**
 docs/node_modules/**
 docs/public/**
+node_modules/**
