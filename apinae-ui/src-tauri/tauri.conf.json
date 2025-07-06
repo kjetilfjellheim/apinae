@@ -4,8 +4,8 @@
   "version": "0.1.16",
   "identifier": "net.forgottendonkey.apinae",
   "build": {
-    "beforeDevCommand": "npm run dev",
-    "beforeBuildCommand": "npm run build",
+    "beforeDevCommand": "npm run dev --prefix apinae-ui",
+    "beforeBuildCommand": "npm run build  --prefix apinae-ui",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
