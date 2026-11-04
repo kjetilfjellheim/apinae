@@ -62,7 +62,7 @@ npm run tauri dev
 
 For release
 ```
-cargo tauri build --no-bundle   
+npm run tauri:build:nobundle
 ```
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

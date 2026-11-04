@@ -20,15 +20,6 @@ use tokio::task::JoinHandle;
 use super::common::StartableServer;
 
 /**
- * The character used to separate query parameters in a URL.
- */
-const QUERYPARAMSEPARATOR: char = '&';
-/**
- * The character used to separate key and value in a query parameter.
- */
-const KEYVALUESEPARATOR: char = '=';
-
-/**
  * The `AppServer` struct is used to configure and start the server.
  */
 pub struct AppServer {
@@ -431,8 +422,15 @@ fn get_client(route_configuration: &RouteConfiguration) -> Result<reqwest::Clien
  * ```
  *
  */
-fn get_request(req: &HttpRequest, payload: Option<String>, url: String) -> Result<reqwest::Request, ApplicationError> {
+fn get_request(req: &HttpRequest, payload: Option<String>, mut url: String) -> Result<reqwest::Request, ApplicationError> {
     log::debug!("Creating request");
+
+    if !req.query_string().is_empty() {
+        let separator = if url.contains('?') { '&' } else { '?' };
+        url.push(separator);
+        url.push_str(req.query_string());
+    }
+
     let mut request_builder = reqwest::Client::new()
         .request(Method::from_bytes(req.method().as_str().as_bytes()).map_err(|err| ApplicationError::RoutingError(format!("Failed to map method {}: {err}", req.method().as_str())))?, url);
     request_builder = match req.version() {
@@ -451,17 +449,6 @@ fn get_request(req: &HttpRequest, payload: Option<String>, url: String) -> Resul
         let bytes = payload.clone().into_bytes();
         request_builder = request_builder.body(bytes);
     }
-    request_builder = request_builder.query(
-        &req.query_string()
-            .split(QUERYPARAMSEPARATOR)
-            .map(|x| {
-                let mut parts = x.split(KEYVALUESEPARATOR);
-                let key = parts.next().map_or_else(|| "", |x| x);
-                let value = parts.next().map_or_else(|| "", |x| x);
-                (key.to_owned(), value.to_owned())
-            })
-            .collect::<Vec<(String, String)>>(),
-    );
     let request = request_builder.build().map_err(|err| ApplicationError::RoutingError(format!("Failed to create request: {err}")))?;
     Ok(request)
 }
@@ -767,6 +754,15 @@ mod test {
         let value = "This is a test with ${param1} and ${param2}";
         let result = convert_params(value, &params);
         assert_eq!(result, "This is a test with value1 and value2");
+    }
+
+    #[test]
+    fn test_get_request_preserves_query_string() {
+        let req = actix_web::test::TestRequest::with_uri("/test?token=abc=123&&a=1").to_http_request();
+
+        let request = get_request(&req, None, "http://localhost:8080/test".to_string()).unwrap();
+
+        assert_eq!(request.url().query(), Some("token=abc=123&&a=1"));
     }
 
 }

@@ -4,10 +4,7 @@ import vue from "@vitejs/plugin-vue";
 const host = process.env.TAURI_DEV_HOST;
 
 export default defineConfig({
-
-  plugins: [
-    vue()    
-  ],
+  plugins: [vue()],
 
   // prevent vite from obscuring rust errors
   clearScreen: false,
@@ -34,11 +31,12 @@ export default defineConfig({
   // Env variables starting with the item of `envPrefix` will be exposed in tauri's source code through `import.meta.env`.
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
-    // Tauri uses Chromium on Windows and WebKit on macOS and Linux
+    // Vite 8 + esbuild cannot reliably downlevel some patterns to very old Safari targets.
+    // Keep a modern target for WebKit while preserving Windows WebView2 target.
     target:
       process.env.TAURI_ENV_PLATFORM == 'windows'
         ? 'chrome105'
-        : 'safari13',
+        : 'safari15.4',
     // don't minify for debug builds
     minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
     // produce sourcemaps for debug builds
