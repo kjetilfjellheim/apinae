@@ -37,7 +37,7 @@ jobs:
       - name: Build daemon
         run: cargo build --release 
       - name: Install cargo Tauri
-        run: cargo install tauri-cli --version 2.12.5 --locked
+        run: cargo install tauri-cli --version 2.12.4 --locked
       - name: Build UI
         working-directory: apinae-ui/src-tauri
         run: |
