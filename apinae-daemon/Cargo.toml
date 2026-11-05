@@ -12,20 +12,20 @@ categories = ["testing", "api"]
 
 [dependencies]
 apinae-lib = { path = "../apinae-lib" }
-clap = { version = "4.5.39", features = ["derive"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = { version = "1.0.140" }
-tokio = { version = "1.45.1", features = ["full"] }
-regex = "1.11.1"
-actix-web = { version = "4.11.0", features = ["rustls-0_23"] }
-rustls = { version = "0.23.27", features = ["logging", "tls12"] }
+clap = { version = "4.6.7", features = ["derive"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154" }
+tokio = { version = "1.54.1", features = ["full"] }
+regex = "1.13.1"
+actix-web = { version = "4.18.1", features = ["rustls-0_23"] }
+rustls = { version = "0.23.46", features = ["logging", "tls12"] }
 rustls-pemfile = "2.2.0"
-reqwest = { version = "0.12.18" }
-log = "0.4.27"
-env_logger = { version = "0.11.8"}
+reqwest = { version = "0.13.5" }
+log = "0.4.35"
+env_logger = { version = "0.11.11"}
 
 [dev-dependencies]
-futures-util = "0.3"
+futures-util = "0.3.34"
 
 [profile.release]
 lto = true
