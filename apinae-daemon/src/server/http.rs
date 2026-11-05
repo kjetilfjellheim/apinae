@@ -523,7 +523,7 @@ fn convert_params(value: &str, params: &Vec<(String, String)>) -> String {
 fn ssl_builder(https_config: &HttpsConfiguration) -> Result<ServerConfig, ApplicationError> {
     log::info!("Creating ssl builder");
     let config_builder = ServerConfig::builder_with_protocol_versions(&get_protocol_versions(&https_config.supported_tls_versions));
-    log::debug!("Supported TLS versions: {:?}", &https_config.supported_tls_versions);
+    log::debug!("Supported TLS versions: {:?}", https_config.supported_tls_versions);
 
     let config_builder = match https_config.clone().client_certificate {
         Some(client_certificate) => {

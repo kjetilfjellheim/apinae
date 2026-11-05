@@ -37,7 +37,7 @@ impl ServerSetup {
      * An error if the setup was not successful.
      */
     pub async fn setup(&mut self, setup_configuration: &SetupConfiguration, params: Vec<(String, String)>) -> Result<(), ApplicationError> {
-        log::info!("Setting up setup with id {}", &setup_configuration.id);
+        log::info!("Setting up setup with id {}", setup_configuration.id);
         let servers: Vec<Box<dyn StartableServer>> =
         setup_configuration.servers.iter().map(|server_configuration| Box::new(AppServer::new(server_configuration.clone(), params.clone())) as Box<dyn StartableServer>).collect();
         let listeners: Vec<Box<dyn StartableServer>> = setup_configuration.listeners.iter().map(|tcp_listener_data| Box::new(AppListener::new(tcp_listener_data)) as Box<dyn StartableServer>).collect();
