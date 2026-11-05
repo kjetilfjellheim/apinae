@@ -216,7 +216,7 @@ async fn get_body_as_string(payload: Option<web::Payload>) -> Option<String> {
 fn is_valid_endpoint(request_path: &str, request_method: &str, endpoint: &EndpointConfiguration, payload_string: &Option<String>) -> Result<bool, ApplicationError> {
     let path_result = check_regexp(endpoint.path_expression.clone(), &Some(request_path.to_owned()))?;
     let payload_result = check_regexp(endpoint.body_expression.clone(), payload_string)?;
-    let method_result = endpoint.method.clone().map_or(true, |f| f == request_method);
+    let method_result = endpoint.method.clone().is_none_or(|f| f == request_method);
     Ok(path_result && payload_result && method_result)
 }
 
