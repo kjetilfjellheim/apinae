@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "typecheck": "vue-tsc --noEmit",
     "preview": "vite preview",
     "tauri": "tauri",
     "tauri:build:nobundle": "bash -lc 'ulimit -Sn \"$(ulimit -Hn)\" && cargo tauri build --no-bundle'"
@@ -19,15 +20,17 @@
     "@tauri-apps/api": "2.12.4",
     "@tauri-apps/plugin-opener": "2.7.2",
     "bootstrap": "5.3.8",
-    "tauri": "0.15.0",
-    "vue": "3.5.44",
+    "vue": "3.5.45",
     "vue-router": "5.4.0"
   },
   "devDependencies": {
     "@tauri-apps/cli": "2.12.4",
+    "@types/node": "^26.6.6",
     "@vitejs/plugin-vue": "6.0.10",
     "esbuild": "^0.28.2",
-    "vite": "8.3.5"
+    "typescript": "^5.9.2",
+    "vite": "8.3.6",
+    "vue-tsc": "^3.0.0"
   },
   "allowScripts": {
     "esbuild@0.28.2": true,

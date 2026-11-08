@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 // Required for showing editing modals.
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
 // Required for showing the setup data and updating the setup data.
@@ -7,28 +7,28 @@ import { ref, onMounted } from "vue";
 import { invoke } from "@tauri-apps/api/core";
 
 // Array of setups to display. 
-const setups = ref([]);
+const setups = ref<any[]>([]);
 
 // Initializes the data for editing a setup. This is called when the user clicks the edit button.
 // The data is copied from the setups object to the editSetupData object.
-const editSetupData = ref({});
+const editSetupData = ref<Record<string, any>>({});
 
 // Parameter data for adding a new parameter to the setup.
 // This is called when the user clicks the add button in the edit setup modal.
 const editAddParameter = ref("");
 
 // Modal for editing the run parameters of the setup.
-const editRunParameterModal = ref(null);
+const editRunParameterModal = ref<any>(null);
 
 // Parameter data for the setup.
 // This is called when the user clicks the play button and the setup requires parameters.
-const editRunParameterData = ref({});
+const editRunParameterData = ref<Record<string, any>>({});
 
 // Refreshes the setups array by calling the get_setups function in the backend.
 // This is called when the component is mounted and when a setup is added, updated, or deleted.
 const refresh = () => {
     invoke("get_setups", {})
-        .then((message) => {
+        .then((message: any) => {
             setups.value = message;
         })
         .catch((error) => window.alert(error));
@@ -97,8 +97,8 @@ const initSetup = (setup) => {
 //processId returned by the backend.
 const startSetup = (setup, params) => {
     invoke("start_setup", { setupid: setup.id, params: params })
-        .then((message) => {
-            setup.processId = message.processId
+        .then((message: any) => {
+            setup.processId = message.processId;
         })
         .catch((error) => window.alert(error));
 }
@@ -107,7 +107,7 @@ const startSetup = (setup, params) => {
 //This is called when the user clicks the stop button. The process_id is set to null.
 const stopSetup = (setup) => {
     invoke("stop_setup", { setupid: setup.id })
-        .then((message) => {
+        .then((message: any) => {
             setup.processId = message.processId;
         })
         .catch((error) => window.alert(error));

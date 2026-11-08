@@ -1,18 +1,18 @@
-<script setup>
+<script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import * as bootstrap from "bootstrap";
 
 import settings from "./components/Settings.vue";
 
 const current_file_path = ref("");
-
 const render_route_view = ref(true);
 
 async function load() {
   render_route_view.value = false;
   await invoke("load", {})
     .then((file_path) => {
-      current_file_path.value = file_path;
+      current_file_path.value = file_path as string;
       render_route_view.value = true;
     })
     .catch((error) => window.alert(error));
@@ -32,16 +32,20 @@ async function save_as() {
 
 async function clean() {
   render_route_view.value = false;
-  let data = await invoke("clean", {})
-    .then((message) => {render_route_view.value = true;})
+  await invoke("clean", {})
+    .then(() => {
+      render_route_view.value = true;
+    })
     .catch((error) => window.alert(error));
-} 
-
-function show_settings() {
-  const modal = new bootstrap.Modal(document.getElementById("idSettingsModal"));
-  modal.show();
 }
 
+function show_settings() {
+  const modalElement = document.getElementById("idSettingsModal");
+  if (!modalElement) return;
+
+  const modal = new bootstrap.Modal(modalElement);
+  modal.show();
+}
 </script>
 <style>
 

@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 //Required for showing editing modals.
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
 //Required for calling the rust code.
@@ -8,10 +8,10 @@ import { invoke } from "@tauri-apps/api/core";
 import { onMounted, ref } from "vue";
 
 //The modal for editing settings. Initialized in the onMounted function.
-const editSettingsModal = ref(null);
+const editSettingsModal = ref<any>(null);
 
 //The settings data.
-const settingsData = ref({
+const settingsData = ref<{ apinaeCommand: string; commandType: string; bodyHeight: string }>({
     apinaeCommand: "",
     commandType: "",
     bodyHeight: "8pc",
@@ -20,28 +20,29 @@ const settingsData = ref({
 // Saves the settings. Calls the rust code to save the settings.
 const saveSettings = () => {
     invoke("save_settings", { settings: convertToSettingsRequestObject(settingsData.value) })
-        .then((message) => {
-            editSettingsModal.value.hide();
+        .then(() => {
+            editSettingsModal.value?.hide();
         })
-    .catch((error) => window.alert(error));
-}
+        .catch((error) => window.alert(error));
+};
 
 // Converts the settings data to a request object. The request object is used to call the rust code.
-const convertToSettingsRequestObject = (settingsData) => {
+const convertToSettingsRequestObject = (settingsData: { commandType: string; apinaeCommand: string; bodyHeight: string }) => {
     return {
         apinaePath: settingsData.commandType == 'specific' ? settingsData.apinaeCommand : null,
         bodyHeight: settingsData.bodyHeight,
     };
-}
+};
 
 //Called when the component is mounted. Initializes the editSettingsModal and loads the settings.
 onMounted(() => {
-    editSettingsModal.value = new Modal(document.getElementById("idSettingsModal"));
+    const modalElement = document.getElementById("idSettingsModal");
+    editSettingsModal.value = modalElement ? new Modal(modalElement) : null;
     invoke("load_settings", {})
-        .then((settings) => {
-            settingsData.value.apinaeCommand = settings.apinaePath;
+        .then((settings: any) => {
+            settingsData.value.apinaeCommand = settings.apinaePath ?? "";
             settingsData.value.commandType = settings.apinaePath ? 'specific' : 'installed';
-            settingsData.value.bodyHeight = settings.bodyHeight;
+            settingsData.value.bodyHeight = settings.bodyHeight ?? "8pc";
         })
         .catch((error) => window.alert(error));
 });

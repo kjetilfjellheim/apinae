@@ -1,4 +1,4 @@
-<script setup>
+<script setup lang="ts">
 //Required for showing editing modals.
 import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
 //Required for showing the setup data and updating the setup data.
@@ -12,68 +12,68 @@ import { invoke } from "@tauri-apps/api/core";
 const route = useRoute();
 
 // The setup being displayed
-const setup = ref([]);
+const setup = ref<any>({});
 // Array of all tcp listeners for the setup
-const tcpListeners = ref([]);
+const tcpListeners = ref<any[]>([]);
 // Array of all http servers for the setup
-const httpServers = ref([]);
+const httpServers = ref<any[]>([]);
 // Array of all predefined sets for the setup.
-const predefinedSets = ref([]);
+const predefinedSets = ref<any[]>([]);
 // Data for editing a tcp listener. Data is copied from the tcpListener 
 // object to this object when the user clicks the edit button
-const editTcpListenerData = ref({});
+const editTcpListenerData = ref<Record<string, any>>({});
 // Data for editing a http server. Data is copied from the httpServer
 // object to this object when the user clicks the edit button
-const editHttpServerData = ref({});
+const editHttpServerData = ref<Record<string, any>>({});
 // Data for editing an endpoint. Data is copied from the endpoint object
 // to this object when the user clicks the edit button
-const editEndpointData = ref({});
+const editEndpointData = ref<Record<string, any>>({});
 // Show or hide the https config for the http server. If the http server
 // has an https config, this is set to true, otherwise false
-const showEditHttpsConfig = ref({});
+const showEditHttpsConfig = ref<boolean>(false);
 // Show or hide the mock data for the endpoint when editing. If the endpoint
 // has mock data, this is set to true, otherwise false.
 const showEditMockData = ref(true);
 // Data for editing the https config for the http server. Data is copied
 // from the https_config object to this object when the user clicks the edit button.
 // Null if the http server does not have an https config
-const editHttpsConfig = ref({});
+const editHttpsConfig = ref<Record<string, any>>({});
 // Data for editing the endpoint mock data. Data is copied from the endpoint mock object
 // to this object when the user clicks the edit button. Empty if the endpoint does not have
 // mock data.
-const editMockData = ref({});
+const editMockData = ref<Record<string, any>>({});
 // Data for editing the endpoint route data. Data is copied from the endpoint route object
 // to this object when the user clicks the edit button. Empty if the endpoint does not have
 // route data.
-const editRouteData = ref({});
+const editRouteData = ref<Record<string, any>>({});
 // Supported tls versions for the https config. This is an array of strings
 // with the supported tls versions and is updated in during editing of the https config.
-const editSupportedTlsVersions = ref([]);
+const editSupportedTlsVersions = ref<any[]>([]);
 // Reference to the modal for editing the http server. Implemented as a ref rather than using
 // the modal directly in the button so that we can implement validation when
 // the user clicks the Ok button
-const editHttpServerModal = ref(null);
+const editHttpServerModal = ref<any>(null);
 // Reference to the modal for editing the tcp listener. Implemented as a ref rather than using
 // the modal directly in the button so that we can implement validation when
 // the user clicks the Ok button
-const editTcpListenerModal = ref(null);
+const editTcpListenerModal = ref<any>(null);
 // Reference to the modal for editing the endpoint. Implemented as a ref rather than using
 // the modal directly in the button so that we can implement validation when
 // the user clicks the Ok button
-const editEndpointModal = ref(null);
+const editEndpointModal = ref<any>(null);
 // Reference to the server id for the endpoint being edited. This is used to send the server id
 // to the rust code when updating the endpoint.
-const serverIdEditEndpoint = ref(null);
+const serverIdEditEndpoint = ref<any>(null);
 // Initializes the data for editing a setup. This is called when the user clicks the edit button.
 // The data is copied from the setups object to the editSetupData object.
-const editSetupData = ref({});
+const editSetupData = ref<Record<string, any>>({});
 // Initializes the data for editing a predefined set. This is called when the user clicks the edit button.
 // The data is copied from the predefined set object to the editSelectedPredefinedSet object.
-const editSelectedPredefinedSet = ref({});
+const editSelectedPredefinedSet = ref<Record<string, any>>({});
 // Reference to the selected predefined parameter set.
-const selectedPredefinedSet = ref(null);
+const selectedPredefinedSet = ref<any>(null);
 // Reference to the settings. This is used to set common information in the ui.
-const settingsData = ref({
+const settingsData = ref<Record<string, any>>({
   bodyHeight: "8pc",
 });
 //Initializes the data for editing a setup. This is called when the user clicks the edit button.
@@ -88,26 +88,26 @@ const editAddParameter = ref("");
 //and when the user updates the data. This is because when updating the data we only update the
 //remote rust data, not the local data. This is so that we only have one source of truth for the data.
 //TODO: Only refresh required data, not all data.
-const refresh = (setupId) => {
+const refresh = (setupId: string | string[]) => {
   invoke("get_setup", { setupid: setupId })
-    .then((message) => {
+    .then((message: any) => {
       setup.value = message;
     })
     .catch((error) => window.alert(error));
 
   invoke("get_servers", { setupid: setupId })
-    .then((message) => {
+    .then((message: any) => {
       httpServers.value = message;
     })
     .catch((error) => console.log(error));
 
   invoke("get_listeners", { setupid: setupId })
-    .then((message) => {
+    .then((message: any) => {
       tcpListeners.value = message;
     })
     .catch((error) => console.log(error));
   invoke("get_predefined_sets", { setupid: setupId })
-    .then((message) => {
+    .then((message: any) => {
       predefinedSets.value = message;
       //Updates the selected predefined set if it is not null. This done to update the selected display when refreshing the data.
       for (let i = 0; i < predefinedSets.value.length; i++) {
@@ -119,11 +119,11 @@ const refresh = (setupId) => {
     })
     .catch((error) => console.log(error));
   invoke("load_settings", {})
-    .then((message) => {
+    .then((message: any) => {
       settingsData.value.bodyHeight = message.bodyHeight;
     })
     .catch((error) => console.log(error));
-}
+};
 
 //Updates the setup by calling the update_setup function in the backend.
 //This is called when the user clicks the Ok button in the edit setup modal.
@@ -141,66 +141,66 @@ const updateSetup = (setup) => {
 //The file is set on the editTcpListenerData object.
 const setEditTcpListenerDataFile = () => {
   invoke("open_dialog", { name: null, extension: null })
-    .then((message) => {
+    .then((message: any) => {
       if (message) {
         editTcpListenerData.value.file = message;
       }
     })
     .catch((error) => window.alert(error));
-}
+};
 
 //Clear the data file for the tcp listener. This is called when the user clicks the clear button.
 const clearEditTcpListenerDataFile = () => {
   editTcpListenerData.value.file = null;
-}
+};
 
 //Set the private key for the https config. This is called when the user clicks the select file button.
 const setEditHttpsConfigPrivateKey = () => {
   invoke("open_dialog", { name: "Pem file", extension: "pem" })
-    .then((message) => {
+    .then((message: any) => {
       if (message) {
         editHttpsConfig.value.privateKey = message;
       }
     })
     .catch((error) => window.alert(error));
-}
+};
 
 //Clear the server certificate for the https config. This is called when the user clicks the clear button.
 const clearEditHttpsConfigPrivateKey = () => {
   editHttpsConfig.value.privateKey = null;
-}
+};
 
 //Set the server certificate for the https config. This is called when the user clicks the select file button.
 const setEditHttpsConfigServerCertificate = () => {
   invoke("open_dialog", { name: "Pem file", extension: "pem" })
-    .then((message) => {
+    .then((message: any) => {
       if (message) {
         editHttpsConfig.value.serverCertificate = message;
       }
     })
     .catch((error) => window.alert(error));
-}
+};
 
 //Clear the server certificate for the https config. This is called when the user clicks the clear button.
 const clearEditHttpsConfigServerCertificate = () => {
   editHttpsConfig.value.serverCertificate = null;
-}
+};
 
 //Set the client certificate for the https config. This is called when the user clicks the select file button.
 const setEditHttpsConfigClientCertificate = () => {
   invoke("open_dialog", { name: "Pem file", extension: "pem" })
-    .then((message) => {
+    .then((message: any) => {
       if (message) {
         editHttpsConfig.value.clientCertificate = message;
       }
     })
     .catch((error) => window.alert(error));
-}
+};
 
 //Clear the server certificate for the https config. This is called when the user clicks the clear button.
 const clearEditHttpsConfigClientCertificate = () => {
   editHttpsConfig.value.clientCertificate = null;
-}
+};
 
 //Add an http server to the setup. This is called when the user clicks the add button.
 //The server is added to the setup and the data is refreshed.
@@ -227,7 +227,7 @@ const confirmDeleteHttpServer = (serverId) => {
       }
     }
     )
-    .catch((error) => window.error(error));
+    .catch((error) => console.error(error));
 }
 
 //Add a tcp listener to the setup. This is called when the user clicks the add button.
