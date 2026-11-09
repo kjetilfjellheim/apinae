@@ -12,6 +12,10 @@ import App from "./App.vue";
 import Setups from "./components/Setups.vue";
 import Setup from "./components/Setup.vue";
 
+import ui from '@nuxt/ui/vue-plugin'
+
+import './css/styles.css';
+
 library.add(fas, far);
 dom.watch();
 
@@ -36,5 +40,6 @@ app
   .component("font-awesome-icon", FontAwesomeIcon)
   .use(router)
   .provide("bootstrap", bootstrap)
+  .use(ui)
   .mount("#app");
 
