@@ -17,10 +17,12 @@ declare global {
   const useFileUpload: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useFileUpload').useFileUpload
   const useFormField: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useFormField').useFormField
   const useKbd: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useKbd').useKbd
+  const useNavigationMenu: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useNavigationMenu').useNavigationMenu
   const useOverlay: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useOverlay').useOverlay
   const useResizable: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useResizable').useResizable
   const useScrollShadow: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useScrollShadow').useScrollShadow
   const useScrollspy: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useScrollspy').useScrollspy
   const useToast: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useToast').useToast
   const useTour: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useTour').useTour
+  const useTree: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useTree').useTree
 }

@@ -12,7 +12,7 @@ async fn test_http_server_with_proxy() {
     #![allow(clippy::zombie_processes)]
     let mut tinyproxy_command = Command::new("tinyproxy").arg("-c").arg("./tests/resources/http_tinyproxy.conf").arg("-d").spawn().expect("Failed to start tinyproxy");
     // Start the server. Allow zombie process as it's a daemon running.
-    let mut server_command = common::start_server("./tests/resources/test_http_mock_with_proxy.json", "1").await.expect("Failed to start server");
+    let mut server_command = common::start_server("./tests/resources/test_http_mock_with_proxy.json", "1-1").await.expect("Failed to start server");
     // Run curl and verify the response.
     let curl_command: std::process::Output = match Command::new("curl").arg("http://localhost:8080/test").output().await {
         Ok(command) => command,

@@ -1,6 +1,5 @@
 <script setup lang="ts">
 // Required for showing editing modals.
-import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
 // Required for showing the setup data and updating the setup data.
 import { ref, onMounted } from "vue";
 // Required for calling the rust code.
@@ -126,7 +125,7 @@ const showParameterDialog = (setup) => {
 
 //Refreshes the setups array when the component is mounted.
 onMounted(() => {
-    editRunParameterModal.value = new Modal('#idRunParameterModel', { keyboard: false });
+    //editRunParameterModal.value = new Modal('#idRunParameterModel', { keyboard: false });
     refresh()
 });
 

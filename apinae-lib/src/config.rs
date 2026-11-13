@@ -16,8 +16,8 @@ pub struct AppConfiguration {
     pub name: String,
     // The description of the configuration.
     pub description: String,
-    // the setup configurations.
-    pub setups: Vec<SetupConfiguration>,
+    // The collection configurations.
+    pub collections: Vec<CollectionConfiguration>,
 }
 
 impl AppConfiguration {
@@ -26,13 +26,16 @@ impl AppConfiguration {
      *
      * `name` The name of the configuration.
      * `description` The description of the configuration.
-     * `setups` The setup configurations.
      *
      * The configuration.
      */
     #[must_use]
-    pub fn new(name: String, description: String, setups: Vec<SetupConfiguration>) -> Self {
-        AppConfiguration { name, description, setups }
+    pub fn new(name: String, description: String) -> Self {
+        AppConfiguration {
+            name,
+            description,
+            collections: vec![],
+        }
     }
 
     /**
@@ -47,22 +50,42 @@ impl AppConfiguration {
     }
 
     /**
-     * Update test.
+     * Add a collection to the configuration.
      *
-     * `setup_id` The id of the setup.
-     * `name` The name of the setup.
-     * `description` The description of the setup.
-     * `params` The parameters to pass to the setup.
+     * `collection` The collection to add.
+     */
+    pub fn add_collection(&mut self, collection: CollectionConfiguration) {
+        self.collections.push(collection);
+    }
+
+    /**
+     * Get a mutable reference to a collection by its id.
+     *
+     * `collection_id` The id of the collection.
+     *
+     * The collection if found.
+     */
+    pub fn get_collection(&mut self, collection_id: &str) -> Option<&mut CollectionConfiguration> {
+        self.collections.iter_mut().find(|collection| collection.id == collection_id)
+    }
+
+    pub fn get_collections(&self) -> &Vec<CollectionConfiguration> {
+        &self.collections
+    }
+
+    /**
+     * Delete a collection by its id.
+     *
+     * `collection_id` The id of the collection.
+     *
+     * Ok if the collection was deleted successfully.
      *
      * # Errors
-     * An error if the setup could not be found.
+     * An error if the collection could not be found.
      */
-    pub fn update_setup(&mut self, setup_id: &str, name: &str, description: &str, params: Option<HashSet<String>>) -> Result<(), ApplicationError> {
-        let test = self.get_setup(setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
-        test.name = name.to_string();
-        test.description = description.to_string();
-        test.params = params.clone();
-        test.update_predefined_params(params);
+    pub fn delete_collection(&mut self, collection_id: &str) -> Result<(), ApplicationError> {
+        let index = self.collections.iter().position(|collection| collection.id == collection_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Collection with id {collection_id} not found.")))?;
+        self.collections.remove(index);
         Ok(())
     }
 
@@ -94,23 +117,103 @@ impl AppConfiguration {
      */
     pub fn load(path: &str) -> Result<Self, ApplicationError> {
         let string_data = std::fs::read_to_string(path).map_err(|err| ApplicationError::FileError(format!("Failed to read input data to string: {err}")))?;
-        serde_json::from_str(&string_data).map_err(|err| ApplicationError::FileError(format!("Failed to convert input string to config model: {err}")))
+        let mut value: serde_json::Value =
+            serde_json::from_str(&string_data).map_err(|err| ApplicationError::FileError(format!("Failed to convert input string to json: {err}")))?;
+
+        // Backward compatibility: older files stored setups at the root level.
+        if value.get("collections").is_none() {
+            let legacy_setups = value.get("setups").cloned();
+            if let (Some(serde_json::Value::Array(setups)), Some(object)) = (legacy_setups, value.as_object_mut()) {
+                object.insert(
+                    "collections".to_string(),
+                    serde_json::Value::Array(vec![serde_json::json!({
+                        "name": "Default",
+                        "description": "",
+                        "setups": setups
+                    })]),
+                );
+                object.remove("setups");
+            }
+        }
+
+        serde_json::from_value(value).map_err(|err| ApplicationError::FileError(format!("Failed to convert input json to config model: {err}")))
     }
 
+}
+
+/**
+ * Configuration collection.
+ */
+#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionConfiguration {
+    // Collection id
+    pub id: String,
+    // Collection name.
+    pub name: String,
+    // Collection description.
+    pub description: String,
+    // Setups for this collection.
+    pub setups: Vec<SetupConfiguration>,
+}
+
+impl CollectionConfiguration {
     /**
-     * Get a setup by its ID.
+     * Create a new collection.
      *
-     * `id` The ID of the setup.
-     *
-     * The setup configuration.
+     * `name` The name of the collection.
+     * `description` The description of the collection.
+     * `setups` The setups for the collection.
      */
     #[must_use]
-    pub fn get_setup(&mut self, setup_id: &str) -> Option<&mut SetupConfiguration> {
-        self.setups.iter_mut().find(|test| test.id == setup_id)
+    pub fn new(name: String, description: String) -> Result<Self, ApplicationError> {
+        let id = get_identifier()?;
+        Ok(CollectionConfiguration { id, name, description, setups: Vec::new() })
     }
 
     /**
-     * Delete setup by id.
+     * Update the collection.
+     *
+     * `name` The name of the collection.
+     * `description` The description of the collection.
+     */
+    pub fn update(&mut self, name: String, description: String) {
+        self.name = name;
+        self.description = description;
+    }
+
+    /**
+     * Add a setup to the collection.
+     *
+     * `setup` The setup to add.
+     */
+    pub fn add_setup(&mut self, setup: SetupConfiguration) {
+        self.setups.push(setup);
+    }
+
+    /**
+     * Get all setups in the collection.
+     *
+     * The setups in the collection.
+     */
+    pub fn get_setups(&self) -> &Vec<SetupConfiguration> {
+        &self.setups
+    }
+
+
+    /**
+     * Get a mutable reference to a setup by its id.
+     *
+     * `setup_id` The id of the setup.
+     *
+     * The setup if found.
+     */
+    pub fn get_setup(&mut self, setup_id: &str) -> Option<&mut SetupConfiguration> {
+        self.setups.iter_mut().find(|setup| setup.id == setup_id)
+    }
+
+    /**
+     * Delete a setup by its id.
      *
      * `setup_id` The id of the setup.
      *
@@ -123,196 +226,7 @@ impl AppConfiguration {
         Ok(())
     }
 
-    /**
-     * Get a new listener.
-     *
-     * `setup_id` The id of the setup.
-     * `listener_id` The id of the listener.
-     *
-     * The listener configuration.
-     */
-    pub fn get_listener(&mut self, setup_id: &str, listener_id: &str) -> Option<TcpListenerData> {
-        self.get_setup(setup_id).and_then(|setup| setup.listeners.iter_mut().find(|listener| listener.id == listener_id).cloned())
-    }
 
-    /**
-     * Delete listener by id.
-     *
-     * `setup_id` The id of the setup.
-     * `listener_id` The id of the listener.
-     *
-     * # Errors
-     * An error if the setup could not be found.
-     * An error if the listener could not be found.
-     *
-     */
-    pub fn delete_listener(&mut self, setup_id: &str, listener_id: &str) -> Result<(), ApplicationError> {
-        let setup: &mut SetupConfiguration = self.get_setup(setup_id).ok_or(ApplicationError::CouldNotFind(format!("Setup with id {setup_id} not found.")))?;
-        let index = setup.listeners.iter().position(|listener| listener.id == listener_id).ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
-        setup.listeners.remove(index);
-        Ok(())
-    }
-
-    /**
-     * Update the listener configuration.
-     *
-     * `setup_id` The id of the setup.
-     * `listener_id` The id of the listener.
-     * `file` The file to read from.
-     * `data` The data to return. If this is set, the file will be ignored.
-     * `delay_write_ms` Time to wait before writing the response.
-     * `port` The port to listen on.
-     * `accept` Do accept connections.
-     * `close_connection` When to close the connection.
-     *
-     * # Errors
-     * An error if the listener could not be found.
-     */
-    #[allow(clippy::too_many_arguments)]
-    pub fn update_listener(
-        &mut self,
-        setup_id: &str,
-        listener_id: &str,
-        file: Option<String>,
-        data: Option<String>,
-        delay_write_ms: Option<u64>,
-        port: u16,
-        accept: bool,
-        close_connection: CloseConnectionWhen,
-    ) -> Result<(), ApplicationError> {
-        let listener = self
-            .get_setup(setup_id)
-            .and_then(|test| test.listeners.iter_mut().find(|listener| listener.id == listener_id))
-            .ok_or(ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
-        listener.file = file;
-        listener.data = data;
-        listener.delay_write_ms = delay_write_ms;
-        listener.port = port;
-        listener.accept = accept;
-        listener.close_connection = close_connection;
-        Ok(())
-    }
-
-    /**
-     * Get a server by its ID.
-     *
-     * `setup_id` The ID of the setup.
-     * `server_id` The ID of the server.
-     *
-     * The server configuration.
-     */
-    pub fn get_server(&mut self, setup_id: &str, server_id: &str) -> Option<&mut ServerConfiguration> {
-        self.get_setup(setup_id).and_then(|test| test.get_server(server_id))
-    }
-
-    /**
-     * Delete server by id.
-     *
-     * `setup_id` The id of the setup.
-     * `server_id` The id of the server.
-     *
-     * # Errors
-     * An error if the setup could not be found.
-     */
-    pub fn delete_server(&mut self, setup_id: &str, server_id: &str) -> Result<(), ApplicationError> {
-        let test: &mut SetupConfiguration = self.get_setup(setup_id).ok_or(ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
-        test.delete_server(server_id)
-    }
-
-    /**
-     * Get an endpoint by its ID.
-     *
-     * `setup_id` The ID of the setup.
-     * `server_id` The ID of the server.
-     * `endpoint_id` The ID of the endpoint.
-     *
-     * The endpoint configuration.
-     */
-    pub fn get_endpoint(&mut self, setup_id: &str, server_id: &str, endpoint_id: &str) -> Option<&mut EndpointConfiguration> {
-        self.get_server(setup_id, server_id).and_then(|server| server.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id))
-    }
-
-    /**
-     * Delete endpoint by id.
-     *
-     * `setup_id` The id of the setup.
-     * `server_id` The id of the server.
-     * `endpoint_id` The id of the endpoint.
-     *
-     * # Errors
-     * An error if the setup could not be found.
-     * An error if the server could not be found.
-     * An error if the endpoint could not be found.
-     */
-    pub fn delete_endpoint(&mut self, setup_id: &str, server_id: &str, endpoint_id: &str) -> Result<(), ApplicationError> {
-        let server: &mut ServerConfiguration = self.get_server(setup_id, server_id).ok_or(ApplicationError::CouldNotFind(format!("Server with id {server_id} not found.")))?;
-        server.delete_endpoint(endpoint_id)
-    }
-
-    /**
-     * Update the server configuration.
-     *
-     * `setup_id` The id of the setup.
-     * `server_id` The id of the server.
-     * `endpoint_id` The id of the endpoint.
-     * `path_expression` The path expression for the apinae API. This is a regular expression.
-     * `method` The HTTP method.
-     * `mock_response` The mock response.
-     * `route` The route configuration.
-     *
-     * # Errors
-     * An error if the setup could not be found.
-     * An error if the server could not be found.
-     * An error if the endpoint could not be found.
-     */
-    #[allow(clippy::too_many_arguments)]
-    pub fn update_endpoint(
-        &mut self,
-        setup_id: &str,
-        server_id: &str,
-        endpoint_id: &str,
-        path_expression: Option<String>,
-        body_expression: Option<String>,
-        method: Option<String>,
-        endpoint_type: Option<EndpointType>,
-    ) -> Result<(), ApplicationError> {
-        let endpoint = self.get_endpoint(setup_id, server_id, endpoint_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Endpoint with id {endpoint_id} not found.")))?;
-        endpoint.path_expression = path_expression;
-        endpoint.method = method;
-        endpoint.endpoint_type = endpoint_type;
-        endpoint.body_expression = body_expression;
-        Ok(())
-    }
-
-    /**
-     * Add parameter to the setup.
-     *
-     * `setup_id` The id of the setup.
-     * `param` The parameter to add.
-     *
-     * # Errors
-     * An error if the setup could not be found.
-     */
-    pub fn add_param(&mut self, setup_id: &str, param: String) -> Result<(), ApplicationError> {
-        let test = self.get_setup(setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
-        test.add_param(param);
-        Ok(())
-    }
-
-    /**
-     * Remove parameter from the setup.
-     *
-     * `setup_id` The id of the setup.
-     * `param` The parameter to remove.
-     *
-     * # Errors
-     * An error if the setup could not be found.
-     */
-    pub fn remove_param(&mut self, setup_id: &str, param: &str) -> Result<(), ApplicationError> {
-        let test = self.get_setup(setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Test with id {setup_id} not found.")))?;
-        test.remove_param(param);
-        Ok(())
-    }
 }
 
 /**
@@ -333,8 +247,6 @@ pub struct SetupConfiguration {
     pub listeners: Vec<TcpListenerData>,
     // The parameters to pass to the setup.
     pub params: Option<HashSet<String>>,
-    // Predefined sets of parameters.
-    pub predefined_params: Option<Vec<PredefinedSet>>,
 }
 
 impl SetupConfiguration {
@@ -351,9 +263,9 @@ impl SetupConfiguration {
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(name: String, description: String, servers: Vec<ServerConfiguration>, listeners: Vec<TcpListenerData>, params: Option<HashSet<String>>, predefined_params: Option<Vec<PredefinedSet>>) -> Result<Self, ApplicationError> {
+    pub fn new(name: String, description: String) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(SetupConfiguration { id, name, description, servers, listeners, params, predefined_params })
+        Ok(SetupConfiguration { id, name, description, servers: Vec::new(), listeners: Vec::new(), params: None })
     }
 
     /**
@@ -392,6 +304,15 @@ impl SetupConfiguration {
     }
 
     /**
+     * Add a server to the setup.
+     *
+     * `server` The server to add.
+     */
+    pub fn add_server(&mut self, server: ServerConfiguration) {
+        self.servers.push(server);
+    }
+
+    /**
      * Add a parameter to the setup.
      *
      * `param` The parameter to add.
@@ -404,12 +325,8 @@ impl SetupConfiguration {
             params.insert(param.clone());
             self.params = Some(params);
         }
-        if let Some(predefined_params) = &mut self.predefined_params {
-            predefined_params.iter_mut().for_each(|f| {
-                f.values.insert(param.clone(), String::new());
-            });                        
-        }
     }
+
     /**
      * Delete a parameter from the setup.
      *
@@ -422,131 +339,8 @@ impl SetupConfiguration {
                 self.params = None;
             }
         }
-        if let Some(predefined_params) = &mut self.predefined_params {
-            predefined_params.iter_mut().for_each(|f| {
-                f.values.remove(param);
-            });                        
-        }
     }
 
-    /**
-     * Update predefined parameters.
-     *
-     * `params` The parameters to update.
-     */
-    pub fn update_predefined_params(&mut self, params: Option<HashSet<String>>) {
-        if let Some(predefined_params) = &mut self.predefined_params {
-            predefined_params.iter_mut().for_each(|f| {
-                if let Some(params) = &params {
-                    for param in params.iter() {
-                       if !f.values.contains_key(param) {
-                            f.values.insert(param.clone(), String::new());
-                        } 
-                    }
-                    let values = &mut f.values;
-                    for param in values.clone().keys() {
-                        if !params.contains(param) {
-                            values.remove(param);
-                        }
-                    }
-                }
-            });
-        }
-    }
-
-    /**
-     * Add a predefined parameter set.
-     *
-     * # Errors
-     * An error if the predefined set could not be created.
-     */
-    pub fn add_new_predefined_param_set(&mut self) -> Result<(), ApplicationError> {
-        let values = if let Some(params) = &self.params {
-            params.iter().map(|param| (param.clone(), String::new())).collect::<HashMap<String, String>>()
-        } else {
-            HashMap::<String, String>::new()
-        };        
-        let predefined_set = PredefinedSet::new(values)?;
-        if let Some(predefined_params) = &mut self.predefined_params {
-            predefined_params.push(predefined_set);
-        } else {
-            let predefined_params = vec![predefined_set];
-            self.predefined_params = Some(predefined_params);
-        }
-        Ok(())
-    }
-
-    /**
-     * Delete a predefined parameter set.
-     *
-     * `name` The name to delete
-     *
-     * # Errors
-     * An error if the predefined set could not be found.
-     */
-    pub fn delete_predefined_param_set(&mut self, name: &str) -> Result<(), ApplicationError> {
-        if let Some(predefined_params) = &mut self.predefined_params {
-            let index = predefined_params.iter().position(|f| f.name == name).ok_or_else(|| ApplicationError::CouldNotFind(format!("Predefined set with name {name} not found.")))?;
-            predefined_params.remove(index);
-        }
-        Ok(())
-    }
-
-    /**
-     * Update a predefined parameter set.
-     *
-     * `old_name` The name of the predefined set to update.
-     * `new_name` The new name of the predefined set.
-     * `values` The values of the predefined set.
-     *
-     * # Errors
-     * An error if the predefined set could not be found.
-     */
-    pub fn update_predefined_param_set(&mut self, old_name: &str, new_name: &str, values: HashMap<String, String>) -> Result<(), ApplicationError> {
-        if let Some(predefined_params) = &mut self.predefined_params {
-            let index = predefined_params.iter().position(|f| f.name == old_name).ok_or_else(|| ApplicationError::CouldNotFind(format!("Predefined set with name {old_name} not found.")))?;
-            let mut predefined_set = predefined_params.get(index).unwrap().clone();
-            predefined_set.name = new_name.to_string();
-            predefined_set.values = values;
-            predefined_params.remove(index);
-            predefined_params.push(predefined_set);
-        }
-        Ok(())
-    }
-}
-
-/**
- * Predefined parameters.
- */
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone)]
-#[serde(rename_all = "camelCase")]
-pub struct PredefinedSet {
-    // Name of the predefined set.
-    pub name: String,
-    // The values of the predefined set.
-    pub values: HashMap<String, String>,
-}
-
-impl PredefinedSet {
-
-    /**
-     * Create a new predefined set.
-     *
-     * `name` The name of the predefined set.
-     * `values` The values of the predefined set.
-     *
-     * # Returns
-     * The predefined set.
-     * 
-     * # Errors
-     * An error if the identifier could not be generated.
-     */
-    pub fn new(values: HashMap<String, String>) -> Result<Self, ApplicationError> {
-        let mut name = String::from("Untitled_");
-        let identifier = get_identifier()?;
-        name.push_str(identifier.as_str());
-        Ok(PredefinedSet { name, values })
-    }
 }
 
 /**
@@ -607,15 +401,15 @@ impl ServerConfiguration {
      * Create a new server configuration.
      *
      * `name` The name of the server.
-     * `port` The port to run the server on.
-     * `endpoints` The endpoints to configure.
+     * `http_port` The port to run the server on.
+     * `https_config` The https configuration.
      *
      * # Errors
      * An error if the identifier could not be generated.
      */
-    pub fn new(name: String, http_port: Option<u16>, endpoints: Vec<EndpointConfiguration>, https_config: Option<HttpsConfiguration>) -> Result<Self, ApplicationError> {
+    pub fn new(name: String, http_port: Option<u16>, https_config: Option<HttpsConfiguration>) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(ServerConfiguration { id, name, http_port, endpoints, https_config })
+        Ok(ServerConfiguration { id, name, http_port, endpoints: Vec::new(), https_config })
     }
 
     /**
@@ -628,6 +422,24 @@ impl ServerConfiguration {
         self.name = name;
         self.http_port = http_port;
         self.https_config = https_config;
+    }
+
+    /**
+     * Get endpoint by id.
+     *
+     * `endpoint_id` The id of the endpoint.
+     */
+    pub fn get_endpoint(&mut self, endpoint_id: &str) -> Option<&mut EndpointConfiguration> {
+        self.endpoints.iter_mut().find(|endpoint| endpoint.id == endpoint_id)
+    }
+
+    /**
+     * Add endpoint to server.
+     *
+     * `endpoint` The endpoint to add.
+     */
+    pub fn add_endpoint(&mut self, endpoint: EndpointConfiguration) {
+        self.endpoints.push(endpoint);
     }
 
     /**
@@ -645,6 +457,8 @@ impl ServerConfiguration {
         self.endpoints.remove(index);
         Ok(())
     }
+
+
 }
 
 /**
@@ -681,6 +495,22 @@ impl EndpointConfiguration {
         let id = get_identifier()?;
         Ok(EndpointConfiguration { id, path_expression, body_expression, method, endpoint_type })
     }
+
+    /**
+     * Update the endpoint configuration.
+     *
+     * `path_expression` Endpoint for the apinae API. This is a regular expression.
+     * `body_expression` Body expression for the apinae API. This is a regular expression.
+     * `method` The HTTP method.
+     * `endpoint_type` Defines how the endpoint is to be handled.
+     */
+    fn update(&mut self, path_expression: Option<String>, method: Option<String>, body_expression: Option<String>, endpoint_type: Option<EndpointType>) {
+        self.path_expression = path_expression;
+        self.body_expression = body_expression;
+        self.method = method;
+        self.endpoint_type = endpoint_type;
+    }
+
 }
 
 /**
@@ -827,6 +657,21 @@ impl MockResponseConfiguration {
     pub fn new(response: Option<String>, status: String, headers: HashMap<String, String>, delay: u64) -> Self {
         MockResponseConfiguration { response, status, headers, delay }
     }
+
+    /**
+     * Update the mock response configuration.
+     *
+     * `response` The response to return when the mock is called.
+     * `status` The status code to return when the mock is called.
+     * `headers` The headers to return when the mock is called.
+     * `delay` Time to wait before returning the response.
+     */
+    pub fn update(&mut self, response: Option<String>, status: String, headers: HashMap<String, String>, delay: u64) {
+        self.response = response;
+        self.status = status;
+        self.headers = headers;
+        self.delay = delay;
+    }
 }
 
 /**
@@ -943,6 +788,35 @@ impl RouteConfiguration {
     ) -> Self {
         RouteConfiguration { url, proxy_url, log, http1_only, accept_invalid_certs, accept_invalid_hostnames, min_tls_version, max_tls_version, read_timeout, connect_timeout, delay_before, delay_after }
     }
+
+    pub fn update(
+        &mut self,
+        url: String,
+        proxy_url: Option<String>,
+        log: Option<String>,
+        http1_only: bool,
+        accept_invalid_certs: bool,
+        accept_invalid_hostnames: bool,
+        min_tls_version: Option<TlsVersion>,
+        max_tls_version: Option<TlsVersion>,
+        read_timeout: Option<u64>,
+        connect_timeout: Option<u64>,
+        delay_before: Option<u64>,
+        delay_after: Option<u64>,
+    ) {
+        self.url = url;
+        self.proxy_url = proxy_url;
+        self.log = log;
+        self.http1_only = http1_only;
+        self.accept_invalid_certs = accept_invalid_certs;
+        self.accept_invalid_hostnames = accept_invalid_hostnames;
+        self.min_tls_version = min_tls_version;
+        self.max_tls_version = max_tls_version;
+        self.read_timeout = read_timeout;
+        self.connect_timeout = connect_timeout;
+        self.delay_before = delay_before;
+        self.delay_after = delay_after;
+    }
 }
 
 /**
@@ -982,128 +856,41 @@ fn default_close_connection_when() -> CloseConnectionWhen {
 #[cfg(test)]
 mod test {
 
-    use std::vec;
-
     use super::*;
-
-    /**
-     * Test creating a configuration.
-     */
-    #[test]
-    fn test_configuration() {
-        let configuration = AppConfiguration::new(
-            "Test Configuration".to_string(),
-            "Test Configuration Description".to_string(),
-            vec![SetupConfiguration::new(
-                "Test".to_string(),
-                "Test Description".to_string(),
-                vec![ServerConfiguration::new(
-                    "Server".to_string(),
-                    Some(8080),
-                    vec![EndpointConfiguration::new(
-                        Some("/test".to_string()),
-                        Some("GET".to_string()),
-                        Some("Body".to_string()),
-                        Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None, Some(10), Some(100)) }),
-                    )
-                    .unwrap()],
-                    None,                    
-                )
-                .unwrap()],
-                Vec::new(),
-                None,
-                None,
-            )
-            .unwrap()],
-        );
-
-        assert_eq!(configuration.name, "Test Configuration");
-        assert_eq!(configuration.description, "Test Configuration Description");
-        assert_eq!(configuration.setups.len(), 1);
-        assert_eq!(configuration.setups[0].name, "Test");
-        assert_eq!(configuration.setups[0].description, "Test Description");
-        assert_eq!(configuration.setups[0].servers.len(), 1);
-        assert_eq!(configuration.setups[0].servers[0].name, "Server");
-        assert_eq!(configuration.setups[0].servers[0].http_port, Some(8080));
-        assert_eq!(configuration.setups[0].servers[0].endpoints.len(), 1);
-        assert_eq!(configuration.setups[0].servers[0].endpoints[0].path_expression, Some("/test".to_owned()));
-        assert_eq!(configuration.setups[0].servers[0].endpoints[0].method, Some("GET".to_owned()));
-        assert_eq!(configuration.setups[0].servers[0].endpoints[0].body_expression, Some("Body".to_owned()));
-        assert_eq!(
-            configuration.setups[0].servers[0].endpoints[0].endpoint_type,
-            Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None, Some(10), Some(100)) })
-        );
-    }
-
-    /**
-     * Test serializing and deserializing the configuration.
-     */
-    #[test]
-    fn test_serialize_deserialize() {
-        let configuration = AppConfiguration::new(
-            "Test Configuration".to_string(),
-            "Test Configuration Description".to_string(),
-            vec![SetupConfiguration::new(
-                "Test".to_string(),
-                "Test Description".to_string(),
-                vec![ServerConfiguration::new(
-                    "Server".to_string(),
-                    Some(8080),
-                    vec![EndpointConfiguration::new(
-                        Some("/test".to_string()),
-                        Some("".to_string()),
-                        Some("GET".to_string()),
-                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), String::from("200"), HashMap::new(), 0) }),
-                    )
-                    .unwrap()],
-                    None,
-                )
-                .unwrap()],
-                Vec::new(),
-                None,
-                None,
-            )
-            .unwrap()],
-        );
-
-        let serialized = serde_json::to_string(&configuration).unwrap();
-        let deserialized: AppConfiguration = serde_json::from_str(&serialized).unwrap();
-
-        assert_eq!(configuration, deserialized);
-    }
 
     #[test]
     fn test_save_load() {
-        let configuration = AppConfiguration::new(
+        let endpoint = EndpointConfiguration::new(
+            Some("/test".to_string()),
+            Some("GET".to_string()),
+            Some("Body".to_string()),
+            Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None, Some(10), Some(100)) }),
+        )
+        .unwrap();
+        let mut server = ServerConfiguration::new(
+            "Test Server".to_string(),
+            Some(8080),
+            None,
+        ).unwrap();
+        server.add_endpoint(endpoint);
+        let mut setup = SetupConfiguration::new(
+            "Test".to_string(),
+            "Test Description".to_string()).unwrap();
+        setup.add_server(server);
+        let mut collection = CollectionConfiguration::new(
+            "Test Collection".to_string(),
+            "Test Collection Description".to_string()).unwrap();
+        collection.add_setup(setup);
+        let mut configuration = AppConfiguration::new(
             "Setup Configuration".to_string(),
-            "Setup Configuration Description".to_string(),
-            vec![SetupConfiguration::new(
-                "Test".to_string(),
-                "Test Description".to_string(),
-                vec![ServerConfiguration::new(
-                    "Server".to_string(),
-                    Some(8080),
-                    vec![EndpointConfiguration::new(
-                        Some("/test".to_string()),
-                        Some("".to_string()),
-                        Some("GET".to_string()),
-                        Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("Test Response".to_string()), String::from("200"), HashMap::new(), 0) }),
-                    )
-                    .unwrap()],
-                    None,
-                )
-                .unwrap()],
-                Vec::new(),
-                None,
-                None,
-            )
-            .unwrap()],
+            "Setup Configuration Description".to_string()
         );
-
+        configuration.add_collection(collection);
         let path = "/tmp/test.json";
         let _ = configuration.save(path);
         let loaded = AppConfiguration::load(path).unwrap();
 
         assert_eq!(configuration, loaded);
     }
+
 }

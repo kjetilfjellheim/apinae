@@ -1,7 +1,5 @@
 import { createApp } from "vue";
 import { createRouter, createWebHistory } from "vue-router";
-import * as bootstrap from "bootstrap";
-import "bootstrap/dist/css/bootstrap.min.css";
 
 import { library, dom } from "@fortawesome/fontawesome-svg-core";
 import { FontAwesomeIcon } from "@fortawesome/vue-fontawesome";
@@ -39,7 +37,6 @@ const router = createRouter({ history: createWebHistory(), routes });
 app
   .component("font-awesome-icon", FontAwesomeIcon)
   .use(router)
-  .provide("bootstrap", bootstrap)
   .use(ui)
   .mount("#app");
 

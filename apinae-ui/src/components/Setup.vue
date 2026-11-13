@@ -1,6 +1,5 @@
 <script setup lang="ts">
 //Required for showing editing modals.
-import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
 //Required for showing the setup data and updating the setup data.
 import { ref, onMounted } from "vue";
 //Required for getting the route parameters.
@@ -450,9 +449,9 @@ const convertTcpListenerToRequestObject = (tcpListener) => {
 //Initializes the httpserver and tcplistener modals so that we can show and hide them 
 //in code rather than just in the button.
 onMounted(() => {
-  editEndpointModal.value = new Modal('#idEditEndpointModel', { keyboard: false });
-  editHttpServerModal.value = new Modal('#idEditHttpServerModel', { keyboard: false });
-  editTcpListenerModal.value = new Modal('#idEditTcpListenerModel', { keyboard: false });
+  //editEndpointModal.value = new Modal('#idEditEndpointModel', { keyboard: false });
+  //editHttpServerModal.value = new Modal('#idEditHttpServerModel', { keyboard: false });
+  //editTcpListenerModal.value = new Modal('#idEditTcpListenerModel', { keyboard: false });
   const setupId = route.params.setupid
   refresh(setupId)
 });

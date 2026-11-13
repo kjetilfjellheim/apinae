@@ -1,6 +1,5 @@
 <script setup lang="ts">
 //Required for showing editing modals.
-import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
 //Required for calling the rust code.
 import { invoke } from "@tauri-apps/api/core";
 
@@ -37,7 +36,7 @@ const convertToSettingsRequestObject = (settingsData: { commandType: string; api
 //Called when the component is mounted. Initializes the editSettingsModal and loads the settings.
 onMounted(() => {
     const modalElement = document.getElementById("idSettingsModal");
-    editSettingsModal.value = modalElement ? new Modal(modalElement) : null;
+    ///editSettingsModal.value = modalElement ? new Modal(modalElement) : null;
     invoke("load_settings", {})
         .then((settings: any) => {
             settingsData.value.apinaeCommand = settings.apinaePath ?? "";

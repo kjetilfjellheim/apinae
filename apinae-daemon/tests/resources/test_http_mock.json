@@ -1,57 +1,64 @@
 {
     "name": "Test Configuration",
     "description": "Test Configuration Description",
-    "setups": [
+    "collections": [
         {
             "id": "1",
-            "name": "Test",
-            "description": "Test Description",
-            "servers": [
+            "name": "Test Configuration",
+            "description": "Test Configuration Description",
+            "setups": [
                 {
                     "id": "1",
-                    "name": "Server",
-                    "httpPort": 8080,
-                    "endpoints": [
+                    "name": "Test",
+                    "description": "Test Description",
+                    "servers": [
                         {
-                            "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-                            "pathExpression": "^\/test$",
-                            "method": "GET",
-                            "soapAction": null,
-                            "endpointType": {
-                                "mock": {
-                                    "configuration": {
-                                        "response": "{ \"test\": \"Success http\" }",
-                                        "status": "200",
-                                        "headers": {
-                                            "Content-Type": "application/json"
-                                        },
-                                        "delay": 0
+                            "id": "1",
+                            "name": "Server",
+                            "httpPort": 8080,
+                            "endpoints": [
+                                {
+                                    "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+                                    "pathExpression": "^\/test$",
+                                    "method": "GET",
+                                    "soapAction": null,
+                                    "endpointType": {
+                                        "mock": {
+                                            "configuration": {
+                                                "response": "{ \"test\": \"Success http\" }",
+                                                "status": "200",
+                                                "headers": {
+                                                    "Content-Type": "application/json"
+                                                },
+                                                "delay": 0
+                                            }
+                                        }
+                                    }
+                                },
+                                {
+                                    "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+                                    "pathExpression": "^\/test$",
+                                    "method": "POST",
+                                    "soapAction": null,
+                                    "endpointType": {
+                                        "mock": {
+                                            "configuration": {
+                                                "response": "{ \"test\": \"Success http\" }",
+                                                "status": "200",
+                                                "headers": {
+                                                    "Content-Type": "application/json"
+                                                },
+                                                "delay": 0
+                                            }
+                                        }
                                     }
                                 }
-                            }
-                        },
-                        {
-                            "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-                            "pathExpression": "^\/test$",
-                            "method": "POST",
-                            "soapAction": null,
-                            "endpointType": {
-                                "mock": {
-                                    "configuration": {
-                                        "response": "{ \"test\": \"Success http\" }",
-                                        "status": "200",
-                                        "headers": {
-                                            "Content-Type": "application/json"
-                                        },
-                                        "delay": 0
-                                    }
-                                }
-                            }
-                        }                        
-                    ]
+                            ]
+                        }
+                    ],
+                    "listeners": []
                 }
-            ],
-            "listeners": []
+            ]
         }
     ]
 }

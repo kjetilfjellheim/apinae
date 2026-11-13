@@ -11,6 +11,14 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
+    Banner: typeof import('./src/components/Banner.vue')['default']
+    BannerView: typeof import('./src/components/BannerView.vue')['default']
+    FooterView: typeof import('./src/components/FooterView.vue')['default']
+    HeaderMenu: typeof import('./src/components/HeaderMenu.vue')['default']
+    HeaderMenuView: typeof import('./src/components/HeaderMenuView.vue')['default']
+    LeftMenuView: typeof import('./src/components/LeftMenuView.vue')['default']
+    MainView: typeof import('./src/components/MainView.vue')['default']
+    RightView: typeof import('./src/components/RightView.vue')['default']
     RouterLink: typeof import('vue-router')['RouterLink']
     RouterView: typeof import('vue-router')['RouterView']
     Settings: typeof import('./src/components/Settings.vue')['default']
@@ -19,5 +27,7 @@ declare module 'vue' {
     UFooter: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Footer.vue')['default']
     UHeader: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Header.vue')['default']
     UNavigationMenu: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/NavigationMenu.vue')['default']
+    USeparator: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Separator.vue')['default']
+    UTree: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Tree.vue')['default']
   }
 }

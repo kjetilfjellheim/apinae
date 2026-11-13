@@ -23,7 +23,7 @@ impl AppData {
      * The new instance of the `AppData` struct.
      */
     pub fn new() -> Self {
-        Self { data: Mutex::new(AppConfiguration::new(String::from("Untitled"), String::new(), Vec::new()).into()), file_path: Mutex::new(None), process_data: Mutex::new(HashMap::new()) }
+        Self { data: Mutex::new(AppConfiguration::new(String::from("Untitled"), String::new()).into()), file_path: Mutex::new(None), process_data: Mutex::new(HashMap::new()) }
     }
 }
 

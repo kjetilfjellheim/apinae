@@ -1,6 +1,33 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 
-use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration, TlsVersion};
+use apinae_lib::config::{CollectionConfiguration, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration, TlsVersion};
+
+/**
+ * This struct represents a collection row for request and responses.
+ */
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionRow {
+    // Collection id
+    pub id: String,
+    // Collection name.
+    pub name: String,
+    // Collection description.
+    pub description: String,
+    // Collection setups.
+    pub setups: Vec<SetupRow>,
+}
+
+impl From<&CollectionConfiguration> for CollectionRow {
+    fn from(collection: &CollectionConfiguration) -> Self {
+        Self {
+            id: collection.id.clone(),
+            name: collection.name.clone(),
+            description: collection.description.clone(),
+            setups: collection.get_setups().iter().map(|setup| SetupRow::from(setup.clone())).collect(),
+        }
+    }
+}
 
 /**
  * This struct represents a setup row for both request and responses.
@@ -14,8 +41,6 @@ pub struct SetupRow {
     pub name: String,
     // The description of the setup.
     pub description: String,
-    // The process id of the setup.
-    pub process_id: Option<u32>,
     // The parameters of the setup.
     pub params: Option<Vec<String>>,    
 }
@@ -34,8 +59,8 @@ impl SetupRow {
      * # Returns
      * `SetupRow` - The setup row.
      */
-    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>, params: Option<HashSet<String>>) -> Self {
-        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id, params: params.map(|p| p.into_iter().collect()) }
+    pub fn new(id: &str, name: &str, description: &str, params: Option<Vec<String>>) -> Self {
+        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), params }
     }
 }
 
@@ -48,41 +73,12 @@ impl From<SetupConfiguration> for SetupRow {
             id: setup.id.clone(),
             name: setup.name.clone(),
             description: setup.description.clone(),
-            process_id: None,
             params: setup.params.map(|f| {
                 let mut params = f.iter().cloned().collect::<Vec<_>>();
                 params.sort();
                 params
             })        
         }
-    }
-}
-
-/**
- * Predefined parameters.
- */
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PredefinedSet {
-    // Name of the predefined set.
-    pub name: String,
-    // Parameters of the predefined set.
-    pub values: HashMap<String, String>,
-}
-
-impl PredefinedSet {
-    /**
-     * Create a new predefined set.
-     *
-     * # Arguments
-     * `name` - The name of the predefined set.
-     * `values` - The parameters of the predefined set.
-     *
-     * # Returns
-     * `PredefinedSet` - The predefined set.
-     */
-    pub fn new(name: &str, values: HashMap<String, String>) -> Self {
-        Self { name: name.to_string(), values }
     }
 }
 
@@ -388,7 +384,7 @@ mod test {
 
     #[test]
     fn test_setup_row_from_setup_configuration() {
-        let setup_config = SetupConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new(), None, None).unwrap();
+        let setup_config = SetupConfiguration::new("name".to_owned(), "description".to_owned()).unwrap();
 
         let setup_row = SetupRow::from(setup_config);
 
@@ -398,7 +394,7 @@ mod test {
 
     #[test]
     fn test_http_server_row_from_server_configuration() {
-        let server_config = ServerConfiguration::new("name".to_owned(), Some(8080), Vec::new(), None).unwrap();
+        let server_config = ServerConfiguration::new("name".to_owned(), Some(8080), None).unwrap();
 
         let http_server_row = HttpServerRow::from(&server_config);
 
