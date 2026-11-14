@@ -38,6 +38,14 @@ const accordionItems = computed<ProcessAccordionItem[]>(() => {
     }));
 });
 
+function stopProcess(processId: number) {
+    invoke("stop_process", { processid: processId })
+        .then(() => {
+            handleProcessReload();
+        })
+        .catch((error) => window.alert(error));
+}
+
 const expandedValues = computed<string[]>(() => accordionItems.value.map((item) => item.value));
 
 onMounted(() => {
@@ -51,9 +59,9 @@ defineExpose({ handleProcessReload })
         <div class="mb-3 flex items-center justify-between">
             <h3 class="text-sm font-medium text-neutral-300">Processes</h3>
             <UButton
-                size="xs"
-                variant="ghost"
-                class="text-neutral-300 hover:text-neutral-100"
+                size="sm"
+                color="primary"
+                variant="soft"
                 @click="handleProcessReload">
                 Refresh
             </UButton>
@@ -77,7 +85,16 @@ defineExpose({ handleProcessReload })
             </template>
             <template #body="{ item }">
                 <div class="space-y-2 px-1 pb-2 text-xs text-neutral-300">
-                    <div class="text-neutral-400">PID: {{ item.process.processId }}</div>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-neutral-400">PID: {{ item.process.processId }}</div>
+                        <UButton
+                            size="xs"
+                            color="error"
+                            variant="soft"
+                            @click="stopProcess(item.process.processId)">
+                            <i class="fa-solid fa-stop fa-fw ml-auto"></i>
+                        </UButton>
+                    </div>
                     <div v-if="Object.keys(item.process.params || {}).length === 0" class="text-neutral-500">
                         No params
                     </div>

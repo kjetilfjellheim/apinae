@@ -40,35 +40,35 @@ function show_settings() {
 const navigationItems = ref([
   {
     label: 'New',
-    icon: 'fas fa-file fa-fw text-neutral-100 primary',
+    icon: 'fas fa-file fa-fw',
     func: () => {
       clean();
     }
   },
   {
     label: 'Open',
-    icon: 'fas fa-home fa-fw text-neutral-100 primary',
+    icon: 'fas fa-home fa-fw',
     func: () => {
       load();
     }
   },
   {
     label: 'Save',
-    icon: 'fas fa-file fa-fw text-neutral-100 primary',
+    icon: 'fas fa-file fa-fw',
     func: () => {
       save();
     }
   },
   {
     label: 'Save as',
-    icon: 'fas fa-file fa-fw text-neutral-100 primary',
+    icon: 'fas fa-file fa-fw',
     func: () => {
       save_as();
     }
   },
   {
     label: 'Settings',
-    icon: 'fas fa-cog fa-fw text-neutral-100 primary',
+    icon: 'fas fa-cog fa-fw',
     func: () => {
       show_settings();
     }
@@ -78,12 +78,15 @@ const navigationItems = ref([
 <template @>
     <UNavigationMenu :items="navigationItems">
         <template #item="{ item }">
-        <UIButton
+        <UButton
             @click="item.func"
-            class="text-neutral-400 hover:text-neutral-200">
-            <i :class="item.icon" class="text-neutral-400"></i>
-            <span class="text-neutral-400">{{ item.label }}</span>
-        </UIButton>
+            size="xs"
+            color="primary"
+            variant="soft"
+            class="ml-auto">
+            <i :class="item.icon"></i>
+            <span>{{ item.label }}</span>
+        </UButton>
         </template>
     </UNavigationMenu>
 </template>

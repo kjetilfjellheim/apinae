@@ -31,7 +31,7 @@ const items: SplitterItem[] = [
 </script>
 
 <template>
-  <UApp class="h-screen flex flex-col" style="min-height: 100%;">
+  <UApp class="flex flex-col">
     <UHeader class="[&>div]:max-w-none [&>div]:mx-0 [&>div]:!px-4">
       <template #title>
         <BannerView />
@@ -40,8 +40,8 @@ const items: SplitterItem[] = [
         <HeaderMenuView @dataReload="handleDataReload" />
       </template>
     </UHeader>
-    <UMain class="flex-1 [&>div]:max-w-none [&>div]:mx-0 [&>div]:!px-4 min-h-[calc(100vh-var(--ui-header-height))]">
-      <USplitter id="splitter-example" :items="items" class="min-h-[calc(100vh-var(--ui-header-height))] w-full">
+    <UMain class="flex-1 [&>div]:max-w-none [&>div]:mx-0 [&>div]:!px-4 min-h-[calc(98vh-var(--ui-header-height))] overflow-hidden">
+      <USplitter id="splitter-example" :items="items" class="min-h-[calc(98vh-var(--ui-header-height))] max-h-[calc(98vh-var(--ui-header-height))] w-full overflow-hidden">
         <template #left>
           <LeftMenuView ref="leftMenuView" @processReload="handleProcessReload"/>
         </template>
