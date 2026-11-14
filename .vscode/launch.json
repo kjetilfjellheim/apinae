@@ -2,12 +2,7 @@
       "version": "0.2.0",
       "configurations": [
             {
-                  "type": "lldb",
-                  "request": "launch",
-                  "name": "Debug http",
-                  "program": "${workspaceFolder}/target/debug/apinae-daemon",
-                  "args": ["--file", "/home/kjetil/Documents/test.apinae", "--id", "1748611617048"],
-                  "cwd": "${workspaceFolder}"
+
             }      
       ]
 }

@@ -12,7 +12,12 @@ declare global {
   const defineShortcuts: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts').defineShortcuts
   const extendLocale: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/defineLocale').extendLocale
   const extractShortcuts: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/defineShortcuts').extractShortcuts
+  const useApp: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/composables/useApp.js').useApp
   const useAppConfig: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/composables/useAppConfig.js').useAppConfig
+  const useAppHead: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/composables/useAppHead.js').useAppHead
+  const useAppLocale: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/composables/useAppLocale.js').useAppLocale
+  const useAppRouter: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/composables/useAppRouter.js').useAppRouter
+  const useAppTheme: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/composables/useAppTheme.js').useAppTheme
   const useContentSearch: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useContentSearch').useContentSearch
   const useFileUpload: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useFileUpload').useFileUpload
   const useFormField: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useFormField').useFormField

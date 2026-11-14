@@ -3,10 +3,30 @@ mod model;
 mod state;
 
 use state::AppData;
+use tauri::{Manager, RunEvent};
 
 use crate::api::{
-    clean, confirm_dialog, load, open_dialog, save, save_as, get_setup_tree
+    add_collection, add_setup, clean, confirm_dialog, get_processes, get_setup_tree, load, open_dialog, save, save_as, start_process, stop_process
 };
+
+fn kill_all_child_processes(app_handle: &tauri::AppHandle) {
+    let app_data = app_handle.state::<AppData>();
+    let mut process_data = match app_data.process_data.lock() {
+        Ok(guard) => guard,
+        Err(_) => return,
+    };
+
+    for process in process_data.values_mut() {
+        match process.process.try_wait() {
+            Ok(Some(_)) => {}
+            Ok(None) | Err(_) => {
+                let _ = process.process.kill();
+                let _ = process.process.wait();
+            }
+        }
+    }
+    process_data.clear();
+}
 
 /**
  * This function is the entry point of the Tauri application.
@@ -39,7 +59,7 @@ pub fn run() {
      * Start the Tauri application.
      */
     #[allow(clippy::items_after_statements)]
-    builder
+    let app = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppData::new())
@@ -48,10 +68,21 @@ pub fn run() {
             save,
             save_as,
             clean,
+            add_collection,
+            add_setup,
             get_setup_tree,
             confirm_dialog,
-            open_dialog
+            open_dialog,
+            start_process,
+            stop_process,
+            get_processes
         ])
-        .run(tauri::generate_context!())
-        .expect("Error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("Error while building tauri application");
+
+    app.run(|app_handle, event| {
+        if matches!(event, RunEvent::Exit | RunEvent::ExitRequested { .. }) {
+            kill_all_child_processes(app_handle);
+        }
+    });
 }

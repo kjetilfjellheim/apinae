@@ -131,9 +131,9 @@ fn list_setups(config: &AppConfiguration) {
  * An error if the id is missing.
  */
 async fn start_daemon(args: Args, config: &mut AppConfiguration) -> Result<(), ApplicationError> {
-    let setup_id = args.clone().id.ok_or(ApplicationError::CouldNotFind("Missing id".to_string()))?;
-    log::info!("Starting daemon with id: {setup_id} and args {args:?}");
-    let setup = get_setup(setup_id.as_str(), config)?;
+    let id = args.clone().id.ok_or(ApplicationError::CouldNotFind("Missing id".to_string()))?;
+    log::info!("Starting daemon with id: {id} and args {args:?}");
+    let setup = get_setup(id.as_str(), config)?;
     let params = validate_parameters(&setup, &args)?;
     let mut server_setup = ServerSetup::new();
     server_setup.setup(&setup, params).await?;
@@ -199,9 +199,11 @@ fn validate_parameters(setup: &SetupConfiguration, args: &Args) -> Result<Vec<(S
  * An error if the test is not found.
  */
 fn get_setup(id: &str, config: &mut AppConfiguration) -> Result<SetupConfiguration, ApplicationError> {
-    let configuration_id = id.split('-').next().ok_or_else(|| ApplicationError::CouldNotFind(format!("Invalid id: {id}")))?;
-    let configuration = config.get_collection(configuration_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("No configuration with id: {configuration_id}")))?;
-    let setup = configuration.get_setup(id).ok_or_else(|| ApplicationError::CouldNotFind(format!("No setup with id: {id}")))?;
+    let mut configuration_id = id.split('-');
+    let collection_id = configuration_id.next().ok_or_else(|| ApplicationError::CouldNotFind(format!("Invalid id: {id}")))?;
+    let collection = config.get_collection(collection_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("No collection with id: {collection_id}")))?;
+    let setup_id = configuration_id.next().ok_or_else(|| ApplicationError::CouldNotFind(format!("Invalid id: {id}")))?;
+    let setup = collection.get_setup(setup_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("No setup with id: {setup_id}")))?;
     Ok(setup.clone())
 }
 

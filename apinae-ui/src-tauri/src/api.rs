@@ -1,12 +1,12 @@
+use std::io::Read;
+use std::thread::Thread;
 use std::{collections::HashMap, path::Path};
 
+use crate::model::{CollectionRow, ProcessRow, SetupRow};
+use crate::state::{ProcessData};
 use crate::AppData;
-use crate::model::CollectionRow;
-use crate::{
-    model::SetupRow
-};
 use apinae_lib::{
-    config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration},
+    config::{AppConfiguration, CollectionConfiguration, SetupConfiguration},
     settings::Settings,
 };
 use tauri::{AppHandle, State};
@@ -160,33 +160,31 @@ pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option
  * If the setup could not be started.
  */
 #[tauri::command]
-pub async fn start_setup(app_data: State<'_, AppData>, setupid: &str, params: HashMap<String, String>) -> Result<(), String> {
-    // let app_config = get_configuration_data(&app_data)?;
-    // let setup = app_config.find_setup(setupid).ok_or("Setup not found")?;
-    // let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    // if let Some(process_data) = process_data.get(setupid) {
-    //     Ok(SetupRow {
-    //         id: setup.id.clone(),
-    //         name: setup.name.clone(),
-    //         description: setup.description.clone(),
-    //         process_id: Some(process_data.process_id),
-    //         params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
-    //     })
-    // } else {
-    //     let file_path = get_current_file_path(&app_data)?;
-    //     let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
-    //     let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
-    //     let mut process = std::process::Command::new(app_path);
-    //     let mut process = process.arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(setupid);
-    //     for (key, value) in params {
-    //         process = process.arg("--param").arg(format!("{key}={value}"));
-    //     }
-    //     let process = process.current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
-    //     let process_id = process.id();
-    //     process_data.insert(setupid.to_owned(), ProcessData::new(process_id, process));
-    //     Ok(SetupRow::new(setup.id.as_str(), setup.name.as_str(), setup.description.as_str(), Some(process_id), setup.params.clone()))
-    //}
-    Err("".to_string())
+pub async fn start_process(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, params: HashMap<String, String>) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let collection_name = collection.name.clone();
+    let setup_name = {
+        let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+        setup.name.clone()
+    };
+    let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
+    let file_path = get_current_file_path(&app_data)?;
+    let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
+    let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
+    let mut process = std::process::Command::new(app_path);
+    let mut process = process.arg("--file").arg(&file_path).arg("--id").arg(collectionid.to_owned() + "-" + &setupid.to_owned());
+    for (key, value) in params.clone() {
+        process = process.arg("--param").arg(format!("{key}={value}"));
+    }
+    let mut process = process.current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+    if let Some(status) = process.try_wait().map_err(|err| err.to_string())? {
+        return Err(format!("Process exited immediately with status: {status}"));
+    }
+    let process_id = process.id();
+    process_data.insert(process_id, ProcessData::new(process_id, process, collection_name, setup_name, params));
+    Ok(())
 }
 
 /**
@@ -205,31 +203,16 @@ pub async fn start_setup(app_data: State<'_, AppData>, setupid: &str, params: Ha
  */
 #[allow(clippy::all)]
 #[tauri::command]
-pub async fn stop_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<SetupRow, String> {
-    // let app_config = get_configuration_data(&app_data)?;
-    // let setup = app_config.find_setup(setupid).ok_or("Setup not found")?;
-    // let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    // match processes_data.get_mut(setupid) {
-    //     Some(process_data) => {
-    //         process_data.process.kill().map_err(|err| err.to_string())?;
-    //         processes_data.remove(setupid);
-    //         Ok(SetupRow {
-    //             id: setup.id.clone(),
-    //             name: setup.name.clone(),
-    //             description: setup.description.clone(),
-    //             process_id: None,
-    //             params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
-    //         })
-    //     }
-    //     None => Ok(SetupRow {
-    //         id: setup.id.clone(),
-    //         name: setup.name.clone(),
-    //         description: setup.description.clone(),
-    //         process_id: None,
-    //         params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
-    //     }),
-    // }
-    Err("".to_string())
+pub async fn stop_process(app_data: State<'_, AppData>, processid: u32) -> Result<(), String> {
+    let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
+    match processes_data.get_mut(&processid) {
+        Some(process_data) => {
+            process_data.process.kill().map_err(|err| err.to_string())?;
+            processes_data.remove(&processid);
+            Ok(())
+        }
+        None => Ok(()),
+    }
 }
 
 /**
@@ -246,10 +229,79 @@ pub async fn stop_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<S
 #[tauri::command]
 pub fn get_setup_tree(app_data: State<'_, AppData>) -> Result<Vec<CollectionRow>, String> {
     let app_config = get_configuration_data(&app_data)?;
-    let collections = app_config.get_collections().iter().map(|collection| {
-        CollectionRow::from(collection)
-    }).collect::<Vec<_>>();
+    let collections = app_config.get_collections().iter().map(|collection| CollectionRow::from(collection)).collect::<Vec<_>>();
     Result::Ok(collections)
+}
+
+/**
+ * Adds a collection to the current configuration.
+ *
+ * `app_data` The application data.
+ * `name` The collection name.
+ * `description` The collection description.
+ *
+ * Returns:
+ * The created collection row.
+ *
+ * # Errors
+ * If data cannot be locked or collection cannot be created.
+ */
+#[tauri::command]
+pub fn add_collection(app_data: State<'_, AppData>, name: Option<String>, description: Option<String>) -> Result<CollectionRow, String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = CollectionConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
+        .map_err(|err| err.to_string())?;
+    let collection_row = CollectionRow::from(&collection);
+    app_config.add_collection(collection);
+    update_data(&app_data, Some(app_config))?;
+    Ok(collection_row)
+}
+
+/**
+ * Adds a setup to a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `name` The setup name.
+ * `description` The setup description.
+ *
+ * Returns:
+ * The created setup row.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be created.
+ */
+#[tauri::command]
+pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<String>, description: Option<String>) -> Result<SetupRow, String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = SetupConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
+        .map_err(|err| err.to_string())?;
+    let setup_row = SetupRow::from(setup.clone());
+    collection.add_setup(setup);
+    update_data(&app_data, Some(app_config))?;
+    Ok(setup_row)
+}
+
+/**
+ * Gets the processes.
+ *
+ * `app_data` The application data.
+ *
+ * Returns:
+ * The processes.
+ *
+ * # Errors
+ * If the processes data could not be locked.
+ */
+#[tauri::command]
+pub fn get_processes(app_data: State<'_, AppData>) -> Result<Vec<ProcessRow>, String> {
+    let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
+    processes_data.retain(|_, process_data| {
+        matches!(process_data.process.try_wait(), Ok(None))
+    });
+    let processes = processes_data.values().map(ProcessRow::from).collect::<Vec<_>>();
+    Result::Ok(processes)
 }
 
 /**
@@ -306,10 +358,10 @@ fn get_file_path(file_path: FilePath) -> Result<String, String> {
 
 /**
  * Update state data
- * 
+ *
  * 'app_data' The application data.
  * 'new_data' The new data.
- * 
+ *
  * # Errors
  * If the data could not be locked.
  */
@@ -333,6 +385,3 @@ fn update_file_path(app_data: &State<'_, AppData>, new_file_path: Option<String>
     *lock = new_file_path;
     Result::Ok(())
 }
-
-
-

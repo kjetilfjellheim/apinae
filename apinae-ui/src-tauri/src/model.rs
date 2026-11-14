@@ -2,6 +2,8 @@ use std::collections::{HashMap};
 
 use apinae_lib::config::{CollectionConfiguration, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration, TlsVersion};
 
+use crate::state::ProcessData;
+
 /**
  * This struct represents a collection row for request and responses.
  */
@@ -370,6 +372,33 @@ impl From<&TcpListenerData> for TcpListenerRow {
             port: tcp_listener.port,
             accept: tcp_listener.accept,
             close_connection: String::from(tcp_listener.clone().close_connection),
+        }
+    }
+}
+
+/**
+ * This struct represents a running proceses.
+ */
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessRow {
+    // The process id.
+    pub process_id: u32,
+    // The name of the collection.
+    pub collection_name: String,
+    // The name of the setup.
+    pub setup_name: String,
+    // The parameters of the process.
+    pub params: HashMap<String, String>,
+}
+
+impl From<&ProcessData> for ProcessRow {
+    fn from(process_data: &ProcessData) -> Self {
+        Self {
+            process_id: process_data.process_id,
+            collection_name: process_data.collection_name.clone(),
+            setup_name: process_data.setup_name.clone(),
+            params: process_data.params.clone(),
         }
     }
 }

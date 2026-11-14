@@ -5,36 +5,53 @@ import HeaderMenuView from './components/HeaderMenuView.vue';
 import BannerView from './components/BannerView.vue';
 import LeftMenuView from './components/LeftMenuView.vue';
 import Main from './components/MainView.vue';
-import FooterView from './components/FooterView.vue';
 import RightView from './components/RightView.vue';
+import { SplitterItem } from '@nuxt/ui';
 
 const leftMenuView = ref<InstanceType<typeof import('./components/LeftMenuView.vue').default>>();
+const rightView = ref<InstanceType<typeof import('./components/RightView.vue').default>>();
+
 
 function handleDataReload() {
   leftMenuView?.value?.handleDataReload();
 }
 
+function handleProcessReload() {
+  rightView?.value?.handleProcessReload();
+}
+
+const card = 'bg-elevated/50 border border-default rounded-xl items-center justify-center text-muted font-medium';
+
+const items: SplitterItem[] = [
+  { slot: 'left', minSize: 15, defaultSize: 25, class: card },
+  { slot: 'main', minSize: 30, defaultSize: 50, class: card },
+  { slot: 'right', minSize: 15, defaultSize: 15, class: card }
+];
+
 </script>
 
 <template>
-  <div class="dark h-screen flex flex-col bg-neutral-950 text-neutral-200">
-    <UHeader
-      class="w-full shrink-0 border-b border-neutral-800 bg-neutral-900/90 backdrop-blur supports-[backdrop-filter]:bg-neutral-900/75"
-      :ui="{ container: 'max-w-none mx-0 px-2 sm:px-3 lg:px-4' }">
-      <template #left>
+  <UApp class="h-screen flex flex-col" style="min-height: 100%;">
+    <UHeader class="[&>div]:max-w-none [&>div]:mx-0 [&>div]:!px-4">
+      <template #title>
         <BannerView />
       </template>
       <template #right>
         <HeaderMenuView @dataReload="handleDataReload" />
       </template>
     </UHeader>
-
-    <div class="flex flex-1 min-h-0 overflow-hidden bg-neutral-950">
-      <LeftMenuView ref="leftMenuView" />
-      <Main />
-      <RightView /> 
-    </div>
-
-    <FooterView />
-  </div>
+    <UMain class="flex-1 [&>div]:max-w-none [&>div]:mx-0 [&>div]:!px-4 min-h-[calc(100vh-var(--ui-header-height))]">
+      <USplitter id="splitter-example" :items="items" class="min-h-[calc(100vh-var(--ui-header-height))] w-full">
+        <template #left>
+          <LeftMenuView ref="leftMenuView" @processReload="handleProcessReload"/>
+        </template>
+        <template #main>
+          <Main />
+        </template>
+        <template #right>
+          <RightView ref="rightView" />
+        </template>
+      </USplitter>
+    </UMain>
+  </UApp>
 </template>

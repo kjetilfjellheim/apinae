@@ -11,10 +11,7 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    Banner: typeof import('./src/components/Banner.vue')['default']
     BannerView: typeof import('./src/components/BannerView.vue')['default']
-    FooterView: typeof import('./src/components/FooterView.vue')['default']
-    HeaderMenu: typeof import('./src/components/HeaderMenu.vue')['default']
     HeaderMenuView: typeof import('./src/components/HeaderMenuView.vue')['default']
     LeftMenuView: typeof import('./src/components/LeftMenuView.vue')['default']
     MainView: typeof import('./src/components/MainView.vue')['default']
@@ -24,10 +21,12 @@ declare module 'vue' {
     Settings: typeof import('./src/components/Settings.vue')['default']
     Setup: typeof import('./src/components/Setup.vue')['default']
     Setups: typeof import('./src/components/Setups.vue')['default']
-    UFooter: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Footer.vue')['default']
+    UAccordion: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Accordion.vue')['default']
+    UApp: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/App.vue')['default']
+    UButton: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Button.vue')['default']
     UHeader: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Header.vue')['default']
+    UMain: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Main.vue')['default']
     UNavigationMenu: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/NavigationMenu.vue')['default']
-    USeparator: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Separator.vue')['default']
-    UTree: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Tree.vue')['default']
+    USplitter: typeof import('./node_modules/@nuxt/ui/dist/runtime/components/Splitter.vue')['default']
   }
 }
