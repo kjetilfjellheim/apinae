@@ -33,8 +33,7 @@ async function clean() {
 }
 
 function show_settings() {
-  const modalElement = document.getElementById("idSettingsModal");
-  if (!modalElement) return;
+  window.dispatchEvent(new Event('open-settings-modal'));
 }
 
 const navigationItems = ref([

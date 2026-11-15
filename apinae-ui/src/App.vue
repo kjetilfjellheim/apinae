@@ -6,6 +6,7 @@ import BannerView from './components/BannerView.vue';
 import LeftMenuView from './components/LeftMenuView.vue';
 import Main from './components/MainView.vue';
 import RightView from './components/RightView.vue';
+import SettingsView from './components/Settings.vue';
 import { SplitterItem } from '@nuxt/ui';
 
 const leftMenuView = ref<InstanceType<typeof import('./components/LeftMenuView.vue').default>>();
@@ -53,5 +54,6 @@ const items: SplitterItem[] = [
         </template>
       </USplitter>
     </UMain>
+    <SettingsView />
   </UApp>
 </template>

@@ -1,5 +1,3 @@
-use std::io::Read;
-use std::thread::Thread;
 use std::{collections::HashMap, path::Path};
 
 use crate::model::{CollectionRow, ProcessRow, SetupRow};
@@ -10,6 +8,7 @@ use apinae_lib::{
     settings::Settings,
 };
 use tauri::{AppHandle, State};
+use tauri_plugin_dialog::MessageDialogButtons::Ok;
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
 /**
@@ -39,13 +38,13 @@ const DEFAULT_DELAY: u64 = 0;
  * If the configuration file could not be loaded.
  */
 #[tauri::command]
-pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<String, String> {
+pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), String> {
     let file_path = app.dialog().file().blocking_pick_file();
     if let Some(file_path) = file_path {
         let file_path = get_file_path(file_path)?;
         update_data(&app_data, Some(AppConfiguration::load(&file_path).map_err(|err| err.to_string())?))?;
         update_file_path(&app_data, Some(file_path.clone()))?;
-        return Result::Ok(file_path);
+        return Result::Ok(());
     }
     Err("No file selected".to_string())
 }
@@ -89,10 +88,8 @@ pub async fn save_as(app: AppHandle, app_data: State<'_, AppData>) -> Result<(),
         let data = get_configuration_data(&app_data)?;
         data.save(&file_path).map_err(|err| err.to_string())?;
         update_file_path(&app_data, Some(file_path))?;
-        Result::Ok(())
-    } else {
-        Err("No file selected".to_string())
-    }
+    } 
+    Result::Ok(())
 }
 
 /**
@@ -184,7 +181,7 @@ pub async fn start_process(app_data: State<'_, AppData>, collectionid: &str, set
     }
     let process_id = process.id();
     process_data.insert(process_id, ProcessData::new(process_id, process, collection_name, setup_name, params));
-    Ok(())
+    Result::Ok(())
 }
 
 /**
@@ -209,9 +206,9 @@ pub async fn stop_process(app_data: State<'_, AppData>, processid: u32) -> Resul
         Some(process_data) => {
             process_data.process.kill().map_err(|err| err.to_string())?;
             processes_data.remove(&processid);
-            Ok(())
+            Result::Ok(())
         }
-        None => Ok(()),
+        None => Result::Ok(()),
     }
 }
 
@@ -254,7 +251,7 @@ pub fn add_collection(app_data: State<'_, AppData>, name: Option<String>, descri
     let collection_row = CollectionRow::from(&collection);
     app_config.add_collection(collection);
     update_data(&app_data, Some(app_config))?;
-    Ok(collection_row)
+    Result::Ok(collection_row)
 }
 
 /**
@@ -280,7 +277,7 @@ pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<
     let setup_row = SetupRow::from(setup.clone());
     collection.add_setup(setup);
     update_data(&app_data, Some(app_config))?;
-    Ok(setup_row)
+    Result::Ok(setup_row)
 }
 
 /**
@@ -298,10 +295,34 @@ pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<
 pub fn get_processes(app_data: State<'_, AppData>) -> Result<Vec<ProcessRow>, String> {
     let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
     processes_data.retain(|_, process_data| {
-        matches!(process_data.process.try_wait(), Ok(None))
+        matches!(process_data.process.try_wait(), Result::Ok(None))
     });
     let processes = processes_data.values().map(ProcessRow::from).collect::<Vec<_>>();
     Result::Ok(processes)
+}
+
+/**
+ * Loads the settings.
+ *
+ * Returns:
+ * The settings.
+ */
+#[tauri::command]
+pub fn load_settings() -> Settings {
+    Settings::load()
+}
+
+/**
+ * Saves the settings.
+ *
+ * `settings` The settings to save.
+ *
+ * # Errors
+ * If the settings cannot be saved.
+ */
+#[tauri::command]
+pub fn save_settings(settings: Settings) -> Result<(), String> {
+    settings.save().map_err(|err| err.to_string())
 }
 
 /**

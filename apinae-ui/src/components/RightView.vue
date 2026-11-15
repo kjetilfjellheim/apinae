@@ -63,7 +63,7 @@ defineExpose({ handleProcessReload })
                 color="primary"
                 variant="soft"
                 @click="handleProcessReload">
-                Refresh
+                <i class="fa-solid fa-refresh fa-fw ml-auto"></i>
             </UButton>
         </div>
 
@@ -85,15 +85,38 @@ defineExpose({ handleProcessReload })
             </template>
             <template #body="{ item }">
                 <div class="space-y-2 px-1 pb-2 text-xs text-neutral-300">
-                    <div class="flex items-center justify-between gap-2">
-                        <div class="text-neutral-400">PID: {{ item.process.processId }}</div>
+                    <div class="flex gap-2">
                         <UButton
-                            size="xs"
+                            size="sm"
                             color="error"
                             variant="soft"
                             @click="stopProcess(item.process.processId)">
-                            <i class="fa-solid fa-stop fa-fw ml-auto"></i>
+                            <i class="fa-solid fa-stop fa-fw ml-auto"></i>Stop
                         </UButton>
+                        <UButton
+                            size="sm"
+                            color="primary"
+                            variant="soft"
+                            @click="">
+                            <i class="fa-solid fa-book fa-fw ml-auto"></i>Stdout
+                        </UButton>                             
+                        <UButton
+                            size="sm"
+                            color="primary"
+                            variant="soft"
+                            @click="">
+                            <i class="fa-solid fa-book fa-fw ml-auto"></i>Stderr
+                        </UButton>
+                        <UButton
+                            size="sm"
+                            color="primary"
+                            variant="soft"
+                            @click="">
+                            <i class="fa-solid fa-info fa-fw ml-auto"></i>Info
+                        </UButton>                           
+                    </div>
+                    <div class="flex items-center justify-between gap-2">
+                        <div class="text-neutral-400">PID: {{ item.process.processId }}</div>                   
                     </div>
                     <div v-if="Object.keys(item.process.params || {}).length === 0" class="text-neutral-500">
                         No params
