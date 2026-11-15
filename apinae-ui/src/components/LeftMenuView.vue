@@ -2,10 +2,93 @@
 import { ref } from 'vue';
 import { invoke } from "@tauri-apps/api/core";
 import type { NavigationMenuItem } from '@nuxt/ui';
+import type { DropdownMenuItem } from '@nuxt/ui'
 
-const emit = defineEmits(['processReload','setupSelect', 'editSetup', 'editCollection', 'editFile']);
+const emit = defineEmits(['processReload', 'setupSelect', 'editSetup', 'editCollection', 'editFile']);
 
 const items = ref<NavigationMenuItem[]>([]);
+
+type CollectionNode = NavigationMenuItem & {
+    nodeType: 'collection';
+    collection: any;
+    children: SetupNode[];
+};
+
+type SetupNode = NavigationMenuItem & {
+    nodeType: 'setup';
+    collection: any;
+    setup: any;
+};
+
+function getCollectionMenuItems(collectionId: string, collectionName: string): DropdownMenuItem[][] {
+    return [
+        [
+            {
+                label: 'Add setup',
+                icon: 'fa-plus',
+                onSelect() {
+                    addSetup(collectionId);
+                }
+            },
+            {
+                label: 'Rename',
+                icon: 'fa-pen',
+                onSelect() {
+                    renameCollection(collectionId, collectionName);
+                }
+            }
+        ],
+        [
+            {
+                label: 'Delete',
+                color: 'error',
+                icon: 'fa-trash',
+                onSelect() {
+                    deleteCollection(collectionId);
+                }
+            }
+        ]
+    ];
+}
+
+function getSetupMenuItems(collectionId: string, setupId: string, setupName: string): DropdownMenuItem[][] {
+    return [
+        [
+            {
+                label: 'Run',
+                icon: 'fa-play',
+                onSelect() {
+                    startProcess(collectionId, setupId);
+                }
+            },
+            {
+                label: 'Edit',
+                icon: 'fa-pen-square',
+                onSelect() {
+                    editSetup(collectionId, setupId);
+                }
+            },
+            {
+                label: 'Rename',
+                icon: 'fa-pen',
+                onSelect() {
+                    renameSetup(collectionId, setupId, setupName);
+                }
+            }
+        ],
+        [
+            {
+                label: 'Delete',
+                color: 'error',
+                icon: 'fa-trash',
+                onSelect() {
+                    deleteSetup(collectionId, setupId);
+                }
+            }
+        ]
+    ];
+}
+
 
 function handleDataReload() {
     invoke("get_setup_tree", {})
@@ -41,35 +124,69 @@ function addSetup(collectionId: string) {
         .catch((error) => window.alert(error));
 }
 
+function renameSetup(collectionId: string, setupId: string, currentName: string) {
+    const newName = window.prompt('Setup name', currentName);
+    if (newName === null) {
+        return;
+    }
+
+    invoke("rename_setup", { collectionid: collectionId, setupid: setupId, name: newName })
+        .then(() => {
+            handleDataReload();
+        })
+        .catch((error) => window.alert(error));
+}
+
+function deleteSetup(collectionId: string, setupId: string) {
+    invoke("delete_setup", { collectionid: collectionId, setupid: setupId })
+        .then(() => {
+            handleDataReload();
+        })
+        .catch((error) => window.alert(error));
+}
+
+function renameCollection(collectionId: string, currentName: string) {
+    const newName = window.prompt('Collection name', currentName);
+    if (newName === null) {
+        return;
+    }
+
+    invoke("rename_collection", { collectionid: collectionId, name: newName })
+        .then(() => {
+            handleDataReload();
+        })
+        .catch((error) => window.alert(error));
+}
+
+function deleteCollection(collectionId: string) {
+    invoke("delete_collection", { collectionid: collectionId })
+        .then(() => {
+            handleDataReload();
+        })
+        .catch((error) => window.alert(error));
+}
+
 function editSetup(collectionId: string, setupId: string) {
     emit('editSetup', { collectionid: collectionId, setupid: setupId });
 }
 
-function editCollection(collectionId: string) {
-    emit('editCollection', { collectionid: collectionId });
-}
-
-function editFile() {
-    emit('editFile');
-}
-
-function parseTreeItems(collections: any[]): any[] {
-    const treeItems: any[] = [];
+function parseTreeItems(collections: any[]): CollectionNode[] {
+    const treeItems: CollectionNode[] = [];
     collections.forEach((collection) => {
         treeItems.push({
+            nodeType: 'collection',
             label: collection.name,
-            description: collection.description,
             icon: 'fa-solid fa-folder fa-fw text-neutral-400',
-            value: null,
             tooltip: collection.description,
-            children: collection.setups.map((setup: any) => ({
+            children: collection.setups.map((setup: any): SetupNode => ({
+                nodeType: 'setup',
                 label: setup.name,
-                description: setup.description,
                 icon: 'fa-solid fa-gears fa-fw text-neutral-400',
-                value: { collection: collection, setup: setup },
-                tooltip: setup.description
+                tooltip: setup.description,
+                collection,
+                setup
             })),
-            collection: collection,
+            collection,
         });
     });
     return treeItems;
@@ -88,11 +205,16 @@ function handleProcessReload() {
 }
 
 function handleSetupSelect(item: NavigationMenuItem | null) {
-    if (item == null || item.value == null) {
+    if (item == null) {
         return;
     }
-    console.log('Selected setup:', item.value);
-    emit('setupSelect', { collectionid: item.value["collection"].id, setupid: item.value["setup"].id });
+
+    const node = item as Partial<SetupNode>;
+    if (node.nodeType !== 'setup' || !node.collection || !node.setup) {
+        return;
+    }
+
+    emit('setupSelect', { collectionid: node.collection.id, setupid: node.setup.id });
 }
 
 defineExpose({ handleDataReload });
@@ -101,64 +223,40 @@ defineExpose({ handleDataReload });
 <template class="h-full w-full">
     <div class="h-full w-full max-h-screen min-h-0 overflow-hidden flex flex-col">
         <div class="px-4 py-2 border-b border-neutral-800">
-            <UButton
-                size="sm"
-                color="primary"
-                variant="soft"
-                @click="addCollection">
+            <UButton size="sm" color="primary" variant="soft" @click="addCollection">
                 <i class="fa-solid fa-plus fa-fw"></i>Add Collection
             </UButton>
-            <UButton
-                size="sm"
-                color="primary"
-                variant="soft"
-                @click="editFile">
-                <i class="fa-solid fa-edit fa-fw"></i>Edit description
-            </UButton>            
         </div>
         <div class="flex-1 min-h-0 overflow-y-auto">
-            <UNavigationMenu :items="items" orientation="vertical" highlight highlightColor="primary" class="w-full [&>div]:!px-4" @onSelect="handleSetupSelect">
+            <UNavigationMenu :items="items" orientation="vertical" highlight highlightColor="primary"
+                class="w-full [&>div]:!px-4" @onSelect="handleSetupSelect">
                 <template #item="{ item }">
                     <i :class="item.icon"></i>
                     <span class="text-neutral-300">{{ item.label }}</span>
-                    <template v-if="item.collection">
-                        <div class="ml-auto flex gap-1" @click.stop>                        
-                            <UButton
-                                size="xs"
-                                color="primary"
-                                variant="soft"
-                                class="ml-auto"
-                                @click.stop.prevent="() => addSetup(item.collection.id)">
-                                <i class="fa-solid fa-plus fa-fw"></i>
-                            </UButton>
-                            <UButton
-                                size="xs"
-                                color="primary"
-                                variant="soft"
-                                class="ml-auto"
-                                @click.stop.prevent="() => editCollection(item.collection.id)">
-                                <i class="fa-solid fa-edit fa-fw"></i>
-                            </UButton>                            
+                    <template v-if="item.nodeType === 'collection'">
+                        <div class="ml-auto flex gap-1" @click.stop>
+                            <UDropdownMenu :items="getCollectionMenuItems(item.collection.id, item.collection.name)" :content="{ align: 'start' }"
+                                :ui="{ content: 'w-48' }">
+                                <UButton color="primary" variant="soft" size="xs" class="ml-auto">
+                                    <i class="fa-solid fa-list-ul fa-fw"></i>
+                                </UButton>
+                                <template #item="{ item }">
+                                    <i :class="`fa-solid ${item.icon} fa-fw`"></i> {{ item.label }}
+                                </template>
+                            </UDropdownMenu>
                         </div>
                     </template>
-                    <template v-if="item.value">
-                        <div class="ml-auto flex gap-1" @click.stop>        
-                            <UButton 
-                                size="xs"
-                                color="primary"
-                                variant="soft"
-                                class="ml-auto"
-                                @click.stop.prevent="() => startProcess(item.value.collection.id, item.value.setup.id)">
-                                <i class="fa-solid fa-play fa-fw ml-auto"></i>
-                            </UButton>                                                                   
-                            <UButton 
-                                size="xs"
-                                color="primary"
-                                variant="soft"
-                                class="ml-auto"
-                                @click.stop.prevent="() => editSetup(item.value.collection.id, item.value.setup.id)">
-                                <i class="fa-solid fa-edit fa-fw ml-auto"></i>
-                            </UButton>                                          
+                    <template v-if="item.nodeType === 'setup'">
+                        <div class="ml-auto flex gap-1" @click.stop>
+                            <UDropdownMenu :items="getSetupMenuItems(item.collection.id, item.setup.id, item.setup.name)" :content="{ align: 'start' }"
+                                :ui="{ content: 'w-48' }">
+                                <UButton color="primary" variant="soft" size="xs" class="ml-auto">
+                                    <i class="fa-solid fa-list-ul fa-fw"></i>
+                                </UButton>
+                                <template #item="{ item }">
+                                    <i :class="`fa-solid ${item.icon} fa-fw`"></i> {{ item.label }}
+                                </template>
+                            </UDropdownMenu>
                         </div>
                     </template>
                 </template>

@@ -8,21 +8,33 @@ use apinae_lib::{
     settings::Settings,
 };
 use tauri::{AppHandle, State};
-use tauri_plugin_dialog::MessageDialogButtons::Ok;
 use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 
 /**
  * Default name for new setups, servers, listeners and endpoints.
  */
 const DEFAULT_NAME: &str = "Untitled";
+
 /**
- * Default status code for new mock responses.
+ * Gets a setup from a collection.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * 
+ * Returns:
+ * The setup.
+ * 
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
  */
-const DEFAULT_STATUS_CODE: &str = "200";
-/**
- * Default delay for new mock responses.
- */
-const DEFAULT_DELAY: u64 = 0;
+#[tauri::command]
+pub fn get_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<SetupRow, String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    Result::Ok(SetupRow::from(setup.clone()))
+}
 
 /**
  * Loads the configuration from a file.
@@ -44,9 +56,8 @@ pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), St
         let file_path = get_file_path(file_path)?;
         update_data(&app_data, Some(AppConfiguration::load(&file_path).map_err(|err| err.to_string())?))?;
         update_file_path(&app_data, Some(file_path.clone()))?;
-        return Result::Ok(());
     }
-    Err("No file selected".to_string())
+    return Result::Ok(());
 }
 
 /**
@@ -255,6 +266,47 @@ pub fn add_collection(app_data: State<'_, AppData>, name: Option<String>, descri
 }
 
 /**
+ * Renames a collection in the current configuration.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `name` The new collection name.
+ * 
+ * # Errors
+ * If data cannot be locked or collection cannot be found.
+ */
+#[tauri::command]
+pub fn rename_collection(app_data: State<'_, AppData>, collectionid: &str, name: String) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    collection.name = name;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a collection from the current configuration.
+ *
+ * `app` The application handle.
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ *
+ * # Errors
+ * If data cannot be locked or collection cannot be deleted.
+ */
+#[tauri::command]
+pub async fn delete_collection(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str) -> Result<(), String> {
+    let confirmed = confirm_dialog(app).await;
+    if !confirmed {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    app_config.delete_collection(collectionid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
  * Adds a setup to a collection.
  *
  * `app_data` The application data.
@@ -278,6 +330,50 @@ pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<
     collection.add_setup(setup);
     update_data(&app_data, Some(app_config))?;
     Result::Ok(setup_row)
+}
+
+/**
+ * Renames a setup in a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `name` The new setup name.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
+ */
+#[tauri::command]
+pub fn rename_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, name: String) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.name = name;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a setup from a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be deleted.
+ */
+#[tauri::command]
+pub async fn delete_setup(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
+    let confirmed = confirm_dialog(app).await;
+    if !confirmed {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    collection.delete_setup(setupid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
 }
 
 /**

@@ -10,6 +10,7 @@ import SettingsView from './components/Settings.vue';
 import { SplitterItem } from '@nuxt/ui';
 
 const leftMenuView = ref<InstanceType<typeof import('./components/LeftMenuView.vue').default>>();
+const mainView = ref<InstanceType<typeof import('./components/MainView.vue').default>>();
 const rightView = ref<InstanceType<typeof import('./components/RightView.vue').default>>();
 
 
@@ -19,6 +20,10 @@ function handleDataReload() {
 
 function handleProcessReload() {
   rightView?.value?.handleProcessReload();
+}
+
+function handleEditSetup(payload: { collectionid: string; setupid: string }) {
+  mainView?.value?.handleEditSetup(payload);
 }
 
 const card = 'bg-elevated/50 border border-default rounded-xl items-center justify-center text-muted font-medium';
@@ -44,10 +49,10 @@ const items: SplitterItem[] = [
     <UMain class="flex-1 [&>div]:max-w-none [&>div]:mx-0 [&>div]:!px-4 min-h-[calc(98vh-var(--ui-header-height))] overflow-hidden">
       <USplitter id="splitter-example" :items="items" class="min-h-[calc(98vh-var(--ui-header-height))] max-h-[calc(98vh-var(--ui-header-height))] w-full overflow-hidden">
         <template #left>
-          <LeftMenuView ref="leftMenuView" @processReload="handleProcessReload"/>
+          <LeftMenuView ref="leftMenuView" @processReload="handleProcessReload" @editSetup="handleEditSetup"/>
         </template>
         <template #main>
-          <Main />
+          <Main ref="mainView" />
         </template>
         <template #right>
           <RightView ref="rightView" />

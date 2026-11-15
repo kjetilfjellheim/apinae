@@ -7,8 +7,6 @@ import { fas } from "@fortawesome/free-solid-svg-icons";
 import { far } from "@fortawesome/free-regular-svg-icons";
 
 import App from "./App.vue";
-import Setups from "./components/Setups.vue";
-import Setup from "./components/Setup.vue";
 
 import ui from '@nuxt/ui/vue-plugin'
 
@@ -18,20 +16,8 @@ library.add(fas, far);
 dom.watch();
 
 const app = createApp(App);
-
 const routes: Array<{ path: string; name: string; component: any }> = [
-  {
-    path: "/",
-    name: "Setups",
-    component: Setups,
-  },
-  {
-    path: "/:setupid",
-    name: "Setup",
-    component: Setup,
-  },
 ];
-
 const router = createRouter({ history: createWebHistory(), routes });
 
 app
