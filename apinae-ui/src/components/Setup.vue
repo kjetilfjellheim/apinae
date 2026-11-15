@@ -1,13 +1,9 @@
 <script setup lang="ts">
 import { ref} from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { watch } from "vue";
 
-// Required to get the route parameters
-const props = defineProps<{
-  collectionId?: string;
-  setupId?: string;
-}>();
+const collectionIdRef = ref<string>('');
+const setupIdRef = ref<string>('');
 
 // The setup being displayed
 const setup = ref<any>({});
@@ -33,27 +29,47 @@ const editRouteData = ref<any>({});
 const showEditHttpsConfig = ref(false);
 const showEditMockData = ref(false);
 
-const editSetup = () => {
-  editSetupData.value = { ...setup.value };
-  isEditSetupOpen.value = true;
-}
-
-const refresh = (collectionId: string, setupId: string | string[]) => {
-  invoke("get_setup", { collectionId: collectionId, setupid: setupId })
+const refresh = (collectionId: string, setupId: string) => {
+  collectionIdRef.value = collectionId;
+  setupIdRef.value = setupId;
+  invoke("get_setup", { collectionid: collectionId, setupid: setupId })
     .then((message: any) => {
       setup.value = message;
     })
     .catch((error) => window.alert(error));
 };
 
-watch(() => [props.collectionId, props.setupId],
-  ([collectionId, setupId]) => {
-    if (collectionId && setupId) {
-      refresh(collectionId, setupId);
-    }
-  },
-  { immediate: true }
-);
+const editSetup = () => {
+  editSetupData.value = { ...setup.value };
+  isEditSetupOpen.value = true;
+}
+
+function addParameter() {
+  if (!editAddParameter.value ) {
+    return;
+  }
+  editSetupData.value.params = editSetupData.value.params || [];
+  editSetupData.value.params.push(editAddParameter.value);
+  editAddParameter.value = '';
+}
+
+function saveEditSetup() {
+  if (!editSetupData.value.name) {
+    window.alert('Name is required');
+    return;
+  }
+  if (!editSetupData.value.params) {
+    editSetupData.value.params = [];
+  }  
+  invoke("update_setup", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, name: editSetupData.value.name, description: editSetupData.value.description, parameters: editSetupData.value.params })
+    .then(() => {
+      refresh(collectionIdRef.value, setupIdRef.value);
+      isEditSetupOpen.value = false;
+    })
+    .catch((error) => window.alert(error));
+}
+
+defineExpose({ refresh });
 </script>
 
 <template class="h-full w-full min-h-0 overflow-y-auto p-4">
@@ -114,7 +130,7 @@ watch(() => [props.collectionId, props.setupId],
       </div>
 
       <div v-if="activeTab === 'tcp'" class="space-y-3">
-        <UCard v-for="tcpListener in setup?.tcpListeners" :key="tcpListener.id">
+        <UCard v-for="tcpListener in setup?.listeners" :key="tcpListener.id">
           <template #header>
             <div class="flex items-center justify-between gap-2">
               <div class="text-sm text-neutral-200">
@@ -145,13 +161,13 @@ watch(() => [props.collectionId, props.setupId],
       </div>
 
       <div v-if="activeTab === 'http'" class="space-y-3">
-        <UCard v-for="httpServer in setup?.httpServers" :key="httpServer.id">
+        <UCard v-for="httpServer in setup?.servers" :key="httpServer.id">
           <template #header>
-            <div class="flex items-center justify-between gap-2">
+            <div class="flex items-center justify-between gap-1">
               <div class="text-sm text-neutral-200">
-                <i class="fa-solid fa-cloud mr-2" />Http server: {{ httpServer.name }}
+                <i class="fa-solid fa-cloud mr-1" />Http server: {{ httpServer.name }}
               </div>
-              <div class="flex gap-2">
+              <div class="flex gap-1">
                 <UButton size="xs" color="primary" variant="soft" @click="(httpServer)">Edit</UButton>
                 <UButton size="xs" color="error" variant="soft" @click="">Delete</UButton>
               </div>
@@ -159,7 +175,6 @@ watch(() => [props.collectionId, props.setupId],
           </template>
 
           <div class="grid grid-cols-1 gap-4 md:grid-cols-2 text-sm">
-            <p><span class="text-neutral-500">Id:</span> {{ httpServer.id }}</p>
             <p><span class="text-neutral-500">Http port:</span> {{ httpServer.httpPort }}</p>
             <p class="md:col-span-2"><span class="text-neutral-500">Description:</span> {{ httpServer.description }}</p>
           </div>
@@ -180,19 +195,19 @@ watch(() => [props.collectionId, props.setupId],
             </div>
             <UCard v-for="endpoint in (httpServer.endpoints || [])" :key="endpoint.id" class="border border-neutral-800">
               <template #header>
-                <div class="flex items-center justify-between gap-2">
-                  <div class="text-xs text-neutral-300">Endpoint {{ endpoint.id }} | {{ endpoint.method }} | {{ endpoint.pathExpression }}</div>
-                  <div class="flex gap-2">
+                <div class="flex items-center justify-between gap-1">
+                  <div class="text-xs text-neutral-300">Method: {{ endpoint.method }} | Path: {{ endpoint.pathExpression }}</div>
+                  <div class="flex gap-1">
                     <UButton size="xs" color="primary" variant="soft" @click="">Edit</UButton>
                     <UButton size="xs" color="error" variant="soft" @click="">Delete</UButton>
                   </div>
                 </div>
               </template>
-              <div v-if="endpoint?.mock" class="space-y-2 text-sm">
+              <div v-if="endpoint?.mock" class="space-y-1 text-sm md:grid md:grid-cols-4 md:gap-1">
                 <p><span class="text-neutral-500">Status:</span> {{ endpoint.mock.status }}</p>
                 <p><span class="text-neutral-500">Delay:</span> {{ endpoint.mock.delay }}</p>
-                <UFormField label="Headers"><UTextarea :model-value="endpoint.mock.headers" :rows="4" readonly /></UFormField>
-                <UFormField label="Response"><UTextarea :model-value="endpoint.mock.response" :rows="6" readonly /></UFormField>
+                <UFormField label="Headers"><UTextarea :model-value="endpoint.mock.headers" :rows="6" readonly class="w-full"/></UFormField>
+                <UFormField label="Response"><UTextarea :model-value="endpoint.mock.response" :rows="6" readonly class="w-full"/></UFormField>
               </div>
               <div v-if="endpoint?.route" class="grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
                 <p class="md:col-span-2"><span class="text-neutral-500">Url:</span> {{ endpoint.route.url }}</p>
@@ -264,14 +279,14 @@ watch(() => [props.collectionId, props.setupId],
 
     <UModal v-model:open="isEditSetupOpen" title="Edit setup" :ui="{ content: 'sm:max-w-2xl' }">
       <template #body>
-        <div class="space-y-4">
-          <UFormField label="Id"><UInput :model-value="editSetupData.id" disabled /></UFormField>
-          <UFormField label="Name"><UInput v-model="editSetupData.name" /></UFormField>
-          <UFormField label="Description"><UTextarea v-model="editSetupData.description" :rows="4" /></UFormField>
-          <UFormField label="Parameters">
+        <div class="space-y-4 w-full">
+          <UFormField label="Id" class="w-full"><UInput class="w-full" :model-value="editSetupData.id" disabled /></UFormField>
+          <UFormField label="Name" class="w-full"><UInput class="w-full" v-model="editSetupData.name" /></UFormField>
+          <UFormField label="Description" class="w-full"><UTextarea class="w-full" v-model="editSetupData.description" :rows="4" /></UFormField>
+          <UFormField label="Parameters" class="w-full">
             <div class="flex gap-2">
-              <UInput v-model="editAddParameter" placeholder="Parameter" class="flex-1" />
-              <UButton color="primary" variant="soft" @click="">Add</UButton>
+              <UInput v-model="editAddParameter" placeholder="Parameter" class="flex-1 w-full" />
+              <UButton color="primary" variant="soft" @click="addParameter()">Add</UButton>
             </div>
             <div class="mt-2 flex flex-wrap gap-2">
               <UButton v-for="param in (editSetupData.params || [])" :key="param" size="xs" color="primary" variant="soft" @click="">{{ param }}</UButton>
@@ -282,7 +297,7 @@ watch(() => [props.collectionId, props.setupId],
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" @click="isEditSetupOpen = false">Cancel</UButton>
-          <UButton color="primary" variant="solid" @click="">Save</UButton>
+          <UButton color="primary" variant="solid" @click="saveEditSetup">Save</UButton>
         </div>
       </template>
     </UModal>

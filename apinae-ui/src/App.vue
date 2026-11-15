@@ -49,7 +49,7 @@ const items: SplitterItem[] = [
     <UMain class="flex-1 [&>div]:max-w-none [&>div]:mx-0 [&>div]:!px-4 min-h-[calc(98vh-var(--ui-header-height))] overflow-hidden">
       <USplitter id="splitter-example" :items="items" class="min-h-[calc(98vh-var(--ui-header-height))] max-h-[calc(98vh-var(--ui-header-height))] w-full overflow-hidden">
         <template #left>
-          <LeftMenuView ref="leftMenuView" @processReload="handleProcessReload" @editSetup="handleEditSetup"/>
+          <LeftMenuView ref="leftMenuView" @processReload="handleProcessReload" @setupSelect="handleEditSetup"/>
         </template>
         <template #main>
           <Main ref="mainView" />

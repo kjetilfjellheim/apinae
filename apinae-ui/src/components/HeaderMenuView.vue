@@ -14,13 +14,11 @@ async function load() {
 
 async function save() {
   await invoke("save", {})
-    .then((message) => console.log(message))
     .catch((error) => window.alert(error));
 }
 
 async function save_as() {
   await invoke("save_as", {})
-    .then((message) => console.log(message))
     .catch((error) => window.alert(error));
 }
 

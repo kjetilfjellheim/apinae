@@ -69,6 +69,11 @@ impl AppConfiguration {
         self.collections.iter_mut().find(|collection| collection.id == collection_id)
     }
 
+    /**
+     * Get all collections in the configuration.
+     *
+     * The collections in the configuration.
+     */
     pub fn get_collections(&self) -> &Vec<CollectionConfiguration> {
         &self.collections
     }

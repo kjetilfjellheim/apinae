@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 import type { NavigationMenuItem } from '@nuxt/ui';
 import type { DropdownMenuItem } from '@nuxt/ui'
 
-const emit = defineEmits(['processReload', 'setupSelect', 'editSetup', 'editCollection', 'editFile']);
+const emit = defineEmits(['processReload', 'setupSelect', 'editCollection', 'editFile']);
 
 const items = ref<NavigationMenuItem[]>([]);
 
@@ -65,7 +65,7 @@ function getSetupMenuItems(collectionId: string, setupId: string, setupName: str
                 label: 'Edit',
                 icon: 'fa-pen-square',
                 onSelect() {
-                    editSetup(collectionId, setupId);
+                    selectSetup(collectionId, setupId);
                 }
             },
             {
@@ -166,10 +166,6 @@ function deleteCollection(collectionId: string) {
         .catch((error) => window.alert(error));
 }
 
-function editSetup(collectionId: string, setupId: string) {
-    emit('editSetup', { collectionid: collectionId, setupid: setupId });
-}
-
 function parseTreeItems(collections: any[]): CollectionNode[] {
     const treeItems: CollectionNode[] = [];
     collections.forEach((collection) => {
@@ -204,17 +200,8 @@ function handleProcessReload() {
     emit('processReload');
 }
 
-function handleSetupSelect(item: NavigationMenuItem | null) {
-    if (item == null) {
-        return;
-    }
-
-    const node = item as Partial<SetupNode>;
-    if (node.nodeType !== 'setup' || !node.collection || !node.setup) {
-        return;
-    }
-
-    emit('setupSelect', { collectionid: node.collection.id, setupid: node.setup.id });
+function selectSetup(collectionId: string, setupId: string) {
+    emit('setupSelect', { collectionid: collectionId, setupid: setupId });
 }
 
 defineExpose({ handleDataReload });
@@ -229,7 +216,7 @@ defineExpose({ handleDataReload });
         </div>
         <div class="flex-1 min-h-0 overflow-y-auto">
             <UNavigationMenu :items="items" orientation="vertical" highlight highlightColor="primary"
-                class="w-full [&>div]:!px-4" @onSelect="handleSetupSelect">
+                class="w-full [&>div]:!px-4">
                 <template #item="{ item }">
                     <i :class="item.icon"></i>
                     <span class="text-neutral-300">{{ item.label }}</span>

@@ -44,7 +44,11 @@ pub struct SetupRow {
     // The description of the setup.
     pub description: String,
     // The parameters of the setup.
-    pub params: Option<Vec<String>>,    
+    pub params: Option<Vec<String>>,
+    // The tcp listeners of the setup.
+    pub listeners: Option<Vec<TcpListenerRow>>,
+    // The http servers of the setup.
+    pub servers: Option<Vec<HttpServerRow>>,   
 }
 
 impl SetupRow {
@@ -61,8 +65,8 @@ impl SetupRow {
      * # Returns
      * `SetupRow` - The setup row.
      */
-    pub fn new(id: &str, name: &str, description: &str, params: Option<Vec<String>>) -> Self {
-        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), params }
+    pub fn new(id: &str, name: &str, description: &str, params: Option<Vec<String>>, listeners: Option<Vec<TcpListenerRow>>, servers: Option<Vec<HttpServerRow>>) -> Self {
+        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), params, listeners, servers }
     }
 }
 
@@ -71,15 +75,27 @@ impl From<SetupConfiguration> for SetupRow {
      * Convert a setup configuration to setup setup row.
      */
     fn from(setup: SetupConfiguration) -> Self {
+        let SetupConfiguration { id, name, description, servers, listeners, params } = setup;
+
         Self {
-            id: setup.id.clone(),
-            name: setup.name.clone(),
-            description: setup.description.clone(),
-            params: setup.params.map(|f| {
+            id,
+            name,
+            description,
+            params: params.map(|f| {
                 let mut params = f.iter().cloned().collect::<Vec<_>>();
                 params.sort();
                 params
-            })        
+            }),
+            listeners: if listeners.is_empty() {
+                None
+            } else {
+                Some(listeners.iter().map(TcpListenerRow::from).collect())
+            },
+            servers: if servers.is_empty() {
+                None
+            } else {
+                Some(servers.iter().map(HttpServerRow::from).collect())
+            },
         }
     }
 }

@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use std::{collections::HashMap, path::Path};
 
 use crate::model::{CollectionRow, ProcessRow, SetupRow};
@@ -34,6 +35,33 @@ pub fn get_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
     Result::Ok(SetupRow::from(setup.clone()))
+}
+
+/**
+ * Adds a parameter to a setup.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `parameter` The parameter to add.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
+ */
+#[tauri::command]
+pub fn update_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, name: String, description: String, parameters: Vec<String>) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.name = name;
+    setup.description = description;
+    if parameters.is_empty() {
+        setup.params = None;
+    } else {
+        setup.params = Some(HashSet::from_iter(parameters.into_iter()));
+    }
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
 }
 
 /**
