@@ -30,4 +30,5 @@ declare global {
   const useToast: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useToast').useToast
   const useTour: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useTour').useTour
   const useTree: typeof import('./node_modules/@nuxt/ui/dist/runtime/composables/useTree').useTree
+  const useUaccordion: typeof import('./node_modules/@nuxt/ui/dist/runtime/vue/components/Accordion.vue').useUaccordion
 }

@@ -94,6 +94,7 @@ function handleDataReload() {
     invoke("get_setup_tree", {})
         .then((message: any) => {
             items.value = parseTreeItems(message);
+            selectSetup(null, null);
         })
         .catch((error) => window.alert(error));
 }
