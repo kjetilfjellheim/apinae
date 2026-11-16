@@ -309,12 +309,46 @@ impl SetupConfiguration {
     }
 
     /**
+     * Delete a TCP listener by its id.
+     *
+     * `listener_id` The id of the listener.
+     *
+     * # Errors
+     * An error if the listener could not be found.
+     */
+    pub fn delete_listener(&mut self, listener_id: &str) -> Result<(), ApplicationError> {
+        let index = self.listeners.iter().position(|listener| listener.id == listener_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Listener with id {listener_id} not found.")))?;
+        self.listeners.remove(index);
+        Ok(())
+    }
+
+    /**
+     * Add a TCP listener to the setup.
+     *
+     * `listener` The TCP listener to add.
+     */
+    pub fn add_listener(&mut self, listener: TcpListenerData) {
+        self.listeners.push(listener);
+    }
+
+    /**
      * Add a server to the setup.
      *
      * `server` The server to add.
      */
     pub fn add_server(&mut self, server: ServerConfiguration) {
         self.servers.push(server);
+    }
+
+    /**
+     * Get a mutable reference to a TCP listener by its id.
+     *
+     * `listener_id` The id of the listener.
+     *
+     * The listener if found.
+     */
+    pub fn get_listener(&mut self, listener_id: &str) -> Option<&mut TcpListenerData> {
+        self.listeners.iter_mut().find(|listener| listener.id == listener_id)
     }
 
     /**

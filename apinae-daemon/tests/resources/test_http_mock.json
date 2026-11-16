@@ -58,9 +58,7 @@
             }
           ],
           "listeners": [],
-          "params": [
-            "Test"
-          ]
+          "params": null
         },
         {
           "id": "1794783552505",

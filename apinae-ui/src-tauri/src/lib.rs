@@ -6,7 +6,7 @@ use state::AppData;
 use tauri::{Manager, RunEvent};
 
 use crate::api::{
-    add_collection, add_setup, get_setup, update_setup, clean, confirm_dialog, get_processes, get_setup_tree, load, load_settings, rename_collection, delete_collection, rename_setup, delete_setup, save_settings, open_dialog, save, save_as, start_process, stop_process
+    add_collection, add_endpoint, delete_endpoint, add_setup, get_setup, update_setup, add_http_server, add_tcp_listener, delete_http_server, delete_tcp_listener, clean, confirm_dialog, get_processes, get_setup_tree, load, load_settings, rename_collection, delete_collection, rename_setup, delete_setup, save_settings, open_dialog, save, save_as, start_process, stop_process
 };
 
 fn kill_all_child_processes(app_handle: &tauri::AppHandle) {
@@ -83,7 +83,13 @@ pub fn run() {
             rename_setup,
             delete_setup,
             get_setup,
-            update_setup
+            update_setup,
+            add_http_server,
+            add_tcp_listener,
+            delete_http_server,
+            delete_tcp_listener,
+            add_endpoint,
+            delete_endpoint
         ])
         .build(tauri::generate_context!())
         .expect("Error while building tauri application");
