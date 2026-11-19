@@ -1,14 +1,12 @@
 use std::collections::HashSet;
 use std::{collections::HashMap, path::Path};
 
-use crate::model::PredefinedSet;
+use crate::model::{CollectionRow, EndpointRow, HttpServerRow, ProcessRow, SetupRow, TcpListenerRow};
+use crate::state::{ProcessData};
 use crate::AppData;
-use crate::{
-    model::{EndpointRow, HttpServerRow, TcpListenerRow, SetupRow},
-    state::ProcessData,
-};
+use apinae_lib::config::{EndpointConfiguration, EndpointType, MockResponseConfiguration, ServerConfiguration};
 use apinae_lib::{
-    config::{AppConfiguration, CloseConnectionWhen, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration},
+    config::{AppConfiguration, CollectionConfiguration, SetupConfiguration},
     settings::Settings,
 };
 use tauri::{AppHandle, State};
@@ -18,14 +16,328 @@ use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
  * Default name for new setups, servers, listeners and endpoints.
  */
 const DEFAULT_NAME: &str = "Untitled";
+
 /**
- * Default status code for new mock responses.
+ * Gets a setup from a collection.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * 
+ * Returns:
+ * The setup row.
+ * 
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
  */
-const DEFAULT_STATUS_CODE: &str = "200";
+#[tauri::command]
+pub fn get_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<SetupRow, String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    Result::Ok(SetupRow::from(setup.clone()))
+}
+
 /**
- * Default delay for new mock responses.
+ * Adds a setup to a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `name` The setup name.
+ * `description` The setup description.
+ *
+ * Returns:
+ * The created setup row.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be created.
  */
-const DEFAULT_DELAY: u64 = 0;
+#[tauri::command]
+pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<String>, description: Option<String>) -> Result<SetupRow, String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = SetupConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
+        .map_err(|err| err.to_string())?;
+    let setup_row = SetupRow::from(setup.clone());
+    collection.add_setup(setup);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(setup_row)
+}
+
+/**
+ * Adds a parameter to a setup.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `parameter` The parameter to add.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
+ */
+#[tauri::command]
+pub fn update_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, name: String, description: String, parameters: Vec<String>) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.update(name.clone(), description.clone());
+    if parameters.is_empty() {
+        setup.params = None;
+    } else {
+        setup.params = Some(HashSet::from_iter(parameters));
+    }
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a setup from a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be deleted.
+ */
+#[tauri::command]
+pub async fn delete_setup(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
+    let confirmed = confirm_dialog(app).await;
+    if !confirmed {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    collection.delete_setup(setupid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Adds a TCP listener to a setup.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ *
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ */
+#[tauri::command]
+pub async fn add_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let new_listener = apinae_lib::config::TcpListenerData::new(None, None, None, 0, true, apinae_lib::config::CloseConnectionWhen::Never)
+        .map_err(|err| err.to_string())?;
+    setup.add_listener(new_listener);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Updates a TCP listener in a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `listener_id` The id of the listener to update.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the listener could not be found.
+ */
+#[tauri::command]
+pub fn update_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let listener = setup.get_listener(listenerid).ok_or("Listener not found".to_string())?;
+    listener.update(TcpListenerRow::into(tcplistener));
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a TCP listener from a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `listener_id` The id of the listener to delete.
+ */
+#[tauri::command]
+pub async fn delete_tcp_listener(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, listenerid: &str) -> Result<(), String> {
+    if !confirm_dialog(app).await {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.delete_listener(listenerid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Adds an HTTP server to a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ */
+#[tauri::command]
+pub fn add_http_server(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let http_server = ServerConfiguration::new("Untitled".to_string(), None, None)
+        .map_err(|err| err.to_string())?;
+    setup.add_server(http_server);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Updates an HTTP server in a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to update.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the server could not be updated.
+ */
+#[tauri::command]
+pub fn update_http_server(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str, http_server: HttpServerRow) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    server.update(http_server.name, http_server.http_port, http_server.https_config.map(|config| config.into()));
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes an HTTP server from a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to delete.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be deleted.
+ */
+#[tauri::command]
+pub async fn delete_http_server(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str) -> Result<(), String> {
+    if !confirm_dialog(app).await {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.delete_server(serverid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Adds an endpoint to a server.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to add the endpoint to.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be added.
+ */
+#[tauri::command]
+pub fn add_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    let new_endpoint = EndpointConfiguration::new(None, None, None, Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, "200".to_string(), HashMap::new(), 0) })).map_err(|err| err.to_string())?;
+    server.add_endpoint(new_endpoint);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Updates an endpoint in a server.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to update the endpoint in.
+ * `endpoint_id` The id of the endpoint to update.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be found.
+ * If the endpoint could not be updated.
+ */
+#[tauri::command]
+pub fn update_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRow) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    let current_endpoint = server.get_endpoint(endpointid).ok_or("Endpoint not found".to_string())?;
+    current_endpoint.update((&endpoint).into());
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes an endpoint from a server.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to delete the endpoint from.
+ * `endpoint_id` The id of the endpoint to delete.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be deleted.
+ * 
+ */
+#[tauri::command]
+pub async fn delete_endpoint(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str, endpointid: &str) -> Result<(), String> {
+    if !confirm_dialog(app).await {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    server.delete_endpoint(endpointid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
 
 /**
  * Loads the configuration from a file.
@@ -41,15 +353,14 @@ const DEFAULT_DELAY: u64 = 0;
  * If the configuration file could not be loaded.
  */
 #[tauri::command]
-pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<String, String> {
+pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), String> {
     let file_path = app.dialog().file().blocking_pick_file();
     if let Some(file_path) = file_path {
         let file_path = get_file_path(file_path)?;
         update_data(&app_data, Some(AppConfiguration::load(&file_path).map_err(|err| err.to_string())?))?;
         update_file_path(&app_data, Some(file_path.clone()))?;
-        return Ok(file_path);
     }
-    Err("No file selected".to_string())
+    Result::Ok(())
 }
 
 /**
@@ -64,10 +375,10 @@ pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<String
 #[tauri::command]
 pub async fn save(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), String> {
     let current_file_path = get_current_file_path(&app_data);
-    if let Ok(current_file_path) = current_file_path {
+    if let Result::Ok(current_file_path) = current_file_path {
         let data = get_configuration_data(&app_data)?;
         data.save(&current_file_path).map_err(|err| err.to_string())?;
-        Ok(())
+        Result::Ok(())
     } else {
         save_as(app, app_data).await
     }
@@ -91,10 +402,8 @@ pub async fn save_as(app: AppHandle, app_data: State<'_, AppData>) -> Result<(),
         let data = get_configuration_data(&app_data)?;
         data.save(&file_path).map_err(|err| err.to_string())?;
         update_file_path(&app_data, Some(file_path))?;
-        Ok(())
-    } else {
-        Err("No file selected".to_string())
-    }
+    } 
+    Result::Ok(())
 }
 
 /**
@@ -112,460 +421,11 @@ pub async fn save_as(app: AppHandle, app_data: State<'_, AppData>) -> Result<(),
 #[tauri::command]
 pub async fn clean(app: AppHandle, app_data: State<'_, AppData>) -> Result<AppConfiguration, String> {
     if confirm_dialog(app).await {
-        let new_data = AppConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new());
+        let new_data = AppConfiguration::new(DEFAULT_NAME.to_owned(), String::new());
         update_data(&app_data, Some(new_data))?;
         update_file_path(&app_data, None)?;
     }
     get_configuration_data(&app_data)
-}
-
-/**
- * Gets the setups.
- *
- * `app_data` The application data.
- *
- * Returns:
- * The setups.
- *
- * # Errors
- * If the configuration data could not be locked.
- */
-#[tauri::command]
-pub async fn get_setups(app_data: State<'_, AppData>) -> Result<Vec<SetupRow>, String> {
-    let data = get_configuration_data(&app_data)?;
-    let process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    let setups = data
-        .setups
-        .iter()
-        .map(|setup| SetupRow::from(setup.clone()))
-        .map(|mut setup_row| {
-            setup_row.process_id = process_data.get(&setup_row.id).map(|process_data| process_data.process_id);
-            setup_row
-        })
-        .collect();
-    Ok(setups)
-}
-
-/**
- * Gets a setup.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- *
- * Returns:
- * The setup.
- *
- * # Errors
- * If the setup could not be found.
- */
-#[tauri::command]
-pub async fn get_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<SetupRow, String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Could not find setup")?;
-    Ok(SetupRow::from(setup.clone()))
-}
-
-/**
- * Adds a setup.
- *
- * `app_data` The application data.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be added.
- */
-#[tauri::command]
-pub async fn add_setup(app_data: State<'_, AppData>) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    data.setups.push(SetupConfiguration::new(DEFAULT_NAME.to_owned(), String::new(), Vec::new(), Vec::new(), None, None).map_err(|err| err.to_string())?);
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Updates a setup.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `setup` The setup.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be updated.
- */
-#[tauri::command]
-pub async fn update_setup(app_data: State<'_, AppData>, setupid: &str, setup: SetupRow) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    data.update_setup(setupid, setup.name.as_str(), setup.description.as_str(), setup.params.map(|f| f.iter().cloned().collect::<HashSet<_>>())).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Deletes a setup.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be deleted.
- */
-#[tauri::command]
-pub async fn delete_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    data.delete_setup(setupid).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Gets the predefined sets.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- *
- * Returns:
- * The predefined sets.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- */
-#[tauri::command]
-pub async fn get_predefined_sets(app_data: State<'_, AppData>, setupid: &str) -> Result<Vec<PredefinedSet>, String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
-    let mut sets: Vec<PredefinedSet> = Vec::new();    
-    if let Some(predefined_params) = &setup.predefined_params {
-        for predefined_set in predefined_params {
-            let set = PredefinedSet::new(&predefined_set.name.clone(), predefined_set.values.clone());
-            sets.push(set);
-        }
-    }
-    Ok(sets)
-}
-
-/**
- * Adds a predefined set.
- * 
- * `app_data` The application data.
- * `setupid` The setup id.
- * 
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the predefined set could not be added.
- */
-#[tauri::command]
-pub async fn add_predefined_set(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
-    setup.add_new_predefined_param_set().map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(()) 
-}
-
-/**
- * Deletes a predefined set.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `name` The name of the predefined set.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the predefined set could not be deleted.
- */
-#[tauri::command]
-pub fn delete_predefined_set(app_data: State<'_, AppData>, setupid: &str, name: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
-    setup.delete_predefined_param_set(name).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Updates a predefined set.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `old_name` The old name of the predefined set.
- * `predified_set` The predefined set.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the predefined set could not be updated.
- */
-#[tauri::command]
-pub fn update_predefined_set(app_data: State<'_, AppData>, setupid: &str, old_name: &str, predefined_set: PredefinedSet) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
-    setup.update_predefined_param_set(old_name, &predefined_set.name, predefined_set.values.clone()).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Gets the servers.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- *
- * Returns:
- * The servers.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- */
-#[tauri::command]
-pub async fn get_servers(app_data: State<'_, AppData>, setupid: &str) -> Result<Vec<HttpServerRow>, String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
-    let http_servers = setup.servers.iter().map(HttpServerRow::from).collect();
-    Ok(http_servers)
-}
-
-/**
- * Updates a server.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `serverid` The server id.
- * `httpserver` The server.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be updated.
- */
-#[tauri::command]
-pub async fn update_server(app_data: State<'_, AppData>, setupid: &str, serverid: &str, httpserver: HttpServerRow) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let server = data.get_server(setupid, serverid).ok_or("Setup not found")?;
-    let https_config: Option<HttpsConfiguration> = httpserver.https_config.map(std::convert::Into::into);
-    server.update(httpserver.name, httpserver.http_port, https_config);
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Deletes a server.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `serverid` The server id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be deleted.
- */
-#[tauri::command]
-pub async fn delete_server(app_data: State<'_, AppData>, setupid: &str, serverid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    data.delete_server(setupid, serverid).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Adds a server.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be added.
- */
-#[tauri::command]
-pub async fn add_server(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
-    setup.servers.push(ServerConfiguration::new(DEFAULT_NAME.to_owned(), None, Vec::new(), None).map_err(|err| err.to_string())?);
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Gets the listeners.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- *
- * Returns:
- * The listeners.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- */
-#[tauri::command]
-pub async fn get_listeners(app_data: State<'_, AppData>, setupid: &str) -> Result<Vec<TcpListenerRow>, String> {
-    let data = get_configuration_data(&app_data)?;
-    let setup = data.setups.iter().find(|t| t.id == setupid).ok_or("Setup not found")?;
-    let tcp_listeners = setup.listeners.iter().map(TcpListenerRow::from).collect();
-    Ok(tcp_listeners)
-}
-
-/**
- * Updates a listener.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `listenerid` The listener id.
- * `tcplistener` The listener.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the listener could not be updated.
- */
-#[tauri::command]
-pub async fn update_listener(app_data: State<'_, AppData>, setupid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    data.update_listener(
-        setupid,
-        listenerid,
-        tcplistener.file,
-        tcplistener.data,
-        tcplistener.delay_write_ms,
-        tcplistener.port,
-        tcplistener.accept,
-        CloseConnectionWhen::from(tcplistener.close_connection.as_str()),
-    )
-    .map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Deletes a listener.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `listenerid` The listener id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the listener could not be deleted.
- */
-#[tauri::command]
-pub async fn delete_listener(app_data: State<'_, AppData>, setupid: &str, listenerid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    data.delete_listener(setupid, listenerid).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Adds a listener.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the listener could not be added.
- */
-#[tauri::command]
-pub async fn add_listener(app_data: State<'_, AppData>, setupid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let setup = data.get_setup(setupid).ok_or("Setup not found")?;
-    let () = setup.listeners.push(TcpListenerData::new(None, None, None, 8000, false, CloseConnectionWhen::AfterResponse).map_err(|err| err.to_string())?);
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Adds an endpoint.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `serverid` The server id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be found.
- * If the endpoint could not be added.
- */
-#[tauri::command]
-pub async fn add_endpoint(app_data: State<'_, AppData>, setupid: &str, serverid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let server = data.get_server(setupid, serverid).ok_or("Server not found")?;
-    server.endpoints.push(
-        EndpointConfiguration::new(
-            Some("/".to_owned()),
-            Some("GET".to_owned()),
-            Some(String::new()),
-            Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, DEFAULT_STATUS_CODE.to_string(), HashMap::new(), DEFAULT_DELAY) }),
-        )
-        .map_err(|err| err.to_string())?,
-    );
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Deletes an endpoint.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `serverid` The server id.
- * `endpointid` The endpoint id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be found.
- * If the endpoint could not be deleted.
- */
-#[tauri::command]
-pub async fn delete_endpoint(app_data: State<'_, AppData>, setupid: &str, serverid: &str, endpointid: &str) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    data.delete_endpoint(setupid, serverid, endpointid).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
-}
-
-/**
- * Updates an endpoint.
- *
- * `app_data` The application data.
- * `setupid` The setup id.
- * `serverid` The server id.
- * `endpointid` The endpoint id.
- * `endpoint` The endpoint.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be found.
- * If the endpoint could not be updated.
- */
-#[allow(clippy::manual_map)]
-#[tauri::command]
-pub async fn update_endpoint(app_data: State<'_, AppData>, setupid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRow) -> Result<(), String> {
-    let mut data = get_configuration_data(&app_data)?;
-    let endpoint_type = if let Some(mock_response) = &endpoint.mock {
-        Some(EndpointType::Mock { configuration: mock_response.into() })
-    } else if let Some(route_response) = &endpoint.route {
-        Some(EndpointType::Route { configuration: route_response.into() })
-    } else {
-        None
-    };
-    data.update_endpoint(setupid, serverid, endpointid, endpoint.path_expression, endpoint.body_expression, endpoint.method, endpoint_type).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(data))?;
-    Ok(())
 }
 
 /**
@@ -611,32 +471,31 @@ pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option
  * If the setup could not be started.
  */
 #[tauri::command]
-pub async fn start_setup(app_data: State<'_, AppData>, setupid: &str, params: HashMap<String, String>) -> Result<SetupRow, String> {
-    let app_config = get_configuration_data(&app_data)?;
-    let setup = app_config.setups.iter().find(|t| t.id == setupid).ok_or("Setup not found")?;
+pub async fn start_process(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, params: HashMap<String, String>) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let collection_name = collection.name.clone();
+    let setup_name = {
+        let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+        setup.name.clone()
+    };
     let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    if let Some(process_data) = process_data.get(setupid) {
-        Ok(SetupRow {
-            id: setup.id.clone(),
-            name: setup.name.clone(),
-            description: setup.description.clone(),
-            process_id: Some(process_data.process_id),
-            params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
-        })
-    } else {
-        let file_path = get_current_file_path(&app_data)?;
-        let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
-        let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
-        let mut process = std::process::Command::new(app_path);
-        let mut process = process.arg("--file").arg(get_current_file_path(&app_data)?).arg("--id").arg(setupid);
-        for (key, value) in params {
-            process = process.arg("--param").arg(format!("{key}={value}"));
-        }
-        let process = process.current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
-        let process_id = process.id();
-        process_data.insert(setupid.to_owned(), ProcessData::new(process_id, process));
-        Ok(SetupRow::new(setup.id.as_str(), setup.name.as_str(), setup.description.as_str(), Some(process_id), setup.params.clone()))
+    let file_path = get_current_file_path(&app_data)?;
+    let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
+    let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
+    let mut process = std::process::Command::new(app_path);
+    let mut process = process.arg("--file").arg(&file_path).arg("--id").arg(collectionid.to_owned() + "-" + setupid);
+    for (key, value) in params.clone() {
+        process = process.arg("--param").arg(format!("{key}={value}"));
     }
+    let mut process = process.stdout(std::process::Stdio::piped()).current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
+    std::thread::sleep(std::time::Duration::from_millis(1000));
+    if let Some(status) = process.try_wait().map_err(|err| err.to_string())? {
+        return Err(format!("Process exited immediately with status: {status}"));
+    }
+    let process_id = process.id();
+    process_data.insert(process_id, ProcessData::new(process_id, process, collection_name, setup_name, params));
+    Result::Ok(())
 }
 
 /**
@@ -655,43 +514,141 @@ pub async fn start_setup(app_data: State<'_, AppData>, setupid: &str, params: Ha
  */
 #[allow(clippy::all)]
 #[tauri::command]
-pub async fn stop_setup(app_data: State<'_, AppData>, setupid: &str) -> Result<SetupRow, String> {
-    let app_config = get_configuration_data(&app_data)?;
-    let setup = app_config.setups.iter().find(|t| t.id == setupid).ok_or("Setup not found")?;
+pub async fn stop_process(app_data: State<'_, AppData>, processid: u32) -> Result<(), String> {
     let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    match processes_data.get_mut(setupid) {
+    match processes_data.remove(&processid) {
         Some(process_data) => {
-            process_data.process.kill().map_err(|err| err.to_string())?;
-            processes_data.remove(setupid);
-            Ok(SetupRow {
-                id: setup.id.clone(),
-                name: setup.name.clone(),
-                description: setup.description.clone(),
-                process_id: None,
-                params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
-            })
+            let mut process = process_data.process;
+            let _ = process.kill().map_err(|err| err.to_string())?;
+            Result::Ok(()) 
         }
-        None => Ok(SetupRow {
-            id: setup.id.clone(),
-            name: setup.name.clone(),
-            description: setup.description.clone(),
-            process_id: None,
-            params: setup.clone().params.map(|f| f.iter().cloned().collect::<Vec<_>>()),
-        }),
+        None => Result::Ok(()),
     }
 }
 
 /**
- * Saves the settings.
+ * Gets the collections tree.
  *
- * `settings` The settings being saved.
+ * `app_data` The application data.
+ *
+ * Returns:
+ * The collections tree.
  *
  * # Errors
- * If the settings could not be saved.
+ * If the configuration data could not be locked.
  */
 #[tauri::command]
-pub async fn save_settings(settings: Settings) -> Result<(), String> {
-    settings.save().map_err(|err| err.to_string())
+pub fn get_setup_tree(app_data: State<'_, AppData>) -> Result<Vec<CollectionRow>, String> {
+    let app_config = get_configuration_data(&app_data)?;
+    let collections = app_config.get_collections().iter().map(CollectionRow::from).collect::<Vec<_>>();
+    Result::Ok(collections)
+}
+
+/**
+ * Adds a collection to the current configuration.
+ *
+ * `app_data` The application data.
+ * `name` The collection name.
+ * `description` The collection description.
+ *
+ * Returns:
+ * The created collection row.
+ *
+ * # Errors
+ * If data cannot be locked or collection cannot be created.
+ */
+#[tauri::command]
+pub fn add_collection(app_data: State<'_, AppData>, name: Option<String>, description: Option<String>) -> Result<CollectionRow, String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = CollectionConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
+        .map_err(|err| err.to_string())?;
+    let collection_row = CollectionRow::from(&collection);
+    app_config.add_collection(collection);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(collection_row)
+}
+
+/**
+ * Renames a collection in the current configuration.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `name` The new collection name.
+ * 
+ * # Errors
+ * If data cannot be locked or collection cannot be found.
+ */
+#[tauri::command]
+pub fn rename_collection(app_data: State<'_, AppData>, collectionid: &str, name: String) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    collection.name = name;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a collection from the current configuration.
+ *
+ * `app` The application handle.
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ *
+ * # Errors
+ * If data cannot be locked or collection cannot be deleted.
+ */
+#[tauri::command]
+pub async fn delete_collection(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str) -> Result<(), String> {
+    let confirmed = confirm_dialog(app).await;
+    if !confirmed {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    app_config.delete_collection(collectionid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Renames a setup in a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `name` The new setup name.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
+ */
+#[tauri::command]
+pub fn rename_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, name: String) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.name = name;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Gets the processes.
+ *
+ * `app_data` The application data.
+ *
+ * Returns:
+ * The processes.
+ *
+ * # Errors
+ * If the processes data could not be locked.
+ */
+#[tauri::command]
+pub fn get_processes(app_data: State<'_, AppData>) -> Result<Vec<ProcessRow>, String> {
+    let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
+    processes_data.retain(|_, process_data| {
+        matches!(process_data.process.try_wait(), Result::Ok(None))
+    });
+    let processes = processes_data.values().map(ProcessRow::from).collect::<Vec<_>>();
+    Result::Ok(processes)
 }
 
 /**
@@ -701,8 +658,21 @@ pub async fn save_settings(settings: Settings) -> Result<(), String> {
  * The settings.
  */
 #[tauri::command]
-pub async fn load_settings() -> Result<Settings, String> {
-    Ok(Settings::load())
+pub fn load_settings() -> Settings {
+    Settings::load()
+}
+
+/**
+ * Saves the settings.
+ *
+ * `settings` The settings to save.
+ *
+ * # Errors
+ * If the settings cannot be saved.
+ */
+#[tauri::command]
+pub fn save_settings(settings: Settings) -> Result<(), String> {
+    settings.save().map_err(|err| err.to_string())
 }
 
 /**
@@ -751,17 +721,17 @@ fn get_current_file_path(app_data: &State<'_, AppData>) -> Result<String, String
  */
 fn get_file_path(file_path: FilePath) -> Result<String, String> {
     if let FilePath::Path(path) = file_path {
-        Ok(path.to_string_lossy().to_string())
+        Result::Ok(path.to_string_lossy().to_string())
     } else {
         Err("Invalid file path".to_string())
     }
 }
 
 /**
- * Updates the data.
+ * Update state data
  *
- * `app_data` The application data.
- * `new_data` The new data.
+ * 'app_data' The application data.
+ * 'new_data' The new data.
  *
  * # Errors
  * If the data could not be locked.
@@ -769,7 +739,7 @@ fn get_file_path(file_path: FilePath) -> Result<String, String> {
 fn update_data(app_data: &State<'_, AppData>, new_data: Option<AppConfiguration>) -> Result<(), String> {
     let mut lock = app_data.data.try_lock().map_err(|err| err.to_string())?;
     *lock = new_data;
-    Ok(())
+    Result::Ok(())
 }
 
 /**
@@ -784,5 +754,5 @@ fn update_data(app_data: &State<'_, AppData>, new_data: Option<AppConfiguration>
 fn update_file_path(app_data: &State<'_, AppData>, new_file_path: Option<String>) -> Result<(), String> {
     let mut lock = app_data.file_path.try_lock().map_err(|err| err.to_string())?;
     *lock = new_file_path;
-    Ok(())
+    Result::Ok(())
 }

@@ -1,99 +1,106 @@
 {
   "name": "Test Configuration",
   "description": "Test Configuration Description",
-  "setups": [
+  "collections": [
     {
       "id": "1",
-      "name": "Test",
-      "description": "Test Description",
-      "servers": [
+      "name": "Test Configuration",
+      "description": "Test Configuration Description",
+      "setups": [
         {
-          "id": "2",
-          "name": "Test https",
-          "httpPort": null,
-          "endpoints": [
+          "id": "1",
+          "name": "Test",
+          "description": "Test Description",
+          "servers": [
             {
-              "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-              "pathExpression": "^/test$",
-              "method": "GET",
-              "mock": {
-                "response": "{ \"test\": \"Success https\" }",
-                "status": 200,
-                "headers": {
-                  "Content-Type": "application/json"
-                },
-                "delay": 0
-              },
-              "route": null
+              "id": "2",
+              "name": "Test https",
+              "httpPort": null,
+              "endpoints": [
+                {
+                  "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+                  "pathExpression": "^/test$",
+                  "method": "GET",
+                  "mock": {
+                    "response": "{ \"test\": \"Success https\" }",
+                    "status": 200,
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "delay": 0
+                  },
+                  "route": null
+                }
+              ],
+              "httpsConfig": {
+                "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
+                "privateKey": "./apinae-daemon/tests/resources/server_key.pem",
+                "httpsPort": 8085,
+                "clientCertificate": null,
+                "supportedTlsVersions": [
+                  "TLSv1_2",
+                  "TLSv1_3"
+                ]
+              }
+            },
+            {
+              "id": "3",
+              "name": "Test https",
+              "httpPort": null,
+              "endpoints": [
+                {
+                  "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
+                  "pathExpression": "^/test$",
+                  "method": "GET",
+                  "mock": {
+                    "response": "{ \"test\": \"Success https\" }",
+                    "status": 200,
+                    "headers": {
+                      "Content-Type": "application/json"
+                    },
+                    "delay": 0
+                  },
+                  "route": null
+                }
+              ],
+              "httpsConfig": {
+                "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
+                "privateKey": "./apinae-daemon/tests/resources/server_key.pem",
+                "httpsPort": 8087,
+                "clientCertificate": null,
+                "supportedTlsVersions": [
+                  "TLSv1_2",
+                  "TLSv1_3"
+                ]
+              }
             }
           ],
-          "httpsConfig": {
-            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
-            "privateKey": "./apinae-daemon/tests/resources/server_key.pem",
-            "httpsPort": 8085,
-            "clientCertificate": null,
-            "supportedTlsVersions": [
-              "TLSv1_2",
-              "TLSv1_3"
-            ]
-          }
-        },
-        {
-          "id": "3",
-          "name": "Test https",
-          "httpPort": null,
-          "endpoints": [
+          "listeners": [
             {
-              "id": "0a583546-5d23-4fa1-a053-543df7b6fce5",
-              "pathExpression": "^/test$",
-              "method": "GET",
-              "mock": {
-                "response": "{ \"test\": \"Success https\" }",
-                "status": 200,
-                "headers": {
-                  "Content-Type": "application/json"
-                },
-                "delay": 0
-              },
-              "route": null
+              "file": null,
+              "data": "Test",
+              "delayWriteMs": null,
+              "port": 8080,
+              "accept": true,
+              "closeConnection": "AfterResponse"
+            },
+            {
+              "file": "./tests/resources/test_listener_data.txt",
+              "data": null,
+              "delayWriteMs": null,
+              "port": 8081,
+              "accept": true,
+              "closeConnection": "AfterResponse"
+            },
+            {
+              "file": null,
+              "data": null,
+              "delayWriteMs": 1000,
+              "port": 8082,
+              "accept": true,
+              "closeConnection": "AfterResponse"
             }
-          ],
-          "httpsConfig": {
-            "serverCertificate": "./apinae-daemon/tests/resources/server_cert.pem",
-            "privateKey": "./apinae-daemon/tests/resources/server_key.pem",
-            "httpsPort": 8087,
-            "clientCertificate": null,
-            "supportedTlsVersions": [
-              "TLSv1_2",
-              "TLSv1_3"
-            ]
-          }
-        }
-      ],
-      "listeners": [
-        {
-          "file": null,
-          "data": "Test",
-          "delayWriteMs": null,
-          "port": 8080,
-          "accept": true,
-          "closeConnection": "AfterResponse"
-        },
-        {
-          "file": "./tests/resources/test_listener_data.txt",
-          "data": null,
-          "delayWriteMs": null,
-          "port": 8081,
-          "accept": true,
-          "closeConnection": "AfterResponse"
-        },
-        {
-          "file": null,
-          "data": null,
-          "delayWriteMs": 1000,
-          "port": 8082,
-          "accept": true,
-          "closeConnection": "AfterResponse"
+          ]
         }
       ]
     }

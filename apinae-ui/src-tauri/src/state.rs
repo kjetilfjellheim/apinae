@@ -12,7 +12,7 @@ pub struct AppData {
     // The file path of the current file.
     pub file_path: Mutex<Option<String>>,
     // The process data.
-    pub process_data: Mutex<HashMap<String, ProcessData>>,
+    pub process_data: Mutex<HashMap<u32, ProcessData>>,
 }
 
 impl AppData {
@@ -23,7 +23,7 @@ impl AppData {
      * The new instance of the `AppData` struct.
      */
     pub fn new() -> Self {
-        Self { data: Mutex::new(AppConfiguration::new(String::from("Untitled"), String::new(), Vec::new()).into()), file_path: Mutex::new(None), process_data: Mutex::new(HashMap::new()) }
+        Self { data: Mutex::new(AppConfiguration::new(String::from("Untitled"), String::new()).into()), file_path: Mutex::new(None), process_data: Mutex::new(HashMap::new()) }
     }
 }
 
@@ -36,6 +36,12 @@ pub struct ProcessData {
     pub process_id: u32,
     // The process.
     pub process: std::process::Child,
+    // The name of the collection.
+    pub collection_name: String,
+    // The name of the setup.
+    pub setup_name: String,
+    // The parameters of the process.
+    pub params: HashMap<String, String>,
 }
 
 impl ProcessData {
@@ -45,11 +51,14 @@ impl ProcessData {
      * # Arguments
      * `process_id` - The process ID.
      * `process` - The process.
+     * `collection_name` - The name of the collection.
+     * `setup_name` - The name of the setup.
+     * `params` - The parameters of the setup.
      *
      * # Returns
      * The new instance of the `ProcessData` struct.
      */
-    pub fn new(process_id: u32, process: std::process::Child) -> Self {
-        Self { process_id, process }
+    pub fn new(process_id: u32, process: std::process::Child, collection_name: String, setup_name: String, params: HashMap<String, String>) -> Self {
+        Self { process_id, process, collection_name, setup_name, params }
     }
 }

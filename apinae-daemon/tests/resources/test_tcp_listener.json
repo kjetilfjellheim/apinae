@@ -1,40 +1,47 @@
 {
   "name": "Test Configuration",
   "description": "Test Configuration Description",
-  "setups": [
+  "collections": [
     {
       "id": "1",
-      "name": "Test",
-      "description": "Test Description",
-      "servers": [],
-      "listeners": [
+      "name": "Test Configuration",
+      "description": "Test Configuration Description",
+      "setups": [
         {
           "id": "1",
-          "data": "Test",
-          "port": 8180
-        },
-        {
-          "id": "2",
-          "file": "./tests/resources/test_listener_data.txt",
-          "port": 8181
-        },
-        {
-          "id": "3",
-          "port": 8182,
-          "delayWriteMs": 1000
-        },
-        {
-          "id": "4",
-          "port": 8183,
-          "accept": false
-        },
-        {
-          "id": "5",
-          "port": 8184,
-          "closeConnection": "Never",
-          "data": "Test"
-        }       
-      ]      
+          "name": "Test",
+          "description": "Test Description",
+          "servers": [],
+          "listeners": [
+            {
+              "id": "1",
+              "data": "Test",
+              "port": 8180
+            },
+            {
+              "id": "2",
+              "file": "./tests/resources/test_listener_data.txt",
+              "port": 8181
+            },
+            {
+              "id": "3",
+              "port": 8182,
+              "delayWriteMs": 1000
+            },
+            {
+              "id": "4",
+              "port": 8183,
+              "accept": false
+            },
+            {
+              "id": "5",
+              "port": 8184,
+              "closeConnection": "Never",
+              "data": "Test"
+            }
+          ]
+        }
+      ]
     }
   ]
 }

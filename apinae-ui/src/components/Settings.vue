@@ -1,106 +1,100 @@
 <script setup lang="ts">
-//Required for showing editing modals.
-import { Modal } from 'bootstrap/dist/js/bootstrap.bundle';
-//Required for calling the rust code.
-import { invoke } from "@tauri-apps/api/core";
+import { invoke } from '@tauri-apps/api/core';
+import { onBeforeUnmount, onMounted, ref } from 'vue';
 
-//Importing the ref function from vue.
-import { onMounted, ref } from "vue";
+type CommandType = 'installed' | 'specific';
 
-//The modal for editing settings. Initialized in the onMounted function.
-const editSettingsModal = ref<any>(null);
-
-//The settings data.
-const settingsData = ref<{ apinaeCommand: string; commandType: string; bodyHeight: string }>({
-    apinaeCommand: "",
-    commandType: "",
-    bodyHeight: "8pc",
-});
-
-// Saves the settings. Calls the rust code to save the settings.
-const saveSettings = () => {
-    invoke("save_settings", { settings: convertToSettingsRequestObject(settingsData.value) })
-        .then(() => {
-            editSettingsModal.value?.hide();
-        })
-        .catch((error) => window.alert(error));
+type SettingsData = {
+    apinaeCommand: string;
+    commandType: CommandType;
+    bodyHeight: string;
 };
 
-// Converts the settings data to a request object. The request object is used to call the rust code.
-const convertToSettingsRequestObject = (settingsData: { commandType: string; apinaeCommand: string; bodyHeight: string }) => {
+const isOpen = ref(false);
+
+const settingsData = ref<SettingsData>({
+    apinaeCommand: '',
+    commandType: 'installed',
+    bodyHeight: '8pc',
+});
+
+const commandTypeItems = [
+    { label: 'Installed', value: 'installed' },
+    { label: 'Specific', value: 'specific' },
+];
+
+function convertToSettingsRequestObject(data: SettingsData) {
     return {
-        apinaePath: settingsData.commandType == 'specific' ? settingsData.apinaeCommand : null,
-        bodyHeight: settingsData.bodyHeight,
+        apinaePath: data.commandType === 'specific' ? data.apinaeCommand : null,
+        bodyHeight: data.bodyHeight,
     };
-};
+}
 
-//Called when the component is mounted. Initializes the editSettingsModal and loads the settings.
-onMounted(() => {
-    const modalElement = document.getElementById("idSettingsModal");
-    editSettingsModal.value = modalElement ? new Modal(modalElement) : null;
-    invoke("load_settings", {})
+async function loadSettings() {
+    await invoke('load_settings', {})
         .then((settings: any) => {
-            settingsData.value.apinaeCommand = settings.apinaePath ?? "";
+            settingsData.value.apinaeCommand = settings.apinaePath ?? '';
             settingsData.value.commandType = settings.apinaePath ? 'specific' : 'installed';
-            settingsData.value.bodyHeight = settings.bodyHeight ?? "8pc";
+            settingsData.value.bodyHeight = settings.bodyHeight ?? '8pc';
         })
         .catch((error) => window.alert(error));
+}
+
+async function saveSettings() {
+    await invoke('save_settings', { settings: convertToSettingsRequestObject(settingsData.value) })
+        .then(() => {
+            isOpen.value = false;
+        })
+        .catch((error) => window.alert(error));
+}
+
+function openSettingsModal() {
+    isOpen.value = true;
+}
+
+onMounted(() => {
+    loadSettings();
+    window.addEventListener('open-settings-modal', openSettingsModal);
 });
 
+onBeforeUnmount(() => {
+    window.removeEventListener('open-settings-modal', openSettingsModal);
+});
 </script>
-<style></style>
+
 <template>
-    <div id="idSettingsModal" class="modal modal-xl" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary">
-                    <h5 class="modal-title">Settings</h5>
-                </div>
-                <div class="modal-body">
-                    <form class="row">
-                        <div class="col-md-4">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="commandType" id="idInstalledRadio" value="installed" v-model="settingsData.commandType">
-                                <label class="form-check-label small" for="installedRadio">Installed</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="radio" name="commandType" id="idSpecificRadio" value="specific" v-model="settingsData.commandType">
-                                <label class="form-check-label small" for="specificRadio">Specific</label>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="row mb-2">
-                                <label for="idEditApinaePath" class="col-sm-2 form-label small">Path</label>
-                                <div class="col-sm-10">
-                                    <input type="text" class="form-control form-control-sm" id="idEditApinaePath" v-model="settingsData.apinaeCommand" :disabled="settingsData.commandType === 'installed'">
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div id="bodyHeightBlock" class="form-text">
-                                What apinae command to use.
-                            </div>                                                         
-                        </div>
-                        <div class="col-md-6">
-                            <div class="row mb-6">
-                                <label for="idEditBodyHeight" class="col-sm-6 form-label small">Multiline field height</label>
-                                <div class="col-sm-6">
-                                    <input type="text" class="form-control form-control-sm" id="idEditBodyHeight" v-model="settingsData.bodyHeight">
-                                </div>                               
-                            </div>                            
-                        </div>
-                        <div class="col-md-6">
-                            <div id="bodyHeightBlock" class="form-text">
-                                The height of the multiline fields displayed.
-                            </div>                                                        
-                        </div>                        
-                    </form>
-                </div>
-                <div class="modal-footer bg-primary-subtle">
-                    <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-sm btn-primary" @click="saveSettings()">Save changes</button>
-                </div>
+    <UModal v-model:open="isOpen" title="Settings" :ui="{ content: 'sm:max-w-2xl' }">
+        <template #body>
+            <div class="space-y-4">
+                <UFormField label="Command Type" description="Which apinae command should be used.">
+                    <URadioGroup
+                        v-model="settingsData.commandType"
+                        :items="commandTypeItems"
+                        orientation="horizontal"
+                        value-key="value"
+                        label-key="label"
+                    />
+                </UFormField>
+
+                <UFormField label="Path" description="Used only when Command Type is Specific.">
+                    <UInput
+                        v-model="settingsData.apinaeCommand"
+                        placeholder="/usr/local/bin/apinae"
+                        :disabled="settingsData.commandType === 'installed'"
+                    />
+                </UFormField>
+
+                <UFormField label="Multiline Field Height" description="Height used for multiline fields in the UI.">
+                    <UInput v-model="settingsData.bodyHeight" placeholder="8pc" />
+                </UFormField>
             </div>
-        </div>
-    </div>
+        </template>
+
+        <template #footer>
+            <div class="flex w-full justify-end gap-2">
+                <UButton color="neutral" variant="ghost" @click="isOpen = false">Close</UButton>
+                <UButton color="primary" variant="solid" @click="saveSettings">Save changes</UButton>
+            </div>
+        </template>
+    </UModal>
 </template>

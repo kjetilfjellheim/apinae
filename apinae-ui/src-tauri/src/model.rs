@@ -1,6 +1,35 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap};
 
-use apinae_lib::config::{EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration, TlsVersion};
+use apinae_lib::config::{CloseConnectionWhen, CollectionConfiguration, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, SetupConfiguration, TcpListenerData, TlsVersion};
+
+use crate::state::ProcessData;
+
+/**
+ * This struct represents a collection row for request and responses.
+ */
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CollectionRow {
+    // Collection id
+    pub id: String,
+    // Collection name.
+    pub name: String,
+    // Collection description.
+    pub description: String,
+    // Collection setups.
+    pub setups: Vec<SetupRow>,
+}
+
+impl From<&CollectionConfiguration> for CollectionRow {
+    fn from(collection: &CollectionConfiguration) -> Self {
+        Self {
+            id: collection.id.clone(),
+            name: collection.name.clone(),
+            description: collection.description.clone(),
+            setups: collection.get_setups().iter().map(|setup| SetupRow::from(setup.clone())).collect(),
+        }
+    }
+}
 
 /**
  * This struct represents a setup row for both request and responses.
@@ -14,29 +43,12 @@ pub struct SetupRow {
     pub name: String,
     // The description of the setup.
     pub description: String,
-    // The process id of the setup.
-    pub process_id: Option<u32>,
     // The parameters of the setup.
-    pub params: Option<Vec<String>>,    
-}
-
-impl SetupRow {
-    /**
-     * Create a new setup row.
-     *
-     * # Arguments
-     * `id` - The unique identifier of the setup.
-     * `name` - The name of the setup.
-     * `description` - The description of the setup.
-     * `process_id` - The process id of the setup.
-     * `params` - The parameters of the setup.
-     *
-     * # Returns
-     * `SetupRow` - The setup row.
-     */
-    pub fn new(id: &str, name: &str, description: &str, process_id: Option<u32>, params: Option<HashSet<String>>) -> Self {
-        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), process_id, params: params.map(|p| p.into_iter().collect()) }
-    }
+    pub params: Option<Vec<String>>,
+    // The tcp listeners of the setup.
+    pub listeners: Option<Vec<TcpListenerRow>>,
+    // The http servers of the setup.
+    pub servers: Option<Vec<HttpServerRow>>,   
 }
 
 impl From<SetupConfiguration> for SetupRow {
@@ -44,45 +56,28 @@ impl From<SetupConfiguration> for SetupRow {
      * Convert a setup configuration to setup setup row.
      */
     fn from(setup: SetupConfiguration) -> Self {
+        let SetupConfiguration { id, name, description, servers, listeners, params } = setup;
+
         Self {
-            id: setup.id.clone(),
-            name: setup.name.clone(),
-            description: setup.description.clone(),
-            process_id: None,
-            params: setup.params.map(|f| {
+            id,
+            name,
+            description,
+            params: params.map(|f| {
                 let mut params = f.iter().cloned().collect::<Vec<_>>();
                 params.sort();
                 params
-            })        
+            }),
+            listeners: if listeners.is_empty() {
+                None
+            } else {
+                Some(listeners.iter().map(TcpListenerRow::from).collect())
+            },
+            servers: if servers.is_empty() {
+                None
+            } else {
+                Some(servers.iter().map(HttpServerRow::from).collect())
+            },
         }
-    }
-}
-
-/**
- * Predefined parameters.
- */
-#[derive(Debug, serde::Serialize, serde::Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct PredefinedSet {
-    // Name of the predefined set.
-    pub name: String,
-    // Parameters of the predefined set.
-    pub values: HashMap<String, String>,
-}
-
-impl PredefinedSet {
-    /**
-     * Create a new predefined set.
-     *
-     * # Arguments
-     * `name` - The name of the predefined set.
-     * `values` - The parameters of the predefined set.
-     *
-     * # Returns
-     * `PredefinedSet` - The predefined set.
-     */
-    pub fn new(name: &str, values: HashMap<String, String>) -> Self {
-        Self { name: name.to_string(), values }
     }
 }
 
@@ -159,6 +154,31 @@ impl From<&EndpointConfiguration> for EndpointRow {
                 EndpointType::Mock { configuration: _ } => None,
             }),
         }
+    }
+}
+
+impl From<&EndpointRow> for EndpointConfiguration {
+    /**
+     * Convert an endpoint row to an endpoint configuration.
+     */
+    fn from(endpoint_row: &EndpointRow) -> Self {
+        let endpoint_type = endpoint_row
+            .mock
+            .as_ref()
+            .map(|mock_row| EndpointType::Mock { configuration: MockResponseConfiguration::from(mock_row) })
+            .or_else(|| {
+                endpoint_row
+                    .route
+                    .as_ref()
+                    .map(|route_row| EndpointType::Route { configuration: RouteConfiguration::from(route_row) })
+            });
+
+        EndpointConfiguration::new(
+            endpoint_row.path_expression.clone(),
+            endpoint_row.method.clone(),
+            endpoint_row.body_expression.clone(),
+            endpoint_type,
+        ).unwrap()
     }
 }
 
@@ -378,6 +398,49 @@ impl From<&TcpListenerData> for TcpListenerRow {
     }
 }
 
+impl From<TcpListenerRow> for TcpListenerData {
+    /**
+     * Convert a tcp listener row to a tcp listener data.
+     */
+    fn from(tcp_listener_row: TcpListenerRow) -> Self {
+        TcpListenerData::new(
+            tcp_listener_row.file,
+            tcp_listener_row.data,
+            tcp_listener_row.delay_write_ms,
+            tcp_listener_row.port,
+            tcp_listener_row.accept,
+            CloseConnectionWhen::from(tcp_listener_row.close_connection.as_str())
+        ).unwrap()
+    }
+}
+
+/**
+ * This struct represents a running proceses.
+ */
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProcessRow {
+    // The process id.
+    pub process_id: u32,
+    // The name of the collection.
+    pub collection_name: String,
+    // The name of the setup.
+    pub setup_name: String,
+    // The parameters of the process.
+    pub params: HashMap<String, String>,
+}
+
+impl From<&ProcessData> for ProcessRow {
+    fn from(process_data: &ProcessData) -> Self {
+        Self {
+            process_id: process_data.process_id,
+            collection_name: process_data.collection_name.clone(),
+            setup_name: process_data.setup_name.clone(),
+            params: process_data.params.clone(),
+        }
+    }
+}
+
 mod test {
 
     #[allow(unused_imports)]
@@ -388,7 +451,7 @@ mod test {
 
     #[test]
     fn test_setup_row_from_setup_configuration() {
-        let setup_config = SetupConfiguration::new("name".to_owned(), "description".to_owned(), Vec::new(), Vec::new(), None, None).unwrap();
+        let setup_config = SetupConfiguration::new("name".to_owned(), "description".to_owned()).unwrap();
 
         let setup_row = SetupRow::from(setup_config);
 
@@ -398,7 +461,7 @@ mod test {
 
     #[test]
     fn test_http_server_row_from_server_configuration() {
-        let server_config = ServerConfiguration::new("name".to_owned(), Some(8080), Vec::new(), None).unwrap();
+        let server_config = ServerConfiguration::new("name".to_owned(), Some(8080), None).unwrap();
 
         let http_server_row = HttpServerRow::from(&server_config);
 

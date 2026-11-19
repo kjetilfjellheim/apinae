@@ -2,13 +2,31 @@ mod api;
 mod model;
 mod state;
 
-use api::update_predefined_set;
 use state::AppData;
+use tauri::{Manager, RunEvent};
 
 use crate::api::{
-    add_endpoint, add_listener, add_server, add_setup, clean, confirm_dialog, delete_endpoint, delete_listener, delete_server, delete_setup, get_listeners, get_servers, get_setup, get_setups, load,
-    load_settings, open_dialog, save, save_as, save_settings, start_setup, stop_setup, update_endpoint, update_listener, update_server, update_setup, get_predefined_sets, add_predefined_set, delete_predefined_set,
+    add_collection, add_endpoint, delete_endpoint, update_endpoint, add_setup, get_setup, update_setup, add_http_server, update_http_server, add_tcp_listener, update_tcp_listener, delete_http_server, delete_tcp_listener, clean, confirm_dialog, get_processes, get_setup_tree, load, load_settings, rename_collection, delete_collection, rename_setup, delete_setup, save_settings, open_dialog, save, save_as, start_process, stop_process
 };
+
+fn kill_all_child_processes(app_handle: &tauri::AppHandle) {
+    let app_data = app_handle.state::<AppData>();
+    let mut process_data = match app_data.process_data.lock() {
+        Ok(guard) => guard,
+        Err(_) => return,
+    };
+
+    for process in process_data.values_mut() {
+        match process.process.try_wait() {
+            Ok(Some(_)) => {}
+            Ok(None) | Err(_) => {
+                let _ = process.process.kill();
+                let _ = process.process.wait();
+            }
+        }
+    }
+    process_data.clear();
+}
 
 /**
  * This function is the entry point of the Tauri application.
@@ -41,7 +59,7 @@ pub fn run() {
      * Start the Tauri application.
      */
     #[allow(clippy::items_after_statements)]
-    builder
+    let app = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .manage(AppData::new())
@@ -50,33 +68,39 @@ pub fn run() {
             save,
             save_as,
             clean,
-            get_setups,
-            get_setup,
-            update_setup,
+            add_collection,
             add_setup,
-            delete_setup,
-            get_servers,
-            update_server,
-            add_server,
-            delete_server,
-            get_listeners,
-            update_listener,
-            add_listener,
-            delete_listener,
-            get_predefined_sets,
-            add_predefined_set,
-            delete_predefined_set,
-            update_predefined_set,
-            add_endpoint,
-            delete_endpoint,
-            update_endpoint,
+            get_setup_tree,
             confirm_dialog,
             open_dialog,
-            start_setup,
-            stop_setup,
+            start_process,
+            stop_process,
+            get_processes,
+            load_settings,
             save_settings,
-            load_settings
+            rename_collection,
+            delete_collection,
+            rename_setup,
+            delete_setup,
+            get_setup,
+            update_setup,
+            add_http_server,
+            update_http_server,
+            add_tcp_listener,
+            update_tcp_listener,
+            delete_http_server,
+            delete_tcp_listener,
+            add_endpoint,
+            delete_endpoint,
+            update_endpoint
+            
         ])
-        .run(tauri::generate_context!())
-        .expect("Error while running tauri application");
+        .build(tauri::generate_context!())
+        .expect("Error while building tauri application");
+
+    app.run(|app_handle, event| {
+        if matches!(event, RunEvent::Exit | RunEvent::ExitRequested { .. }) {
+            kill_all_child_processes(app_handle);
+        }
+    });
 }
