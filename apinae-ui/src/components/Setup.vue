@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
+import { end } from "@popperjs/core";
 
 const collectionIdRef = ref<string>('');
 const setupIdRef = ref<string>('');
@@ -19,15 +20,15 @@ const editSetupData = ref<Record<string, any>>({});
 const editAddParameter = ref<string>('');
 const editTcpListenerData = ref<any>({});
 const editHttpServerData = ref<any>({});
-const editHttpsConfig = ref<any>({});
 const editSelectedPredefinedSet = ref<any>({});
 const editSupportedTlsVersions = ref<string[]>([]);
 const editEndpointData = ref<any>({});
-const editMockData = ref<any>({});
-const editRouteData = ref<any>({});
+
+const editServerIdForNewEndpoint = ref<string>('');
+const selectedMock = ref<boolean>(true);
 
 const showEditHttpsConfig = ref(false);
-const showEditMockData = ref(false);
+
 
 const refresh = (collectionId: string, setupId: string) => {
   if (setupId == null) {
@@ -55,10 +56,12 @@ const editTcpListener = (listener: any) => {
 
 const editHttpServer = (server: any) => {
   editHttpServerData.value = { ...server };
+  showEditHttpsConfig.value = editHttpServerData.value?.httpsConfig != null;
   isEditHttpServerOpen.value = true;
 }
 
-const editEndpoint = (endpoint: any) => {
+const editEndpoint = (serverId: string, endpoint: any) => {
+  editServerIdForNewEndpoint.value = serverId;
   editEndpointData.value = { ...endpoint };
   isEditEndpointOpen.value = true;
 }
@@ -103,6 +106,15 @@ function addTcpListener() {
     .catch((error) => window.alert(error));
 }
 
+function updateTcpListener() {
+  invoke("update_tcp_listener", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, listenerid: editTcpListenerData.value.id, tcplistener: editTcpListenerData.value })
+    .then(() => {
+      refresh(collectionIdRef.value, setupIdRef.value);
+      isEditTcpListenerOpen.value = false;
+    })
+    .catch((error) => window.alert(error));
+}
+
 function addHttpServer() {
     invoke("add_http_server", { collectionid: collectionIdRef.value, setupid: setupIdRef.value })
     .then(() => {
@@ -112,7 +124,7 @@ function addHttpServer() {
 }
 
 function deleteTcpListener(listenerId: string) {
-    invoke("delete_tcp_listener", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, listenerId: listenerId })
+    invoke("delete_tcp_listener", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, listenerid: listenerId })
     .then(() => {
       refresh(collectionIdRef.value, setupIdRef.value);
     })
@@ -120,23 +132,41 @@ function deleteTcpListener(listenerId: string) {
 }
 
 function deleteHttpServer(serverId: string) {
-    invoke("delete_http_server", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverId: serverId })
+    invoke("delete_http_server", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverid: serverId })
     .then(() => {
       refresh(collectionIdRef.value, setupIdRef.value);
     })
     .catch((error) => window.alert(error));
 }
 
+function updateHttpServer() {
+  invoke("update_http_server", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverid: editHttpServerData.value.id, httpServer: editHttpServerData.value })
+    .then(() => {
+      refresh(collectionIdRef.value, setupIdRef.value);
+      isEditHttpServerOpen.value = false;
+    })
+    .catch((error) => window.alert(error));
+}
+
+function updateEndpoint() {
+  invoke("update_endpoint", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverid: editServerIdForNewEndpoint.value, endpointid: editEndpointData.value.id, endpoint: editEndpointData.value })
+    .then(() => {
+      refresh(collectionIdRef.value, setupIdRef.value);
+      isEditEndpointOpen.value = false;
+    })
+    .catch((error) => window.alert(error));
+}
+
 function addEndpoint(serverId: string) {
-    invoke("add_endpoint", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverId: serverId })
+    invoke("add_endpoint", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverid: serverId })
     .then(() => {
       refresh(collectionIdRef.value, setupIdRef.value);
     })
     .catch((error) => window.alert(error));  
 }
 
-function deleteEndpoint(serverId: string, endpointId: string) {
-    invoke("delete_endpoint", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverId: serverId, endpointId: endpointId })
+function deleteEndpoint(serverid: string, endpointid: string) {
+    invoke("delete_endpoint", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, serverid: serverid, endpointid: endpointid })
     .then(() => {
       refresh(collectionIdRef.value, setupIdRef.value);
     })
@@ -313,9 +343,8 @@ defineExpose({ refresh });
                 </template>
                 <template #body="{ item: endpointItem }">
                   <div class="space-y-2 text-sm md:grid md:grid-cols-3 md:gap-1">
-                    <p><span class="text-neutral-500">Description:</span> {{ endpointItem.description }}</p>
-                    <div class="flex gap-1 justify-end md:col-span-2">
-                      <UButton size="xs" color="primary" variant="soft" @click="editEndpoint(endpointItem)">Edit</UButton>
+                    <div class="flex gap-1 justify-end md:col-span-3">
+                      <UButton size="xs" color="primary" variant="soft" @click="editEndpoint(serverItem.id, endpointItem)">Edit</UButton>
                       <UButton size="xs" color="error" variant="soft" @click="deleteEndpoint(serverItem.id, endpointItem.id)">Delete</UButton>
                     </div>                    
                   </div>
@@ -441,10 +470,10 @@ defineExpose({ refresh });
       <template #body>
         <div class="space-y-4 grid grid-cols-1 md:grid-cols-4">
           <UFormField label="Port">
-            <UInput v-model="editTcpListenerData.port" maxlength="5" />
+            <UInput type="number" v-model="editTcpListenerData.port" maxlength="5" />
           </UFormField>
           <UFormField label="Delayed write ms">
-            <UInput v-model="editTcpListenerData.delayWriteMs" maxlength="5" />
+            <UInput type="number" v-model="editTcpListenerData.delayWriteMs" maxlength="5" />
           </UFormField>
           <UFormField label="Close connection" class="w-full">
             <USelect v-model="editTcpListenerData.closeConnection"
@@ -468,7 +497,7 @@ defineExpose({ refresh });
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" @click="isEditTcpListenerOpen = false">Cancel</UButton>
-          <UButton color="primary" variant="solid" @click="(editTcpListenerData)">Save</UButton>
+          <UButton color="primary" variant="solid" @click="updateTcpListener()">Save</UButton>
         </div>
       </template>
     </UModal>
@@ -480,30 +509,30 @@ defineExpose({ refresh });
             <UInput v-model="editHttpServerData.name" />
           </UFormField>
           <UFormField label="Http port" class="md:col-span-2">
-            <UInput v-model="editHttpServerData.httpPort" />
+            <UInput type="number" v-model="editHttpServerData.httpPort" />
           </UFormField>
-          <UCheckbox v-model="showEditHttpsConfig" label="Https config" class="md:col-span-4" />
-          <div v-if="showEditHttpsConfig" class="space-y-4 rounded border border-neutral-800 p-3 md:col-span-4">
+          <UCheckbox v-model="showEditHttpsConfig" @change="editHttpServerData.httpsConfig = showEditHttpsConfig ? {} : null" label="Https config" class="md:col-span-4" />
+          <div v-if="editHttpServerData.httpsConfig" class="space-y-4 rounded border border-neutral-800 p-3 md:col-span-4">
             <UFormField label="Https port" class="md:col-span-2">
-              <UInput v-model="editHttpsConfig.httpsPort" />
+              <UInput type="number" v-model="editHttpServerData.httpsConfig.httpsPort" />
             </UFormField>
             <UFormField label="Server certificate" class="md:col-span-2">
               <div class="flex gap-2">
-                <UInput v-model="editHttpsConfig.serverCertificate" readonly class="flex-1" />
+                <UInput v-model="editHttpServerData.httpsConfig.serverCertificate" readonly class="flex-1" />
                 <UButton size="sm" color="primary" variant="soft" @click="">Select</UButton>
                 <UButton size="sm" color="error" variant="soft" @click="">Clear</UButton>
               </div>
             </UFormField>
             <UFormField label="Private key" class="md:col-span-2">
               <div class="flex gap-2">
-                <UInput v-model="editHttpsConfig.privateKey" readonly class="flex-1" />
+                <UInput v-model="editHttpServerData.httpsConfig.privateKey" readonly class="flex-1" />
                 <UButton size="sm" color="primary" variant="soft" @click="">Select</UButton>
                 <UButton size="sm" color="error" variant="soft" @click="">Clear</UButton>
               </div>
             </UFormField>
             <UFormField label="Client certificate" class="md:col-span-2">
               <div class="flex gap-2">
-                <UInput v-model="editHttpsConfig.clientCertificate" readonly class="flex-1" />
+                <UInput v-model="editHttpServerData.httpsConfig.clientCertificate" readonly class="flex-1" />
                 <UButton size="sm" color="primary" variant="soft" @click="">Select</UButton>
                 <UButton size="sm" color="error" variant="soft" @click="">Clear</UButton>
               </div>
@@ -518,7 +547,7 @@ defineExpose({ refresh });
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" @click="isEditHttpServerOpen = false">Cancel</UButton>
-          <UButton color="primary" variant="solid" @click="">Save</UButton>
+          <UButton color="primary" variant="solid" @click="updateHttpServer()">Save</UButton>
         </div>
       </template>
     </UModal>
@@ -536,57 +565,57 @@ defineExpose({ refresh });
             <UInput v-model="editEndpointData.bodyExpression" class="w-full" />
           </UFormField>
           <div class="md:col-span-4">
-            <UCheckbox v-model="showEditMockData" label="Mock" />
+            <UCheckbox v-model="selectedMock" @change="editEndpointData.mock = selectedMock ? {} : null; editEndpointData.route = selectedMock ? null : {}" label="Mock/Route" />
           </div>          
-          <template v-if="showEditMockData">
+          <template v-if="editEndpointData.mock">
             <div class="md:grid md:grid-cols-4 gap-4 md:col-span-4">
               <UFormField label="Status" class="md:col-span-1">
-                <UInput v-model="editMockData.status" />
+                <UInput v-model="editEndpointData.mock.status" />
               </UFormField>
               <UFormField label="Delay" class="md:col-span-1">
-                <UInput v-model="editMockData.delay" />
+                <UInput type="number" v-model="editEndpointData.mock.delay" />
               </UFormField>
               <UFormField label="Headers" class="md:col-span-4 w-full">
-                <UTextarea v-model="editMockData.headers" :rows="6" class="w-full" />
+                <UTextarea v-model="editEndpointData.mock.headers" :rows="6" class="w-full" />
               </UFormField>
               <UFormField label="Response" class="md:col-span-4 w-full">
-                <UTextarea v-model="editMockData.response" :rows="8" class="w-full" />
+                <UTextarea v-model="editEndpointData.mock.response" :rows="8" class="w-full" />
               </UFormField>
             </div>
           </template>
-          <template v-else>
+          <template v-if="!editEndpointData.mock">
             <div class="md:grid md:grid-cols-4 gap-4 md:col-span-4">
               <UFormField label="Url" class="md:col-span-2">
-                <UInput v-model="editRouteData.url" class="w-full" />
+                <UInput v-model="editEndpointData.route.url" class="w-full" />
               </UFormField>
               <UFormField label="Proxy url" class="md:col-span-2">
-                <UInput v-model="editRouteData.proxyUrl" class="w-full" />
+                <UInput v-model="editEndpointData.route.proxyUrl" class="w-full" />
               </UFormField>
-              <UCheckbox v-model="editRouteData.http1Only" label="Http1 only" class="md:col-span-1" />
-              <UCheckbox v-model="editRouteData.acceptInvalidCerts" label="Accept invalid certs" class="md:col-span-1" />
-              <UCheckbox v-model="editRouteData.acceptInvalidHostnames" label="Accept invalid hostnames" class="md:col-span-1" />
+              <UCheckbox v-model="editEndpointData.route.http1Only" label="Http1 only" class="md:col-span-1" />
+              <UCheckbox v-model="editEndpointData.route.acceptInvalidCerts" label="Accept invalid certs" class="md:col-span-1" />
+              <UCheckbox v-model="editEndpointData.route.acceptInvalidHostnames" label="Accept invalid hostnames" class="md:col-span-1" />
               <div class="md:col-span-1"></div>
               <UFormField label="Min TLS" class="md:col-span-1 w-full">
-                <USelect v-model="editRouteData.minTlsVersion" :items="['TLSv1.2', 'TLSv1.3']" class="w-full" />
+                <USelect v-model="editEndpointData.route.minTlsVersion" :items="['TLSv1.2', 'TLSv1.3']" class="w-full" />
               </UFormField>
               <UFormField label="Max TLS" class="md:col-span-1 w-full">
-                <USelect v-model="editRouteData.maxTlsVersion" :items="['TLSv1.2', 'TLSv1.3']" class="w-full" />
+                <USelect v-model="editEndpointData.route.maxTlsVersion" :items="['TLSv1.2', 'TLSv1.3']" class="w-full" />
               </UFormField>
               <div class="md:col-span-1"></div>
               <div class="md:col-span-1"></div>
               <UFormField label="Read timeout" class="md:col-span-1 w-full">
-                <UInput v-model="editRouteData.readTimeout" class="w-full" />
+                <UInput type="number" v-model="editEndpointData.route.readTimeout" class="w-full" />
               </UFormField>
               <UFormField label="Connect timeout" class="md:col-span-1 w-full">
-                <UInput v-model="editRouteData.connectTimeout" class="w-full" />
+                <UInput type="number" v-model="editEndpointData.route.connectTimeout" class="w-full" />
               </UFormField>
               <div class="md:col-span-1"></div>
               <div class="md:col-span-1"></div>              
               <UFormField label="Delay before request" class="md:col-span-1 w-full">
-                <UInput v-model="editRouteData.delayBefore" class="w-full" />
+                <UInput type="number" v-model="editEndpointData.route.delayBefore" class="w-full" />
               </UFormField>
               <UFormField label="Delay after request" class="md:col-span-1 w-full">
-                <UInput v-model="editRouteData.delayAfter" />
+                <UInput type="number" v-model="editEndpointData.route.delayAfter" class="w-full" />
               </UFormField>
             </div>
           </template>
@@ -595,7 +624,7 @@ defineExpose({ refresh });
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" @click="isEditEndpointOpen = false">Cancel</UButton>
-          <UButton color="primary" variant="solid" @click="">Save</UButton>
+          <UButton color="primary" variant="solid" @click="updateEndpoint()">Save</UButton>
         </div>
       </template>
     </UModal>

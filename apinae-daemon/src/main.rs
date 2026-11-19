@@ -58,7 +58,7 @@ fn read_input_file(args: &Args) -> Result<AppConfiguration, ApplicationError> {
  */
 async fn init(args: Args, config: &mut AppConfiguration) -> Result<(), ApplicationError> {
     if args.list {
-        list_setups(&config);
+        list_setups(config);
     } else if args.list_params {
         list_params(config, args.id)?;
     } else {
@@ -290,8 +290,8 @@ mod test {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_list_setups() {
-        let mut config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
-        list_setups(&mut config);
+        let config: AppConfiguration = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
+        list_setups(&config);
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]

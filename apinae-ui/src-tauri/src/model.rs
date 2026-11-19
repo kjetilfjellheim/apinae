@@ -1,6 +1,6 @@
 use std::collections::{HashMap};
 
-use apinae_lib::config::{CollectionConfiguration, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, TcpListenerData, SetupConfiguration, TlsVersion};
+use apinae_lib::config::{CloseConnectionWhen, CollectionConfiguration, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, SetupConfiguration, TcpListenerData, TlsVersion};
 
 use crate::state::ProcessData;
 
@@ -49,25 +49,6 @@ pub struct SetupRow {
     pub listeners: Option<Vec<TcpListenerRow>>,
     // The http servers of the setup.
     pub servers: Option<Vec<HttpServerRow>>,   
-}
-
-impl SetupRow {
-    /**
-     * Create a new setup row.
-     *
-     * # Arguments
-     * `id` - The unique identifier of the setup.
-     * `name` - The name of the setup.
-     * `description` - The description of the setup.
-     * `process_id` - The process id of the setup.
-     * `params` - The parameters of the setup.
-     *
-     * # Returns
-     * `SetupRow` - The setup row.
-     */
-    pub fn new(id: &str, name: &str, description: &str, params: Option<Vec<String>>, listeners: Option<Vec<TcpListenerRow>>, servers: Option<Vec<HttpServerRow>>) -> Self {
-        Self { id: id.to_string(), name: name.to_string(), description: description.to_string(), params, listeners, servers }
-    }
 }
 
 impl From<SetupConfiguration> for SetupRow {
@@ -173,6 +154,31 @@ impl From<&EndpointConfiguration> for EndpointRow {
                 EndpointType::Mock { configuration: _ } => None,
             }),
         }
+    }
+}
+
+impl From<&EndpointRow> for EndpointConfiguration {
+    /**
+     * Convert an endpoint row to an endpoint configuration.
+     */
+    fn from(endpoint_row: &EndpointRow) -> Self {
+        let endpoint_type = endpoint_row
+            .mock
+            .as_ref()
+            .map(|mock_row| EndpointType::Mock { configuration: MockResponseConfiguration::from(mock_row) })
+            .or_else(|| {
+                endpoint_row
+                    .route
+                    .as_ref()
+                    .map(|route_row| EndpointType::Route { configuration: RouteConfiguration::from(route_row) })
+            });
+
+        EndpointConfiguration::new(
+            endpoint_row.path_expression.clone(),
+            endpoint_row.method.clone(),
+            endpoint_row.body_expression.clone(),
+            endpoint_type,
+        ).unwrap()
     }
 }
 
@@ -389,6 +395,22 @@ impl From<&TcpListenerData> for TcpListenerRow {
             accept: tcp_listener.accept,
             close_connection: String::from(tcp_listener.clone().close_connection),
         }
+    }
+}
+
+impl From<TcpListenerRow> for TcpListenerData {
+    /**
+     * Convert a tcp listener row to a tcp listener data.
+     */
+    fn from(tcp_listener_row: TcpListenerRow) -> Self {
+        TcpListenerData::new(
+            tcp_listener_row.file,
+            tcp_listener_row.data,
+            tcp_listener_row.delay_write_ms,
+            tcp_listener_row.port,
+            tcp_listener_row.accept,
+            CloseConnectionWhen::from(tcp_listener_row.close_connection.as_str())
+        ).unwrap()
     }
 }
 

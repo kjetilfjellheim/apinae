@@ -170,7 +170,6 @@ impl CollectionConfiguration {
      * `description` The description of the collection.
      * `setups` The setups for the collection.
      */
-    #[must_use]
     pub fn new(name: String, description: String) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
         Ok(CollectionConfiguration { id, name, description, setups: Vec::new() })
@@ -538,16 +537,13 @@ impl EndpointConfiguration {
     /**
      * Update the endpoint configuration.
      *
-     * `path_expression` Endpoint for the apinae API. This is a regular expression.
-     * `body_expression` Body expression for the apinae API. This is a regular expression.
-     * `method` The HTTP method.
-     * `endpoint_type` Defines how the endpoint is to be handled.
+     * endpoint_configuration The new endpoint configuration.
      */
-    fn update(&mut self, path_expression: Option<String>, method: Option<String>, body_expression: Option<String>, endpoint_type: Option<EndpointType>) {
-        self.path_expression = path_expression;
-        self.body_expression = body_expression;
-        self.method = method;
-        self.endpoint_type = endpoint_type;
+    pub fn update(&mut self, endpoint_configuration : EndpointConfiguration) {
+        self.path_expression = endpoint_configuration.path_expression;
+        self.body_expression = endpoint_configuration.body_expression;
+        self.method = endpoint_configuration.method;
+        self.endpoint_type = endpoint_configuration.endpoint_type;
     }
 
 }
@@ -648,20 +644,15 @@ impl TcpListenerData {
     /**
      * Update the tcp configuration.
      *
-     * `file` The file to read from.
-     * `data` The data to return. If this is set, the file will be ignored.
-     * `delay_write_ms` Time to wait before writing the response.
-     * `port` The port to listen on.
-     * `accept` Do accept connections.
-     * `close_connection` When to close the connection.
+     * `tcp_listener_data` The new TCP listener data.
      */
-    pub fn update(&mut self, file: Option<String>, data: Option<String>, delay_write_ms: Option<u64>, port: u16, accept: bool, close_connection: CloseConnectionWhen) {
-        self.file = file;
-        self.data = data;
-        self.delay_write_ms = delay_write_ms;
-        self.port = port;
-        self.accept = accept;
-        self.close_connection = close_connection;
+    pub fn update(&mut self, tcp_listener_data: TcpListenerData) {
+        self.file = tcp_listener_data.file;
+        self.data = tcp_listener_data.data;
+        self.delay_write_ms = tcp_listener_data.delay_write_ms;
+        self.port = tcp_listener_data.port;
+        self.accept = tcp_listener_data.accept;
+        self.close_connection = tcp_listener_data.close_connection;
     }
 }
 
@@ -828,6 +819,7 @@ impl RouteConfiguration {
         RouteConfiguration { url, proxy_url, log, http1_only, accept_invalid_certs, accept_invalid_hostnames, min_tls_version, max_tls_version, read_timeout, connect_timeout, delay_before, delay_after }
     }
 
+    #[allow(clippy::too_many_arguments)]
     pub fn update(
         &mut self,
         url: String,

@@ -1,10 +1,10 @@
 use std::collections::HashSet;
 use std::{collections::HashMap, path::Path};
 
-use crate::model::{CollectionRow, HttpServerRow, ProcessRow, SetupRow};
+use crate::model::{CollectionRow, EndpointRow, HttpServerRow, ProcessRow, SetupRow, TcpListenerRow};
 use crate::state::{ProcessData};
 use crate::AppData;
-use apinae_lib::config::{EndpointConfiguration, ServerConfiguration};
+use apinae_lib::config::{EndpointConfiguration, EndpointType, MockResponseConfiguration, ServerConfiguration};
 use apinae_lib::{
     config::{AppConfiguration, CollectionConfiguration, SetupConfiguration},
     settings::Settings,
@@ -25,7 +25,7 @@ const DEFAULT_NAME: &str = "Untitled";
  * `setupid` The setup id.
  * 
  * Returns:
- * The setup.
+ * The setup row.
  * 
  * # Errors
  * If data cannot be locked or setup cannot be found.
@@ -36,6 +36,32 @@ pub fn get_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
     Result::Ok(SetupRow::from(setup.clone()))
+}
+
+/**
+ * Adds a setup to a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `name` The setup name.
+ * `description` The setup description.
+ *
+ * Returns:
+ * The created setup row.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be created.
+ */
+#[tauri::command]
+pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<String>, description: Option<String>) -> Result<SetupRow, String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = SetupConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
+        .map_err(|err| err.to_string())?;
+    let setup_row = SetupRow::from(setup.clone());
+    collection.add_setup(setup);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(setup_row)
 }
 
 /**
@@ -54,13 +80,261 @@ pub fn update_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &
     let mut app_config = get_configuration_data(&app_data)?;
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    setup.name = name;
-    setup.description = description;
+    setup.update(name.clone(), description.clone());
     if parameters.is_empty() {
         setup.params = None;
     } else {
-        setup.params = Some(HashSet::from_iter(parameters.into_iter()));
+        setup.params = Some(HashSet::from_iter(parameters));
     }
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a setup from a collection.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be deleted.
+ */
+#[tauri::command]
+pub async fn delete_setup(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
+    let confirmed = confirm_dialog(app).await;
+    if !confirmed {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    collection.delete_setup(setupid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Adds a TCP listener to a setup.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ *
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ */
+#[tauri::command]
+pub async fn add_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let new_listener = apinae_lib::config::TcpListenerData::new(None, None, None, 0, true, apinae_lib::config::CloseConnectionWhen::Never)
+        .map_err(|err| err.to_string())?;
+    setup.add_listener(new_listener);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Updates a TCP listener in a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `listener_id` The id of the listener to update.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the listener could not be found.
+ */
+#[tauri::command]
+pub fn update_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, listenerid: &str, tcplistener: TcpListenerRow) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let listener = setup.get_listener(listenerid).ok_or("Listener not found".to_string())?;
+    listener.update(TcpListenerRow::into(tcplistener));
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a TCP listener from a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `listener_id` The id of the listener to delete.
+ */
+#[tauri::command]
+pub async fn delete_tcp_listener(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, listenerid: &str) -> Result<(), String> {
+    if !confirm_dialog(app).await {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.delete_listener(listenerid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Adds an HTTP server to a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ */
+#[tauri::command]
+pub fn add_http_server(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let http_server = ServerConfiguration::new("Untitled".to_string(), None, None)
+        .map_err(|err| err.to_string())?;
+    setup.add_server(http_server);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Updates an HTTP server in a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to update.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the server could not be updated.
+ */
+#[tauri::command]
+pub fn update_http_server(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str, http_server: HttpServerRow) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    server.update(http_server.name, http_server.http_port, http_server.https_config.map(|config| config.into()));
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes an HTTP server from a setup.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to delete.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be deleted.
+ */
+#[tauri::command]
+pub async fn delete_http_server(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str) -> Result<(), String> {
+    if !confirm_dialog(app).await {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.delete_server(serverid).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Adds an endpoint to a server.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to add the endpoint to.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be added.
+ */
+#[tauri::command]
+pub fn add_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    let new_endpoint = EndpointConfiguration::new(None, None, None, Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, "200".to_string(), HashMap::new(), 0) })).map_err(|err| err.to_string())?;
+    server.add_endpoint(new_endpoint);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Updates an endpoint in a server.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to update the endpoint in.
+ * `endpoint_id` The id of the endpoint to update.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be found.
+ * If the endpoint could not be updated.
+ */
+#[tauri::command]
+pub fn update_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str, endpointid: &str, endpoint: EndpointRow) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    let current_endpoint = server.get_endpoint(endpointid).ok_or("Endpoint not found".to_string())?;
+    current_endpoint.update((&endpoint).into());
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes an endpoint from a server.
+ * 
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `server_id` The id of the server to delete the endpoint from.
+ * `endpoint_id` The id of the endpoint to delete.
+ * 
+ * # Errors
+ * If the configuration data could not be locked.
+ * If the setup could not be found.
+ * If the server could not be found.
+ * If the endpoint could not be deleted.
+ * 
+ */
+#[tauri::command]
+pub async fn delete_endpoint(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str, endpointid: &str) -> Result<(), String> {
+    if !confirm_dialog(app).await {
+        return Result::Ok(());
+    }
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
+    server.delete_endpoint(endpointid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(app_config))?;
     Result::Ok(())
 }
@@ -86,7 +360,7 @@ pub async fn load(app: AppHandle, app_data: State<'_, AppData>) -> Result<(), St
         update_data(&app_data, Some(AppConfiguration::load(&file_path).map_err(|err| err.to_string())?))?;
         update_file_path(&app_data, Some(file_path.clone()))?;
     }
-    return Result::Ok(());
+    Result::Ok(())
 }
 
 /**
@@ -210,7 +484,7 @@ pub async fn start_process(app_data: State<'_, AppData>, collectionid: &str, set
     let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
     let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
     let mut process = std::process::Command::new(app_path);
-    let mut process = process.arg("--file").arg(&file_path).arg("--id").arg(collectionid.to_owned() + "-" + &setupid.to_owned());
+    let mut process = process.arg("--file").arg(&file_path).arg("--id").arg(collectionid.to_owned() + "-" + setupid);
     for (key, value) in params.clone() {
         process = process.arg("--param").arg(format!("{key}={value}"));
     }
@@ -253,155 +527,6 @@ pub async fn stop_process(app_data: State<'_, AppData>, processid: u32) -> Resul
 }
 
 /**
- * Adds a TCP listener to a setup.
- *
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `setupid` The setup id.
- *
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- */
-#[tauri::command]
-pub async fn add_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    let new_listener = apinae_lib::config::TcpListenerData::new(None, None, None, 0, true, apinae_lib::config::CloseConnectionWhen::Never)
-        .map_err(|err| err.to_string())?;
-    setup.add_listener(new_listener);
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(())
-}
-
-/**
- * Deletes a TCP listener from a setup.
- * 
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `setupid` The setup id.
- * `listener_id` The id of the listener to delete.
- */
-#[tauri::command]
-pub async fn delete_tcp_listener(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, listener_id: &str) -> Result<(), String> {
-    if !confirm_dialog(app).await {
-        return Result::Ok(());
-    }
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    setup.delete_listener(listener_id).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(())
-}
-
-/**
- * Adds an endpoint to a server.
- * 
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `setupid` The setup id.
- * `server_id` The id of the server to add the endpoint to.
- * 
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be found.
- * If the endpoint could not be added.
- */
-#[tauri::command]
-pub fn add_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, server_id: &str) -> Result<(), String> {
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    let server = setup.get_server(server_id).ok_or("Server not found".to_string())?;
-    let new_endpoint = EndpointConfiguration::new(None, None, None, None).map_err(|err| err.to_string())?;
-    server.add_endpoint(new_endpoint);
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(())
-}
-
-/**
- * Deletes an endpoint from a server.
- * 
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `setupid` The setup id.
- * `server_id` The id of the server to delete the endpoint from.
- * `endpoint_id` The id of the endpoint to delete.
- * 
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be found.
- * If the endpoint could not be deleted.
- * 
- */
-#[tauri::command]
-pub async fn delete_endpoint(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, server_id: &str, endpoint_id: &str) -> Result<(), String> {
-    if !confirm_dialog(app).await {
-        return Result::Ok(());
-    }
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    let server = setup.get_server(server_id).ok_or("Server not found".to_string())?;
-    server.delete_endpoint(endpoint_id).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(())
-}
-
-/**
- * Adds an HTTP server to a setup.
- * 
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `setupid` The setup id.
- * 
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- */
-#[tauri::command]
-pub fn add_http_server(app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    let http_server = ServerConfiguration::new("Untitled".to_string(), None, None)
-        .map_err(|err| err.to_string())?;
-    setup.add_server(http_server);
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(())
-}
-
-/**
- * Deletes an HTTP server from a setup.
- * 
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `setupid` The setup id.
- * `server_id` The id of the server to delete.
- * 
- * # Errors
- * If the configuration data could not be locked.
- * If the setup could not be found.
- * If the server could not be deleted.
- */
-#[tauri::command]
-pub async fn delete_http_server(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, server_id: &str) -> Result<(), String> {
-    if !confirm_dialog(app).await {
-        return Result::Ok(());
-    }
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    setup.delete_server(server_id).map_err(|err| err.to_string())?;
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(())
-}
-
-/**
  * Gets the collections tree.
  *
  * `app_data` The application data.
@@ -415,7 +540,7 @@ pub async fn delete_http_server(app: AppHandle, app_data: State<'_, AppData>, co
 #[tauri::command]
 pub fn get_setup_tree(app_data: State<'_, AppData>) -> Result<Vec<CollectionRow>, String> {
     let app_config = get_configuration_data(&app_data)?;
-    let collections = app_config.get_collections().iter().map(|collection| CollectionRow::from(collection)).collect::<Vec<_>>();
+    let collections = app_config.get_collections().iter().map(CollectionRow::from).collect::<Vec<_>>();
     Result::Ok(collections)
 }
 
@@ -485,32 +610,6 @@ pub async fn delete_collection(app: AppHandle, app_data: State<'_, AppData>, col
 }
 
 /**
- * Adds a setup to a collection.
- *
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `name` The setup name.
- * `description` The setup description.
- *
- * Returns:
- * The created setup row.
- *
- * # Errors
- * If data cannot be locked or setup cannot be created.
- */
-#[tauri::command]
-pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<String>, description: Option<String>) -> Result<SetupRow, String> {
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = SetupConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
-        .map_err(|err| err.to_string())?;
-    let setup_row = SetupRow::from(setup.clone());
-    collection.add_setup(setup);
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(setup_row)
-}
-
-/**
  * Renames a setup in a collection.
  *
  * `app_data` The application data.
@@ -527,29 +626,6 @@ pub fn rename_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
     setup.name = name;
-    update_data(&app_data, Some(app_config))?;
-    Result::Ok(())
-}
-
-/**
- * Deletes a setup from a collection.
- *
- * `app_data` The application data.
- * `collectionid` The collection id.
- * `setupid` The setup id.
- *
- * # Errors
- * If data cannot be locked or setup cannot be deleted.
- */
-#[tauri::command]
-pub async fn delete_setup(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str) -> Result<(), String> {
-    let confirmed = confirm_dialog(app).await;
-    if !confirmed {
-        return Result::Ok(());
-    }
-    let mut app_config = get_configuration_data(&app_data)?;
-    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    collection.delete_setup(setupid).map_err(|err| err.to_string())?;
     update_data(&app_data, Some(app_config))?;
     Result::Ok(())
 }
