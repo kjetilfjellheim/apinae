@@ -23,6 +23,7 @@ async fn test_http_server_with_proxy() {
         return;
     }
     // Start the server. Allow zombie process as it's a daemon running.
+    #[allow(clippy::zombie_processes)]
     let mut server_command = common::start_server("tests/resources/test_http_mock_with_proxy.json", "1-1")
         .await
         .expect("Failed to start server");
