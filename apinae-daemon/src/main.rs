@@ -275,8 +275,9 @@ mod test {
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
     async fn test_get_setup() {
         let mut config = AppConfiguration::load("./tests/resources/test_http_mock.json").unwrap();
-        assert!(get_setup("1", &mut config).is_ok());
-        assert!(get_setup("2", &mut config).is_err());
+        assert!(get_setup("1-1", &mut config).is_ok());
+        assert!(get_setup("1-2", &mut config).is_err());
+        assert!(get_setup("2-2", &mut config).is_err())
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 10)]

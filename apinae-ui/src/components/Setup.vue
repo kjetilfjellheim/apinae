@@ -29,6 +29,14 @@ const selectedMock = ref<boolean>(true);
 
 const showEditHttpsConfig = ref(false);
 
+const get_file_name = (element: any) => {
+  const filePath = element?.value || '';
+  invoke("open_dialog", { filePath })
+    .then((message: string) => {
+      return message;
+    })
+    .catch((error) => window.alert(error));
+};
 
 const refresh = (collectionId: string, setupId: string) => {
   if (setupId == null) {

@@ -9,7 +9,7 @@ mod common;
 #[tokio::test(flavor = "multi_thread", worker_threads = 10)]
 async fn test_tcp_listener() {
     // Start the server.
-    let mut server_command = common::start_server("./tests/resources/test_tcp_listener.json", "1").await.expect("Failed to start server");
+    let mut server_command = common::start_server("./tests/resources/test_tcp_listener.json", "1-1").await.expect("Failed to start server");
 
     tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
     // Assert the server response.
