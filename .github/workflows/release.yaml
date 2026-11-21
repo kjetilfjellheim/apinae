@@ -18,11 +18,11 @@ jobs:
             daemon_asset_name: apinae-daemon-linux-x86_64
             ui_path: ./target/release/apinae-ui
             ui_asset_name: apinae-ui-linux-x86_64
-          - os: macos-14
+          - os: macos-latest
             daemon_path: ./target/release/apinae-daemon
-            daemon_asset_name: apinae-daemon-macos-arm64
+            daemon_asset_name: apinae-daemon-macos
             ui_path: ./target/release/apinae-ui
-            ui_asset_name: apinae-ui-macos-arm64
+            ui_asset_name: apinae-ui-macos
           - os: windows-2022
             daemon_path: ./target/release/apinae-daemon.exe
             daemon_asset_name: apinae-daemon-windows-x86_64.exe
@@ -41,7 +41,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
 
       - name: Get release
         id: get_release
