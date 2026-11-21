@@ -253,9 +253,9 @@ async fn wait_for_terminate() -> Result<(), ApplicationError> {
     // Infos here:
     // https://learn.microsoft.com/en-us/windows/console/handlerroutine
     let mut signal_c = windows::ctrl_c().map_err(|err| ApplicationError::ServerStartUpError(err.to_string()))?;
-    let mut signal_break = windows::ctrl_break().map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
-    let mut signal_close = windows::ctrl_close().map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
-    let mut signal_shutdown = windows::ctrl_shutdown().map_err(|err| ApplicationError::ServerStartUpError("Failed to terminate: {err}"))?;
+    let mut signal_break = windows::ctrl_break().map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
+    let mut signal_close = windows::ctrl_close().map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
+    let mut signal_shutdown = windows::ctrl_shutdown().map_err(|err| ApplicationError::ServerStartUpError(format!("Failed to terminate: {err}")))?;
 
     tokio::select! {
         _ = signal_c.recv() => exit(0),
