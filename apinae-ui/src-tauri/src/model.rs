@@ -48,7 +48,9 @@ pub struct SetupRow {
     // The tcp listeners of the setup.
     pub listeners: Option<Vec<TcpListenerRow>>,
     // The http servers of the setup.
-    pub servers: Option<Vec<HttpServerRow>>,   
+    pub servers: Option<Vec<HttpServerRow>>,
+    // The predefined sets of the setup.
+    pub predefined_sets: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 impl From<SetupConfiguration> for SetupRow {
@@ -56,7 +58,7 @@ impl From<SetupConfiguration> for SetupRow {
      * Convert a setup configuration to setup setup row.
      */
     fn from(setup: SetupConfiguration) -> Self {
-        let SetupConfiguration { id, name, description, servers, listeners, params } = setup;
+        let SetupConfiguration { id, name, description, servers, listeners, params, predefined_sets } = setup;
 
         Self {
             id,
@@ -77,6 +79,7 @@ impl From<SetupConfiguration> for SetupRow {
             } else {
                 Some(servers.iter().map(HttpServerRow::from).collect())
             },
+            predefined_sets,
         }
     }
 }

@@ -251,6 +251,8 @@ pub struct SetupConfiguration {
     pub listeners: Vec<TcpListenerData>,
     // The parameters to pass to the setup.
     pub params: Option<HashSet<String>>,
+    // Predefined sets of parameters for the setup.
+    pub predefined_sets: Option<HashMap<String, HashMap<String, String>>>,
 }
 
 impl SetupConfiguration {
@@ -259,17 +261,13 @@ impl SetupConfiguration {
      *
      * `name` The name of the setup.
      * `description` The description of the setup.
-     * `servers` The server configurations.
-     * `listeners` The TCP listeners.
-     * `params` The parameters to pass to the setup.
-     * `predefined_params` The predefined sets of parameters.
      *
      * # Errors
      * An error if the identifier could not be generated.
      */
     pub fn new(name: String, description: String) -> Result<Self, ApplicationError> {
         let id = get_identifier()?;
-        Ok(SetupConfiguration { id, name, description, servers: Vec::new(), listeners: Vec::new(), params: None })
+        Ok(SetupConfiguration { id, name, description, servers: Vec::new(), listeners: Vec::new(), params: None, predefined_sets: None })
     }
 
     /**
@@ -379,6 +377,54 @@ impl SetupConfiguration {
         }
     }
 
+    /**
+     * Add a predefined set to the setup.
+     *
+     * `set_name` The name of the predefined set to add.
+     */
+    pub fn add_predefined_set(&mut self, set_name: String, params: Vec<String>) -> Result<(), ApplicationError> {
+        if let Some(predefined_sets) = &mut self.predefined_sets {
+            predefined_sets.insert(set_name.clone(), params.iter().map(|param| (param.clone(), String::new())).collect());
+        } else {
+            let mut predefined_sets = HashMap::new();
+            predefined_sets.insert(set_name.clone(), params.iter().map(|param| (param.clone(), String::new())).collect());
+            self.predefined_sets = Some(predefined_sets);
+        }
+        Ok(())
+    }
+
+    /**
+     * Delete a predefined set from the setup.
+     *
+     * `set_name` The name of the predefined set to delete.
+     */
+    pub fn remove_predefined_set(&mut self, set_name: &str) {
+        if let Some(predefined_sets) = &mut self.predefined_sets {
+            predefined_sets.remove(set_name);
+            if predefined_sets.is_empty() {
+                self.predefined_sets = None;
+            }
+        }
+    }
+
+    /**
+     * Add a parameter to a predefined set.
+     *
+     * `set_name` The name of the predefined set.
+     * `values` The key-value pairs of parameters to update.
+     * 
+     * # Errors
+     * An error if the predefined set could not be found.
+     */
+    pub fn update_predefined_set(&mut self, set_name: &str, values: HashMap<String, String>) -> Result<(), ApplicationError> {
+        if let Some(predefined_sets) = &mut self.predefined_sets {
+            if let Some(_set) = predefined_sets.get_mut(set_name) {
+                predefined_sets.insert(set_name.to_string(), values);
+                return Ok(());
+            }
+        }
+        Err(ApplicationError::CouldNotFind(format!("Predefined set with name {set_name} not found.")))
+    }
 }
 
 /**

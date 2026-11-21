@@ -79,7 +79,8 @@ mod tests {
             description: "Test description".to_string(),
             servers: vec![ServerConfiguration { id: "test".to_string(), name: "Test server".to_string(), http_port: Some(8080), https_config: None, endpoints: vec![] }],
             listeners: vec![],
-            params: None
+            params: None,
+            predefined_sets: None,
         };
         server_setup.setup(&setup_configuration, Vec::new()).await.unwrap();
         let servers = server_setup.start_servers().await;

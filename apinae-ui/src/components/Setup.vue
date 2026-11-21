@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { ref } from "vue";
 import { invoke } from "@tauri-apps/api/core";
-import { end } from "@popperjs/core";
 
 const collectionIdRef = ref<string>('');
 const setupIdRef = ref<string>('');
@@ -21,22 +20,12 @@ const editAddParameter = ref<string>('');
 const editTcpListenerData = ref<any>({});
 const editHttpServerData = ref<any>({});
 const editSelectedPredefinedSet = ref<any>({});
-const editSupportedTlsVersions = ref<string[]>([]);
 const editEndpointData = ref<any>({});
 
 const editServerIdForNewEndpoint = ref<string>('');
 const selectedMock = ref<boolean>(true);
 
 const showEditHttpsConfig = ref(false);
-
-const get_file_name = (element: any) => {
-  const filePath = element?.value || '';
-  invoke("open_dialog", { filePath })
-    .then((message: string) => {
-      return message;
-    })
-    .catch((error) => window.alert(error));
-};
 
 const refresh = (collectionId: string, setupId: string) => {
   if (setupId == null) {
@@ -74,6 +63,11 @@ const editEndpoint = (serverId: string, endpoint: any) => {
   isEditEndpointOpen.value = true;
 }
 
+const editPredefinedSet = (predefinedSet: string) => {
+  editSelectedPredefinedSet.value = { name: predefinedSet, values: setup.value.predefinedSets[predefinedSet] };
+  isEditPredefinedSetOpen.value = true;
+}
+
 function addParameter() {
   if (!editAddParameter.value) {
     return;
@@ -81,6 +75,16 @@ function addParameter() {
   editSetupData.value.params = editSetupData.value.params || [];
   editSetupData.value.params.push(editAddParameter.value);
   editAddParameter.value = '';
+}
+
+function open_file_dialog(targetObject: Record<string, any> | null | undefined, property: string) {
+  invoke("open_dialog", { name: null, extension: null })
+    .then((message: string) => {
+      if (targetObject != null) {
+        targetObject[property] = message;
+      }
+    })
+    .catch((error) => window.alert(error));
 }
 
 function saveEditSetup() {
@@ -104,6 +108,35 @@ function deleteParameter(param: string) {
     return;
   }
   editSetupData.value.params = editSetupData.value.params.filter((p: string) => p !== param);
+}
+
+function addPredefinedSet() {
+  const name = window.prompt('Predefined set name', 'New Predefined Set');
+  if (name === null) {
+    return;
+  }
+  invoke("add_predefined_set", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, name })
+    .then(() => {
+      refresh(collectionIdRef.value, setupIdRef.value);
+    })
+    .catch((error) => window.alert(error));
+}
+
+function deletePredefinedSet(predefinedSetName: string) {
+  invoke("delete_predefined_set", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, name: predefinedSetName })
+    .then(() => {
+      refresh(collectionIdRef.value, setupIdRef.value);
+    })
+    .catch((error) => window.alert(error));
+}
+
+function savePredefinedSet() {
+  invoke("update_predefined_set", { collectionid: collectionIdRef.value, setupid: setupIdRef.value, name: editSelectedPredefinedSet.value.name, values: editSelectedPredefinedSet.value.values })
+    .then(() => {
+      refresh(collectionIdRef.value, setupIdRef.value);
+      isEditPredefinedSetOpen.value = false;
+    })
+    .catch((error) => window.alert(error));
 }
 
 function addTcpListener() {
@@ -208,20 +241,24 @@ defineExpose({ refresh });
               <UButton size="xs" color="primary" variant="soft" @click="editSetup">Edit</UButton>
             </div>
           </template>
-          <div class="grid grid-cols-1 gap-4 md:grid-cols-2">
+          <div class="grid grid-cols-1 gap-4 md:grid-cols-3">
             <div>
-              <p class="text-xs text-neutral-500">Id</p>
+              <p class="text-xs text-neutral-500">Collection id</p>
+              <p class="text-sm text-neutral-200">{{ collectionIdRef }}</p>
+            </div>
+            <div>
+              <p class="text-xs text-neutral-500">Setup id</p>
               <p class="text-sm text-neutral-200">{{ setup?.id }}</p>
             </div>
             <div>
               <p class="text-xs text-neutral-500">Name</p>
               <p class="text-sm text-neutral-200">{{ setup?.name }}</p>
             </div>
-            <div class="md:col-span-2">
+            <div class="md:col-span-3">
               <p class="text-xs text-neutral-500">Description</p>
               <p class="text-sm text-neutral-200">{{ setup?.description }}</p>
             </div>
-            <div class="md:col-span-2">
+            <div class="md:col-span-3">
               <p class="text-xs text-neutral-500">Parameters</p>
               <div class="mt-2 flex flex-wrap gap-2">
                 <UBadge v-for="param in (setup?.params || [])" :key="param" color="secondary" variant="soft">{{ param }}
@@ -323,6 +360,7 @@ defineExpose({ refresh });
                 <p><span class="text-neutral-500">Server cert:</span> {{ serverItem.httpsConfig.serverCertificate }}</p>
                 <p><span class="text-neutral-500">Private key:</span> {{ serverItem.httpsConfig.privateKey }}</p>
                 <p><span class="text-neutral-500">Client cert:</span> {{ serverItem.httpsConfig.clientCertificate }}</p>
+                <p><span class="text-neutral-500">Supported TLS versions:</span> {{ serverItem.httpsConfig.supportedTlsVersions }}</p>
               </div>
             </div>
 
@@ -397,46 +435,40 @@ defineExpose({ refresh });
           <template #header>
             <div class="flex items-center justify-between gap-1">
               <p class="text-sm text-neutral-200">Predefined sets</p>
-              <UButton size="xs" color="primary" variant="soft" @click="">Add</UButton>
+              <UButton size="xs" color="primary" variant="soft" @click="addPredefinedSet()">Add</UButton>
             </div>
           </template>
           <div class="space-y-2">
-            <div v-for="predefSet in setup?.predefinedSets" :key="predefSet.name"
-              class="flex items-center justify-between gap-2">
-              <UButton size="xs" :variant="predefSet.name === setup?.selectedPredefinedSet?.name ? 'solid' : 'ghost'"
-                color="primary" class="justify-start" @click="">
-                {{ predefSet.name }}
-              </UButton>
-              <UButton size="xs" color="error" variant="ghost" @click="">
-                <i class="fa-solid fa-trash" />
-              </UButton>
-            </div>
-          </div>
-        </UCard>
-
-        <UCard class="md:col-span-2" v-if="setup?.selectedPredefinedSet">
-          <template #header>
-            <div class="flex items-center justify-between">
-              <p class="text-sm text-neutral-200">{{ setup?.selectedPredefinedSet.name }}</p>
-              <UButton size="xs" color="primary" variant="soft" @click="">Edit</UButton>
-            </div>
-          </template>
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="text-left text-neutral-500">
-                  <th class="py-1">Key</th>
-                  <th class="py-1">Value</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="predefKey in Object.keys(setup?.selectedPredefinedSet.values || {})" :key="predefKey"
-                  class="border-t border-neutral-800">
-                  <td class="py-1 text-neutral-300">{{ predefKey }}</td>
-                  <td class="py-1 text-neutral-300">{{ setup?.selectedPredefinedSet.values[predefKey] }}</td>
-                </tr>
-              </tbody>
-            </table>
+            <template v-for="predefSet in Object.keys(setup?.predefinedSets || {})" :key="predefSet"|>
+              <UAccordion
+                :items="[predefSet]"
+                class="w-full"
+                :ui="{
+                  item: 'overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900',
+                  trigger: 'px-3 py-3 text-left hover:bg-neutral-800/80 data-[state=open]:bg-neutral-800',
+                  content: 'border-t border-neutral-700 bg-neutral-950 p-3'
+                }"
+              >
+                <template #default="{ item: setItem }">
+                  <div class="flex items-center justify-between gap-2">
+                    <div class="text-sm text-neutral-200">
+                      Predefined set: {{ setItem }}
+                    </div>
+                  </div>
+                </template>
+                <template #body="{ item: setItem }">
+                  <div class="flex gap-1 justify-end">
+                    <UButton size="xs" color="primary" variant="soft" @click="editPredefinedSet(setItem)">Edit</UButton>
+                    <UButton size="xs" color="error" variant="soft" @click="deletePredefinedSet(setItem)">Delete</UButton>
+                  </div>
+                  <div class="mt-2 space-y-2">
+                    <div v-for="(value, key) in setup?.predefinedSets[setItem]" :key="key" class="flex items-center justify-between gap-2">
+                      <p class="text-sm text-neutral-500"><span class="text-neutral-500">{{ key }}</span> {{ value }}</p>
+                    </div>
+                  </div>
+                </template>
+              </UAccordion> 
+            </template>
           </div>
         </UCard>
       </div>
@@ -493,7 +525,7 @@ defineExpose({ refresh });
           <UFormField label="File" class="md:col-span-4">
             <div class="flex gap-2">
               <UInput v-model="editTcpListenerData.file" readonly class="flex-1" />
-              <UButton size="sm" color="primary" variant="soft" @click="">Select</UButton>
+              <UButton size="sm" color="primary" variant="soft" @click="open_file_dialog(editTcpListenerData, 'file')">Select</UButton>
               <UButton size="sm" color="error" variant="soft" @click="">Clear</UButton>
             </div>
           </UFormField>
@@ -527,27 +559,27 @@ defineExpose({ refresh });
             <UFormField label="Server certificate" class="md:col-span-2">
               <div class="flex gap-2">
                 <UInput v-model="editHttpServerData.httpsConfig.serverCertificate" readonly class="flex-1" />
-                <UButton size="sm" color="primary" variant="soft" @click="">Select</UButton>
-                <UButton size="sm" color="error" variant="soft" @click="">Clear</UButton>
+                <UButton size="sm" color="primary" variant="soft" @click="open_file_dialog(editHttpServerData.httpsConfig, 'serverCertificate')">Select</UButton>
+                <UButton size="sm" color="error" variant="soft" @click="editHttpServerData.httpsConfig.serverCertificate = ''">Clear</UButton>
               </div>
             </UFormField>
             <UFormField label="Private key" class="md:col-span-2">
               <div class="flex gap-2">
                 <UInput v-model="editHttpServerData.httpsConfig.privateKey" readonly class="flex-1" />
-                <UButton size="sm" color="primary" variant="soft" @click="">Select</UButton>
-                <UButton size="sm" color="error" variant="soft" @click="">Clear</UButton>
+                <UButton size="sm" color="primary" variant="soft" @click="open_file_dialog(editHttpServerData.httpsConfig, 'privateKey')">Select</UButton>
+                <UButton size="sm" color="error" variant="soft" @click="editHttpServerData.httpsConfig.privateKey = ''">Clear</UButton>
               </div>
             </UFormField>
             <UFormField label="Client certificate" class="md:col-span-2">
               <div class="flex gap-2">
                 <UInput v-model="editHttpServerData.httpsConfig.clientCertificate" readonly class="flex-1" />
-                <UButton size="sm" color="primary" variant="soft" @click="">Select</UButton>
-                <UButton size="sm" color="error" variant="soft" @click="">Clear</UButton>
+                <UButton size="sm" color="primary" variant="soft" @click="open_file_dialog(editHttpServerData.httpsConfig, 'clientCertificate')">Select</UButton>
+                <UButton size="sm" color="error" variant="soft" @click="editHttpServerData.httpsConfig.clientCertificate = ''">Clear</UButton>
               </div>
             </UFormField>
             <UFormField label="Supported TLS versions" class="md:col-span-4">
-              <UCheckboxGroup v-model="editSupportedTlsVersions"
-                :items="['TLSv1.0', 'TLSv1.1', 'TLSv1.2', 'TLSv1.3']" />
+              <UCheckboxGroup v-model="editHttpServerData.httpsConfig.supportedTlsVersions"
+                :items="['TLSv1.2', 'TLSv1.3']" />
             </UFormField>
           </div>
         </div>
@@ -640,9 +672,6 @@ defineExpose({ refresh });
     <UModal v-model:open="isEditPredefinedSetOpen" title="Edit predefined set" :ui="{ content: 'sm:max-w-2xl' }">
       <template #body>
         <div class="space-y-4">
-          <UFormField label="Name">
-            <UInput v-model="editSelectedPredefinedSet.name" />
-          </UFormField>
           <div class="space-y-2">
             <div v-for="predefKey in Object.keys(editSelectedPredefinedSet.values || {})" :key="predefKey"
               class="grid grid-cols-3 gap-2">
@@ -655,7 +684,7 @@ defineExpose({ refresh });
       <template #footer>
         <div class="flex w-full justify-end gap-2">
           <UButton color="neutral" variant="ghost" @click="isEditPredefinedSetOpen = false">Cancel</UButton>
-          <UButton color="primary" variant="solid" @click="">Save</UButton>
+          <UButton color="primary" variant="solid" @click="savePredefinedSet()">Save</UButton>
         </div>
       </template>
     </UModal>

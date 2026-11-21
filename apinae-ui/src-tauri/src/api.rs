@@ -18,6 +18,70 @@ use tauri_plugin_dialog::{DialogExt, FilePath, MessageDialogButtons};
 const DEFAULT_NAME: &str = "Untitled";
 
 /**
+ * Adds a predefined set to a setup.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `name` The name of the predefined set to add.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
+ */
+#[tauri::command]
+pub fn add_predefined_set(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, name: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.add_predefined_set(name.to_string(), Vec::new()).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Deletes a predefined set from a setup.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `name` The name of the predefined set to delete.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
+ */
+#[tauri::command]
+pub fn delete_predefined_set(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, name: &str) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.remove_predefined_set(name);
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
+ * Updates a predefined set in a setup.
+ *
+ * `app_data` The application data.
+ * `collectionid` The collection id.
+ * `setupid` The setup id.
+ * `name` The name of the predefined set to update.
+ * `values` The new values for the predefined set.
+ *
+ * # Errors
+ * If data cannot be locked or setup cannot be found.
+ */
+#[tauri::command]
+pub fn update_predefined_set(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, name: &str, values: HashMap<String, String>) -> Result<(), String> {
+    let mut app_config = get_configuration_data(&app_data)?;
+    let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    setup.update_predefined_set(name, values).map_err(|err| err.to_string())?;
+    update_data(&app_data, Some(app_config))?;
+    Result::Ok(())
+}
+
+/**
  * Gets a setup from a collection.
  * 
  * `app_data` The application data.
@@ -35,6 +99,25 @@ pub fn get_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str
     let mut app_config = get_configuration_data(&app_data)?;
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
+    if let Some(predefined_sets) = setup.predefined_sets.as_mut() {
+        match setup.params.clone() {
+            Some(params) => {
+                for predefined_set in predefined_sets.values_mut() {
+                    predefined_set.retain(|key, _| params.contains(key));
+                    for param in &params {
+                        if !predefined_set.contains_key(param) {
+                            predefined_set.insert(param.clone(), String::new());
+                        }
+                    }
+                }
+            }
+            None => {
+                for predefined_set in predefined_sets.values_mut() {
+                    predefined_set.clear();
+                }
+            }
+        }
+    }
     Result::Ok(SetupRow::from(setup.clone()))
 }
 

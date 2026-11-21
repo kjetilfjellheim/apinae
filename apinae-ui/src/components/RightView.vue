@@ -92,28 +92,7 @@ defineExpose({ handleProcessReload })
                             variant="soft"
                             @click="stopProcess(item.process.processId)">
                             <i class="fa-solid fa-stop fa-fw ml-auto"></i>Stop
-                        </UButton>
-                        <UButton
-                            size="sm"
-                            color="primary"
-                            variant="soft"
-                            @click="">
-                            <i class="fa-solid fa-book fa-fw ml-auto"></i>Stdout
-                        </UButton>                             
-                        <UButton
-                            size="sm"
-                            color="primary"
-                            variant="soft"
-                            @click="">
-                            <i class="fa-solid fa-book fa-fw ml-auto"></i>Stderr
-                        </UButton>
-                        <UButton
-                            size="sm"
-                            color="primary"
-                            variant="soft"
-                            @click="">
-                            <i class="fa-solid fa-info fa-fw ml-auto"></i>Info
-                        </UButton>                           
+                        </UButton>                         
                     </div>
                     <div class="flex items-center justify-between gap-2">
                         <div class="text-neutral-400">PID: {{ item.process.processId }}</div>                   

@@ -1,63 +1,108 @@
 name: Release
 permissions:
   contents: write
+
 on:
   push:
     tags:
       - v[0-9]+.*
+
 jobs:
   create-release:
-    runs-on: ubuntu-22.04
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-22.04
+            daemon_path: ./target/release/apinae-daemon
+            daemon_asset_name: apinae-daemon-linux-x86_64
+            ui_path: ./target/release/apinae-ui
+            ui_asset_name: apinae-ui-linux-x86_64
+          - os: macos-14
+            daemon_path: ./target/release/apinae-daemon
+            daemon_asset_name: apinae-daemon-macos-arm64
+            ui_path: ./target/release/apinae-ui
+            ui_asset_name: apinae-ui-macos-arm64
+          - os: windows-2022
+            daemon_path: ./target/release/apinae-daemon.exe
+            daemon_asset_name: apinae-daemon-windows-x86_64.exe
+            ui_path: ./target/release/apinae-ui.exe
+            ui_asset_name: apinae-ui-windows-x86_64.exe
+
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
       - name: Get release
         id: get_release
         uses: bruceadams/get-release@v1.3.2
         env:
            GITHUB_TOKEN: ${{ github.token }}
-      - name: Install tauri dependencies                  
+
+      - name: Install tauri dependencies
+        if: runner.os == 'Linux'
         run: |
-          sudo apt-get update  
+          sudo apt-get update
           sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libappindicator3-dev librsvg2-dev
+
       - name: Install cargo-edit
         run: cargo install cargo-edit
+
       - name: Install tinyproxy
+        if: runner.os == 'Linux'
         run: sudo apt install tinyproxy            
+
       - name: Install dependencies
         run: cargo fetch
-      - name: Set version
-        run: cargo set-version 
+
       - name: Set version        
         run: |
             VERSION=${{ github.ref_name }}
             cargo set-version ${VERSION#v}
+
       - name: install frontend dependencies
         run: npm install --prefix apinae-ui      
+
       - name: Build daemon
         run: cargo build --release 
+
       - name: Install cargo Tauri
         run: cargo install tauri-cli --version 2.12.4 --locked
+
       - name: Build UI
         working-directory: apinae-ui/src-tauri
         run: |
-          ulimit -Sn "$(ulimit -Hn)"
+          if [[ "$RUNNER_OS" != "Windows" ]]; then
+            ulimit -Sn "$(ulimit -Hn)"
+          fi
           cargo tauri build --no-bundle
+
       - name: Upload daemon binary
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ./target/release/apinae-daemon
-          asset_name: apinae
+          asset_path: ${{ matrix.daemon_path }}
+          asset_name: ${{ matrix.daemon_asset_name }}
           asset_content_type: application/octet-stream 
+
       - name: Upload UI
         uses: actions/upload-release-asset@v1.0.2
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
           upload_url: ${{ steps.get_release.outputs.upload_url }}
-          asset_path: ./target/release/apinae-ui
-          asset_name: apinae-ui
+          asset_path: ${{ matrix.ui_path }}
+          asset_name: ${{ matrix.ui_asset_name }}
           asset_content_type: application/octet-stream 
