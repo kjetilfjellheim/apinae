@@ -72,4 +72,12 @@ mod test {
         assert_eq!(args.id, None);
         assert!(args.list);
     }
+
+    #[test]
+    fn test_daemon_args_param() {
+        let args = Args::parse_from(["apinae-daemon", "--file", "test.json", "--id", "1", "--param", "key1=value1", "--param", "key2=value2"]);
+        assert_eq!(args.file, "test.json");
+        assert_eq!(args.id, Some("1".to_string()));
+        assert_eq!(args.param, vec![("key1".to_string(), "value1".to_string()), ("key2".to_string(), "value2".to_string())]);
+    }
 }

@@ -62,3 +62,70 @@ impl ProcessData {
         Self { process_id, process, collection_name, setup_name, params }
     }
 }
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use std::process::Command;
+
+    fn spawn_child() -> std::process::Child {
+        #[cfg(windows)]
+        {
+            Command::new("cmd").args(["/C", "exit 0"]).spawn().unwrap()
+        }
+
+        #[cfg(not(windows))]
+        {
+            Command::new("sh").args(["-c", "exit 0"]).spawn().unwrap()
+        }
+    }
+
+    #[test]
+    fn app_data_new_initializes_default_state() {
+        let app_data = AppData::new();
+
+        let data = app_data.data.lock().unwrap();
+        let app_configuration = data.as_ref().expect("App configuration should be initialized");
+        assert_eq!(app_configuration.name, "Untitled");
+        assert_eq!(app_configuration.description, "");
+        assert!(app_configuration.collections.is_empty());
+
+        drop(data);
+
+        assert!(app_data.file_path.lock().unwrap().is_none());
+        assert!(app_data.process_data.lock().unwrap().is_empty());
+    }
+
+    #[test]
+    fn process_data_new_preserves_metadata_and_params() {
+        let child = spawn_child();
+        let process_id = child.id();
+        let params = HashMap::from([("host".to_string(), "example.com".to_string()), ("port".to_string(), "8080".to_string())]);
+
+        let mut process_data = ProcessData::new(process_id, child, "Test Collection".to_string(), "Test Setup".to_string(), params.clone());
+
+        assert_eq!(process_data.process_id, process_id);
+        assert_eq!(process_data.collection_name, "Test Collection");
+        assert_eq!(process_data.setup_name, "Test Setup");
+        assert_eq!(process_data.params, params);
+
+        let _ = process_data.process.kill();
+        let _ = process_data.process.wait();
+    }
+
+    #[test]
+    fn app_data_process_data_can_store_process_data() {
+        let app_data = AppData::new();
+        let child = spawn_child();
+        let process_id = child.id();
+        let process_data = ProcessData::new(process_id, child, "Collection".to_string(), "Setup".to_string(), HashMap::new());
+
+        app_data.process_data.lock().unwrap().insert(process_id, process_data);
+
+        let mut process_data = app_data.process_data.lock().unwrap();
+        let stored = process_data.remove(&process_id).unwrap();
+        let mut child = stored.process;
+        let _ = child.kill();
+        let _ = child.wait();
+    }
+}

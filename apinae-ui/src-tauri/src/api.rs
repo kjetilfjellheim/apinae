@@ -1,9 +1,8 @@
-use std::clone;
 use std::collections::HashSet;
 use std::{collections::HashMap, path::Path};
 
 use crate::model::{CollectionRow, EndpointRow, HttpServerRow, ProcessRow, SetupRow, TcpListenerRow};
-use crate::state::{ProcessData};
+use crate::state::ProcessData;
 use crate::AppData;
 use apinae_lib::config::{EndpointConfiguration, EndpointType, MockResponseConfiguration, ServerConfiguration};
 use apinae_lib::{
@@ -84,14 +83,14 @@ pub fn update_predefined_set(app_data: State<'_, AppData>, collectionid: &str, s
 
 /**
  * Gets a setup from a collection.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
- * 
+ *
  * Returns:
  * The setup row.
- * 
+ *
  * # Errors
  * If data cannot be locked or setup cannot be found.
  */
@@ -140,8 +139,7 @@ pub fn get_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &str
 pub fn add_setup(app_data: State<'_, AppData>, collectionid: &str, name: Option<String>, description: Option<String>) -> Result<SetupRow, String> {
     let mut app_config = get_configuration_data(&app_data)?;
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
-    let setup = SetupConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
-        .map_err(|err| err.to_string())?;
+    let setup = SetupConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default()).map_err(|err| err.to_string())?;
     let setup_row = SetupRow::from(setup.clone());
     collection.add_setup(setup);
     update_data(&app_data, Some(app_config))?;
@@ -213,8 +211,7 @@ pub async fn add_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, 
     let mut app_config = get_configuration_data(&app_data)?;
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    let new_listener = apinae_lib::config::TcpListenerData::new(None, None, None, 0, true, apinae_lib::config::CloseConnectionWhen::Never)
-        .map_err(|err| err.to_string())?;
+    let new_listener = apinae_lib::config::TcpListenerData::new(None, None, None, 0, true, apinae_lib::config::CloseConnectionWhen::Never).map_err(|err| err.to_string())?;
     setup.add_listener(new_listener);
     update_data(&app_data, Some(app_config))?;
     Result::Ok(())
@@ -222,12 +219,12 @@ pub async fn add_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, 
 
 /**
  * Updates a TCP listener in a setup.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
  * `listener_id` The id of the listener to update.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the setup could not be found.
@@ -246,7 +243,7 @@ pub fn update_tcp_listener(app_data: State<'_, AppData>, collectionid: &str, set
 
 /**
  * Deletes a TCP listener from a setup.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
@@ -267,11 +264,11 @@ pub async fn delete_tcp_listener(app: AppHandle, app_data: State<'_, AppData>, c
 
 /**
  * Adds an HTTP server to a setup.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the setup could not be found.
@@ -281,8 +278,7 @@ pub fn add_http_server(app_data: State<'_, AppData>, collectionid: &str, setupid
     let mut app_config = get_configuration_data(&app_data)?;
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-    let http_server = ServerConfiguration::new("Untitled".to_string(), None, None)
-        .map_err(|err| err.to_string())?;
+    let http_server = ServerConfiguration::new("Untitled".to_string(), None, None).map_err(|err| err.to_string())?;
     setup.add_server(http_server);
     update_data(&app_data, Some(app_config))?;
     Result::Ok(())
@@ -290,12 +286,12 @@ pub fn add_http_server(app_data: State<'_, AppData>, collectionid: &str, setupid
 
 /**
  * Updates an HTTP server in a setup.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
  * `server_id` The id of the server to update.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the setup could not be found.
@@ -315,12 +311,12 @@ pub fn update_http_server(app_data: State<'_, AppData>, collectionid: &str, setu
 
 /**
  * Deletes an HTTP server from a setup.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
  * `server_id` The id of the server to delete.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the setup could not be found.
@@ -341,12 +337,12 @@ pub async fn delete_http_server(app: AppHandle, app_data: State<'_, AppData>, co
 
 /**
  * Adds an endpoint to a server.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
  * `server_id` The id of the server to add the endpoint to.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the setup could not be found.
@@ -359,7 +355,8 @@ pub fn add_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid: &
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
     let server = setup.get_server(serverid).ok_or("Server not found".to_string())?;
-    let new_endpoint = EndpointConfiguration::new(None, None, None, Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, "200".to_string(), HashMap::new(), 0) })).map_err(|err| err.to_string())?;
+    let new_endpoint = EndpointConfiguration::new(None, None, None, Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(None, "200".to_string(), HashMap::new(), 0) }))
+        .map_err(|err| err.to_string())?;
     server.add_endpoint(new_endpoint);
     update_data(&app_data, Some(app_config))?;
     Result::Ok(())
@@ -367,13 +364,13 @@ pub fn add_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid: &
 
 /**
  * Updates an endpoint in a server.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
  * `server_id` The id of the server to update the endpoint in.
  * `endpoint_id` The id of the endpoint to update.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the setup could not be found.
@@ -395,19 +392,19 @@ pub fn update_endpoint(app_data: State<'_, AppData>, collectionid: &str, setupid
 
 /**
  * Deletes an endpoint from a server.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `setupid` The setup id.
  * `server_id` The id of the server to delete the endpoint from.
  * `endpoint_id` The id of the endpoint to delete.
- * 
+ *
  * # Errors
  * If the configuration data could not be locked.
  * If the setup could not be found.
  * If the server could not be found.
  * If the endpoint could not be deleted.
- * 
+ *
  */
 #[tauri::command]
 pub async fn delete_endpoint(app: AppHandle, app_data: State<'_, AppData>, collectionid: &str, setupid: &str, serverid: &str, endpointid: &str) -> Result<(), String> {
@@ -486,7 +483,7 @@ pub async fn save_as(app: AppHandle, app_data: State<'_, AppData>) -> Result<(),
         let data = get_configuration_data(&app_data)?;
         data.save(&file_path).map_err(|err| err.to_string())?;
         update_file_path(&app_data, Some(file_path))?;
-    } 
+    }
     Result::Ok(())
 }
 
@@ -616,7 +613,7 @@ pub async fn stop_process(app_data: State<'_, AppData>, processid: u32) -> Resul
         Some(process_data) => {
             let mut process = process_data.process;
             let _ = process.kill().map_err(|err| err.to_string())?;
-            Result::Ok(()) 
+            Result::Ok(())
         }
         None => Result::Ok(()),
     }
@@ -656,8 +653,7 @@ pub fn get_setup_tree(app_data: State<'_, AppData>) -> Result<Vec<CollectionRow>
 #[tauri::command]
 pub fn add_collection(app_data: State<'_, AppData>, name: Option<String>, description: Option<String>) -> Result<CollectionRow, String> {
     let mut app_config = get_configuration_data(&app_data)?;
-    let collection = CollectionConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default())
-        .map_err(|err| err.to_string())?;
+    let collection = CollectionConfiguration::new(name.unwrap_or_else(|| DEFAULT_NAME.to_string()), description.unwrap_or_default()).map_err(|err| err.to_string())?;
     let collection_row = CollectionRow::from(&collection);
     app_config.add_collection(collection);
     update_data(&app_data, Some(app_config))?;
@@ -666,11 +662,11 @@ pub fn add_collection(app_data: State<'_, AppData>, name: Option<String>, descri
 
 /**
  * Renames a collection in the current configuration.
- * 
+ *
  * `app_data` The application data.
  * `collectionid` The collection id.
  * `name` The new collection name.
- * 
+ *
  * # Errors
  * If data cannot be locked or collection cannot be found.
  */
@@ -740,9 +736,7 @@ pub fn rename_setup(app_data: State<'_, AppData>, collectionid: &str, setupid: &
 #[tauri::command]
 pub fn get_processes(app_data: State<'_, AppData>) -> Result<Vec<ProcessRow>, String> {
     let mut processes_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
-    processes_data.retain(|_, process_data| {
-        matches!(process_data.process.try_wait(), Result::Ok(None))
-    });
+    processes_data.retain(|_, process_data| matches!(process_data.process.try_wait(), Result::Ok(None)));
     let processes = processes_data.values().map(ProcessRow::from).collect::<Vec<_>>();
     Result::Ok(processes)
 }
@@ -851,4 +845,220 @@ fn update_file_path(app_data: &State<'_, AppData>, new_file_path: Option<String>
     let mut lock = app_data.file_path.try_lock().map_err(|err| err.to_string())?;
     *lock = new_file_path;
     Result::Ok(())
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use crate::model::MockRow;
+    use apinae_lib::config::{MockResponseConfiguration, TcpListenerData};
+    use tauri::Manager;
+
+    fn mock_app() -> tauri::App<tauri::test::MockRuntime> {
+        tauri::test::mock_builder().manage(AppData::new()).build(tauri::test::mock_context(tauri::test::noop_assets())).unwrap()
+    }
+
+    fn seed_state(app: &tauri::App<tauri::test::MockRuntime>) -> (String, String, String, String, String) {
+        let state = app.state::<AppData>();
+
+        let mut listener = TcpListenerData::new(None, Some("response".to_string()), Some(10), 9000, true, apinae_lib::config::CloseConnectionWhen::Never).unwrap();
+        listener.id = "listener-1".to_string();
+
+        let endpoint = EndpointConfiguration::new(
+            Some("^/test$".to_string()),
+            Some("GET".to_string()),
+            None,
+            Some(EndpointType::Mock { configuration: MockResponseConfiguration::new(Some("ok".to_string()), "200".to_string(), HashMap::new(), 0) }),
+        )
+        .unwrap();
+        let endpoint_id = endpoint.id.clone();
+
+        let mut server = ServerConfiguration::new("Server".to_string(), Some(8080), None).unwrap();
+        server.id = "server-1".to_string();
+        server.add_endpoint(endpoint);
+
+        let mut setup = SetupConfiguration::new("Setup".to_string(), "Setup description".to_string()).unwrap();
+        setup.id = "setup-1".to_string();
+        setup.params = Some(HashSet::from(["host".to_string(), "port".to_string()]));
+        setup.predefined_sets = Some(HashMap::from([("Production".to_string(), HashMap::from([("host".to_string(), "example.com".to_string()), ("port".to_string(), "8080".to_string())]))]));
+        setup.add_server(server);
+        setup.add_listener(listener);
+
+        let mut collection = CollectionConfiguration::new("Collection".to_string(), "Collection description".to_string()).unwrap();
+        collection.id = "collection-1".to_string();
+        collection.add_setup(setup);
+
+        let mut app_config = AppConfiguration::new("App".to_string(), "Description".to_string());
+        app_config.add_collection(collection);
+        update_data(&state, Some(app_config)).unwrap();
+
+        ("collection-1".to_string(), "setup-1".to_string(), "server-1".to_string(), "listener-1".to_string(), endpoint_id)
+    }
+
+    #[test]
+    fn app_state_helpers_update_and_read_configuration() {
+        let app = mock_app();
+        let state = app.state::<AppData>();
+
+        assert!(get_configuration_data(&state).is_ok());
+        assert!(get_current_file_path(&state).is_err());
+
+        update_file_path(&state, Some("test.json".to_string())).unwrap();
+        assert_eq!(get_current_file_path(&state).unwrap(), "test.json");
+
+        update_data(&state, None).unwrap();
+        assert_eq!(get_configuration_data(&state).unwrap_err(), "No data");
+    }
+
+    #[test]
+    fn collection_commands_add_rename_tree_and_delete() {
+        let app = mock_app();
+        let state = app.state::<AppData>();
+
+        let collection = add_collection(state.clone(), Some("Collection".to_string()), Some("Description".to_string())).unwrap();
+        assert_eq!(collection.name, "Collection");
+        assert_eq!(collection.description, "Description");
+
+        rename_collection(state.clone(), &collection.id, "Renamed".to_string()).unwrap();
+        let tree = get_setup_tree(state.clone()).unwrap();
+        assert_eq!(tree.len(), 1);
+        assert_eq!(tree[0].name, "Renamed");
+    }
+
+    #[test]
+    fn setup_commands_add_update_get_and_missing_errors() {
+        let app = mock_app();
+        let state = app.state::<AppData>();
+
+        let collection = add_collection(state.clone(), Some("Collection".to_string()), Some("Description".to_string())).unwrap();
+        let setup = add_setup(state.clone(), &collection.id, Some("Setup".to_string()), Some("Description".to_string())).unwrap();
+
+        update_setup(state.clone(), &collection.id, &setup.id, "Renamed Setup".to_string(), "New description".to_string(), vec!["host".to_string(), "port".to_string()]).unwrap();
+
+        let retrieved = get_setup(state.clone(), &collection.id, &setup.id).unwrap();
+        assert_eq!(retrieved.name, "Renamed Setup");
+        assert_eq!(retrieved.description, "New description");
+        assert_eq!(retrieved.params.as_ref().unwrap(), &["host".to_string(), "port".to_string()]);
+
+        assert_eq!(get_setup(state.clone(), "missing", &setup.id).unwrap_err(), "Collection not found");
+        assert_eq!(get_setup(state.clone(), &collection.id, "missing").unwrap_err(), "Setup not found");
+    }
+
+    #[test]
+    fn predefined_set_commands_normalize_values() {
+        let app = mock_app();
+        let (collection_id, setup_id, _, _, _) = seed_state(&app);
+        let state = app.state::<AppData>();
+
+        update_predefined_set(state.clone(), &collection_id, &setup_id, "Production", HashMap::from([("host".to_string(), "api.example.com".to_string())])).unwrap();
+
+        let setup = get_setup(state.clone(), &collection_id, &setup_id).unwrap();
+        let production = &setup.predefined_sets.unwrap()["Production"];
+        assert_eq!(production.get("host").unwrap(), "api.example.com");
+        assert_eq!(production.get("port").unwrap(), "");
+
+        delete_predefined_set(state.clone(), &collection_id, &setup_id, "Production").unwrap();
+        let setup = get_setup(state.clone(), &collection_id, &setup_id).unwrap();
+        assert!(setup.predefined_sets.is_none());
+
+        add_predefined_set(state.clone(), &collection_id, &setup_id, "Development").unwrap();
+        let setup = get_setup(state.clone(), &collection_id, &setup_id).unwrap();
+        assert!(setup.predefined_sets.as_ref().unwrap().contains_key("Development"));
+    }
+
+    #[tokio::test]
+    async fn tcp_listener_commands_add_update_and_get() {
+        let app = mock_app();
+        let (collection_id, setup_id, _, _, _) = seed_state(&app);
+        let state = app.state::<AppData>();
+
+        add_tcp_listener(state.clone(), &collection_id, &setup_id).await.unwrap();
+        let setup = get_setup(state.clone(), &collection_id, &setup_id).unwrap();
+        let listener_id = setup.listeners.as_ref().unwrap().last().unwrap().id.clone();
+
+        let listener =
+            TcpListenerRow { id: listener_id.clone(), file: None, data: Some("updated".to_string()), delay_write_ms: Some(50), port: 9100, accept: true, close_connection: "Never".to_string() };
+        update_tcp_listener(state.clone(), &collection_id, &setup_id, &listener_id, listener).unwrap();
+
+        let setup = get_setup(state.clone(), &collection_id, &setup_id).unwrap();
+        let listeners = setup.listeners.unwrap();
+        let listener = listeners.iter().find(|item| item.id == listener_id).unwrap();
+        assert_eq!(listener.port, 9100);
+        assert_eq!(listener.data.as_deref(), Some("updated"));
+
+        assert_eq!(
+            update_tcp_listener(
+                state.clone(),
+                &collection_id,
+                &setup_id,
+                "missing",
+                TcpListenerRow::from(&TcpListenerData::new(None, None, None, 1, true, apinae_lib::config::CloseConnectionWhen::Never).unwrap())
+            )
+            .unwrap_err(),
+            "Listener not found"
+        );
+    }
+
+    #[test]
+    fn http_server_and_endpoint_commands_mutate_configuration() {
+        let app = mock_app();
+        let (collection_id, setup_id, _, _, endpoint_id) = seed_state(&app);
+        let state = app.state::<AppData>();
+
+        add_http_server(state.clone(), &collection_id, &setup_id).unwrap();
+        let setup = get_setup(state.clone(), &collection_id, &setup_id).unwrap();
+        let server_id = setup.servers.as_ref().unwrap().last().unwrap().id.clone();
+
+        let server_row = HttpServerRow { id: server_id.clone(), name: "Renamed Server".to_string(), http_port: Some(8181), https_config: None, endpoints: Vec::new() };
+        update_http_server(state.clone(), &collection_id, &setup_id, &server_id, server_row).unwrap();
+
+        add_endpoint(state.clone(), &collection_id, &setup_id, &server_id).unwrap();
+
+        let endpoint_row = EndpointRow {
+            id: endpoint_id.clone(),
+            path_expression: Some("^/updated$".to_string()),
+            method: Some("POST".to_string()),
+            body_expression: Some("body".to_string()),
+            mock: Some(MockRow { response: Some("updated".to_string()), status: "201".to_string(), headers: "Content-Type: application/json\n".to_string(), delay: 5 }),
+            route: None,
+        };
+
+        assert!(update_endpoint(state.clone(), &collection_id, &setup_id, "server-1", &endpoint_id, endpoint_row).is_ok());
+        let setup = get_setup(state.clone(), &collection_id, &setup_id).unwrap();
+        let server = setup.servers.as_ref().unwrap().iter().find(|item| item.id == "server-1").unwrap();
+        assert_eq!(server.endpoints[0].path_expression.as_deref(), Some("^/updated$"));
+    }
+
+    #[tokio::test]
+    async fn process_commands_list_stop_and_handle_missing_process() {
+        let app = mock_app();
+        let state = app.state::<AppData>();
+
+        assert!(get_processes(state.clone()).unwrap().is_empty());
+        assert!(stop_process(state.clone(), 999).await.is_ok());
+
+        #[cfg(windows)]
+        let child = std::process::Command::new("cmd").args(["/C", "exit 0"]).spawn().unwrap();
+        #[cfg(not(windows))]
+        let child = std::process::Command::new("sh").args(["-c", "sleep 30"]).spawn().unwrap();
+
+        let process_id = child.id();
+        let process_data = ProcessData::new(process_id, child, "Collection".to_string(), "Setup".to_string(), HashMap::new());
+        state.process_data.lock().unwrap().insert(process_id, process_data);
+
+        let processes = get_processes(state.clone()).unwrap();
+        assert_eq!(processes.len(), 1);
+        stop_process(state.clone(), process_id).await.unwrap();
+        assert!(get_processes(state.clone()).unwrap().is_empty());
+    }
+
+    #[test]
+    fn settings_and_file_path_helpers() {
+        let _app = mock_app();
+
+        assert_eq!(load_settings(), Settings::load());
+        assert!(save_settings(Settings::default()).is_ok());
+
+        assert_eq!(get_file_path(FilePath::Path(std::path::PathBuf::from("test.json"))).unwrap(), "test.json");
+    }
 }

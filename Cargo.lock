@@ -344,6 +344,7 @@ dependencies = [
  "tauri-plugin-devtools",
  "tauri-plugin-dialog",
  "tauri-plugin-opener",
+ "tokio",
  "tracing",
 ]
 

@@ -31,11 +31,7 @@ impl AppConfiguration {
      */
     #[must_use]
     pub fn new(name: String, description: String) -> Self {
-        AppConfiguration {
-            name,
-            description,
-            collections: vec![],
-        }
+        AppConfiguration { name, description, collections: vec![] }
     }
 
     /**
@@ -89,7 +85,8 @@ impl AppConfiguration {
      * An error if the collection could not be found.
      */
     pub fn delete_collection(&mut self, collection_id: &str) -> Result<(), ApplicationError> {
-        let index = self.collections.iter().position(|collection| collection.id == collection_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Collection with id {collection_id} not found.")))?;
+        let index =
+            self.collections.iter().position(|collection| collection.id == collection_id).ok_or_else(|| ApplicationError::CouldNotFind(format!("Collection with id {collection_id} not found.")))?;
         self.collections.remove(index);
         Ok(())
     }
@@ -122,16 +119,17 @@ impl AppConfiguration {
      */
     pub fn load(path: &str) -> Result<Self, ApplicationError> {
         let string_data = std::fs::read_to_string(path).map_err(|err| ApplicationError::FileError(format!("Failed to read input data to string: {err}")))?;
-        let mut value: serde_json::Value =
-            serde_json::from_str(&string_data).map_err(|err| ApplicationError::FileError(format!("Failed to convert input string to json: {err}")))?;
+        let mut value: serde_json::Value = serde_json::from_str(&string_data).map_err(|err| ApplicationError::FileError(format!("Failed to convert input string to json: {err}")))?;
 
         // Backward compatibility: older files stored setups at the root level.
         if value.get("collections").is_none() {
             let legacy_setups = value.get("setups").cloned();
             if let (Some(serde_json::Value::Array(setups)), Some(object)) = (legacy_setups, value.as_object_mut()) {
+                let collection_id = get_identifier()?;
                 object.insert(
                     "collections".to_string(),
                     serde_json::Value::Array(vec![serde_json::json!({
+                        "id": collection_id,
                         "name": "Default",
                         "description": "",
                         "setups": setups
@@ -143,7 +141,6 @@ impl AppConfiguration {
 
         serde_json::from_value(value).map_err(|err| ApplicationError::FileError(format!("Failed to convert input json to config model: {err}")))
     }
-
 }
 
 /**
@@ -204,7 +201,6 @@ impl CollectionConfiguration {
         &self.setups
     }
 
-
     /**
      * Get a mutable reference to a setup by its id.
      *
@@ -229,8 +225,6 @@ impl CollectionConfiguration {
         self.setups.remove(index);
         Ok(())
     }
-
-
 }
 
 /**
@@ -412,7 +406,7 @@ impl SetupConfiguration {
      *
      * `set_name` The name of the predefined set.
      * `values` The key-value pairs of parameters to update.
-     * 
+     *
      * # Errors
      * An error if the predefined set could not be found.
      */
@@ -541,8 +535,6 @@ impl ServerConfiguration {
         self.endpoints.remove(index);
         Ok(())
     }
-
-
 }
 
 /**
@@ -585,13 +577,12 @@ impl EndpointConfiguration {
      *
      * endpoint_configuration The new endpoint configuration.
      */
-    pub fn update(&mut self, endpoint_configuration : EndpointConfiguration) {
+    pub fn update(&mut self, endpoint_configuration: EndpointConfiguration) {
         self.path_expression = endpoint_configuration.path_expression;
         self.body_expression = endpoint_configuration.body_expression;
         self.method = endpoint_configuration.method;
         self.endpoint_type = endpoint_configuration.endpoint_type;
     }
-
 }
 
 /**
@@ -824,7 +815,7 @@ pub struct RouteConfiguration {
     // Delay before request in milliseconds
     pub delay_before: Option<u64>,
     // Delay after request in milliseconds
-    pub delay_after: Option<u64>,    
+    pub delay_after: Option<u64>,
 }
 
 impl RouteConfiguration {
@@ -862,7 +853,20 @@ impl RouteConfiguration {
         delay_before: Option<u64>,
         delay_after: Option<u64>,
     ) -> Self {
-        RouteConfiguration { url, proxy_url, log, http1_only, accept_invalid_certs, accept_invalid_hostnames, min_tls_version, max_tls_version, read_timeout, connect_timeout, delay_before, delay_after }
+        RouteConfiguration {
+            url,
+            proxy_url,
+            log,
+            http1_only,
+            accept_invalid_certs,
+            accept_invalid_hostnames,
+            min_tls_version,
+            max_tls_version,
+            read_timeout,
+            connect_timeout,
+            delay_before,
+            delay_after,
+        }
     }
 
     #[allow(clippy::too_many_arguments)]
@@ -932,42 +936,309 @@ fn default_close_connection_when() -> CloseConnectionWhen {
 
 #[cfg(test)]
 mod test {
-
     use super::*;
 
-    #[test]
-    fn test_save_load() {
-        let endpoint = EndpointConfiguration::new(
-            Some("/test".to_string()),
-            Some("GET".to_string()),
-            Some("Body".to_string()),
-            Some(EndpointType::Route { configuration: RouteConfiguration::new("/test".to_string(), None, None, false, false, false, None, None, None, None, Some(10), Some(100)) }),
-        )
-        .unwrap();
-        let mut server = ServerConfiguration::new(
-            "Test Server".to_string(),
-            Some(8080),
-            None,
-        ).unwrap();
-        server.add_endpoint(endpoint);
-        let mut setup = SetupConfiguration::new(
-            "Test".to_string(),
-            "Test Description".to_string()).unwrap();
-        setup.add_server(server);
-        let mut collection = CollectionConfiguration::new(
-            "Test Collection".to_string(),
-            "Test Collection Description".to_string()).unwrap();
-        collection.add_setup(setup);
-        let mut configuration = AppConfiguration::new(
-            "Setup Configuration".to_string(),
-            "Setup Configuration Description".to_string()
-        );
-        configuration.add_collection(collection);
-        let path = "/tmp/test.json";
-        let _ = configuration.save(path);
-        let loaded = AppConfiguration::load(path).unwrap();
-
-        assert_eq!(configuration, loaded);
+    fn temp_json_path(name: &str) -> String {
+        let nanos = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_nanos();
+        std::env::temp_dir().join(format!("apinae_{name}_{}_{}.json", std::process::id(), nanos)).to_string_lossy().to_string()
     }
 
+    fn sample_endpoint() -> EndpointConfiguration {
+        EndpointConfiguration::new(
+            Some("^/test$".to_string()),
+            Some("GET".to_string()),
+            Some("body".to_string()),
+            Some(EndpointType::Mock {
+                configuration: MockResponseConfiguration::new(Some("response".to_string()), "200".to_string(), HashMap::from([("Content-Type".to_string(), "application/json".to_string())]), 10),
+            }),
+        )
+        .unwrap()
+    }
+
+    #[test]
+    fn app_configuration_methods() {
+        let mut app = AppConfiguration::new("Original".to_string(), "Original description".to_string());
+        assert_eq!(app.name, "Original");
+        assert_eq!(app.description, "Original description");
+        assert!(app.collections.is_empty());
+
+        app.update("Updated".to_string(), "Updated description".to_string());
+        assert_eq!(app.name, "Updated");
+        assert_eq!(app.description, "Updated description");
+
+        let collection = CollectionConfiguration::new("Collection".to_string(), "Collection description".to_string()).unwrap();
+        let missing_id = "missing".to_string();
+        let collection_id = collection.id.clone();
+        app.add_collection(collection);
+        assert_eq!(app.get_collections().len(), 1);
+        assert!(app.get_collection(&collection_id).is_some());
+        assert!(app.get_collection(&missing_id).is_none());
+
+        assert!(app.delete_collection(&collection_id).is_ok());
+        assert!(app.collections.is_empty());
+        assert!(matches!(
+            app.delete_collection(&collection_id),
+            Err(ApplicationError::CouldNotFind(message)) if message.contains(&collection_id)
+        ));
+    }
+
+    #[test]
+    fn app_save_load_and_file_errors() {
+        let mut app = AppConfiguration::new("Save test".to_string(), "Description".to_string());
+        let mut collection = CollectionConfiguration::new("Collection".to_string(), "Description".to_string()).unwrap();
+        collection.add_setup(SetupConfiguration::new("Setup".to_string(), "Description".to_string()).unwrap());
+        app.add_collection(collection);
+
+        let path = temp_json_path("save_load");
+        app.save(&path).unwrap();
+        assert_eq!(AppConfiguration::load(&path).unwrap(), app);
+        let _ = std::fs::remove_file(&path);
+
+        let missing_path = temp_json_path("missing");
+        assert!(matches!(AppConfiguration::load(&missing_path), Err(ApplicationError::FileError(_))));
+
+        let invalid_path = temp_json_path("invalid");
+        std::fs::write(&invalid_path, "not json").unwrap();
+        assert!(matches!(AppConfiguration::load(&invalid_path), Err(ApplicationError::FileError(_))));
+        let _ = std::fs::remove_file(&invalid_path);
+
+        let directory_path = temp_json_path("directory");
+        std::fs::create_dir(&directory_path).unwrap();
+        assert!(matches!(app.save(&directory_path), Err(ApplicationError::FileError(_))));
+        let _ = std::fs::remove_dir(&directory_path);
+    }
+
+    #[test]
+    fn app_load_legacy_root_setup() {
+        let path = temp_json_path("legacy");
+        std::fs::write(
+            &path,
+            r#"{
+            "name": "Legacy",
+            "description": "Legacy description",
+            "setups": [{
+                "id": "legacy-setup",
+                "name": "Setup",
+                "description": "Setup description",
+                "servers": [],
+                "listeners": [],
+                "params": null,
+                "predefinedSets": null
+            }]
+        }"#,
+        )
+        .unwrap();
+
+        let loaded = AppConfiguration::load(&path).unwrap();
+        assert_eq!(loaded.name, "Legacy");
+        assert_eq!(loaded.collections.len(), 1);
+        assert_eq!(loaded.collections[0].name, "Default");
+        assert_eq!(loaded.collections[0].setups[0].id, "legacy-setup");
+        let _ = std::fs::remove_file(&path);
+    }
+
+    #[test]
+    fn collection_configuration_methods() {
+        let mut collection = CollectionConfiguration::new("Collection".to_string(), "Description".to_string()).unwrap();
+        collection.update("Renamed".to_string(), "New description".to_string());
+        assert_eq!(collection.name, "Renamed");
+        assert_eq!(collection.description, "New description");
+
+        let setup = SetupConfiguration::new("Setup".to_string(), "Description".to_string()).unwrap();
+        let setup_id = setup.id.clone();
+        collection.add_setup(setup);
+        assert_eq!(collection.get_setups().len(), 1);
+        assert!(collection.get_setup(&setup_id).is_some());
+        assert!(collection.get_setup("missing").is_none());
+
+        assert!(collection.delete_setup(&setup_id).is_ok());
+        assert!(collection.get_setups().is_empty());
+        assert!(matches!(collection.delete_setup(&setup_id), Err(ApplicationError::CouldNotFind(_))));
+    }
+
+    #[test]
+    fn setup_configuration_server_listener_and_param_methods() {
+        let mut setup = SetupConfiguration::new("Setup".to_string(), "Description".to_string()).unwrap();
+        setup.update("Renamed".to_string(), "New description".to_string());
+        assert_eq!(setup.name, "Renamed");
+        assert_eq!(setup.description, "New description");
+
+        let server = ServerConfiguration::new("Server".to_string(), Some(8080), None).unwrap();
+        let server_id = server.id.clone();
+        let listener = TcpListenerData::new(None, Some("data".to_string()), Some(5), 9000, true, CloseConnectionWhen::Never).unwrap();
+        let listener_id = listener.id.clone();
+
+        setup.add_server(server.clone());
+        setup.add_listener(listener.clone());
+        assert!(setup.get_server(&server_id).is_some());
+        assert!(setup.get_listener(&listener_id).is_some());
+
+        setup.add_param("host".to_string());
+        setup.add_param("port".to_string());
+        assert_eq!(setup.params.as_ref().unwrap().len(), 2);
+        setup.remove_param("host");
+        assert!(!setup.params.as_ref().unwrap().contains("host"));
+        setup.remove_param("port");
+        assert!(setup.params.is_none());
+
+        assert!(setup.delete_server(&server_id).is_ok());
+        assert!(matches!(setup.delete_server(&server_id), Err(ApplicationError::CouldNotFind(_))));
+        assert!(setup.delete_listener(&listener_id).is_ok());
+        assert!(matches!(setup.delete_listener(&listener_id), Err(ApplicationError::CouldNotFind(_))));
+    }
+
+    #[test]
+    fn setup_predefined_set_methods() {
+        let mut setup = SetupConfiguration::new("Setup".to_string(), "Description".to_string()).unwrap();
+        setup.add_param("host".to_string());
+        setup.add_param("port".to_string());
+        setup.add_predefined_set("Production".to_string(), vec!["host".to_string(), "port".to_string()]).unwrap();
+
+        let set = &setup.predefined_sets.as_ref().unwrap()["Production"];
+        assert_eq!(set.get("host"), Some(&String::new()));
+        assert_eq!(set.get("port"), Some(&String::new()));
+
+        let values = HashMap::from([("host".to_string(), "example.com".to_string()), ("port".to_string(), "8080".to_string())]);
+        setup.update_predefined_set("Production", values.clone()).unwrap();
+        assert_eq!(setup.predefined_sets.as_ref().unwrap()["Production"], values);
+
+        assert!(matches!(setup.update_predefined_set("Missing", HashMap::new()), Err(ApplicationError::CouldNotFind(_))));
+
+        setup.remove_predefined_set("Production");
+        assert!(setup.predefined_sets.is_none());
+        setup.remove_predefined_set("Missing");
+    }
+
+    #[test]
+    fn https_configuration_methods() {
+        let https = HttpsConfiguration::new("server.crt".to_string(), "server.key".to_string(), 8443, Some("client.crt".to_string()), vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3]);
+        assert_eq!(https.server_certificate, "server.crt");
+        assert_eq!(https.private_key, "server.key");
+        assert_eq!(https.https_port, 8443);
+        assert_eq!(https.client_certificate.as_deref(), Some("client.crt"));
+        assert_eq!(https.supported_tls_versions, vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3]);
+    }
+
+    #[test]
+    fn server_configuration_methods() {
+        let mut server = ServerConfiguration::new("Server".to_string(), Some(8080), None).unwrap();
+        server.update("Renamed".to_string(), Some(8081), None);
+        assert_eq!(server.name, "Renamed");
+        assert_eq!(server.http_port, Some(8081));
+
+        let endpoint = sample_endpoint();
+        let endpoint_id = endpoint.id.clone();
+        server.add_endpoint(endpoint);
+        assert!(server.get_endpoint(&endpoint_id).is_some());
+        assert!(server.get_endpoint("missing").is_none());
+        assert!(server.delete_endpoint(&endpoint_id).is_ok());
+        assert!(matches!(server.delete_endpoint(&endpoint_id), Err(ApplicationError::CouldNotFind(_))));
+    }
+
+    #[test]
+    fn endpoint_configuration_methods() {
+        let mut endpoint = sample_endpoint();
+        assert_eq!(endpoint.path_expression.as_deref(), Some("^/test$"));
+        let replacement = EndpointConfiguration::new(Some("^/updated$".to_string()), Some("POST".to_string()), Some("new body".to_string()), None).unwrap();
+        endpoint.update(replacement);
+        assert_eq!(endpoint.path_expression.as_deref(), Some("^/updated$"));
+        assert_eq!(endpoint.method.as_deref(), Some("POST"));
+        assert_eq!(endpoint.body_expression.as_deref(), Some("new body"));
+        assert!(endpoint.endpoint_type.is_none());
+    }
+
+    #[test]
+    fn tcp_listener_configuration_methods_and_close_string_conversion() {
+        let mut listener = TcpListenerData::new(Some("input.txt".to_string()), Some("response".to_string()), Some(25), 9000, false, CloseConnectionWhen::AfterRead).unwrap();
+
+        assert_eq!(listener.file.as_deref(), Some("input.txt"));
+        assert_eq!(listener.data.as_deref(), Some("response"));
+        assert_eq!(listener.delay_write_ms, Some(25));
+        assert_eq!(listener.port, 9000);
+        assert!(!listener.accept);
+
+        listener.update(TcpListenerData::new(None, Some("updated".to_string()), Some(50), 9001, true, CloseConnectionWhen::AfterResponse).unwrap());
+        assert_eq!(listener.file, None);
+        assert_eq!(listener.data.as_deref(), Some("updated"));
+        assert_eq!(listener.delay_write_ms, Some(50));
+        assert_eq!(listener.port, 9001);
+        assert!(listener.accept);
+
+        assert_eq!(String::from(CloseConnectionWhen::BeforeRead), "BeforeRead");
+        assert_eq!(String::from(CloseConnectionWhen::AfterRead), "AfterRead");
+        assert_eq!(String::from(CloseConnectionWhen::AfterResponse), "AfterResponse");
+        assert_eq!(String::from(CloseConnectionWhen::Never), "Never");
+        assert_eq!(CloseConnectionWhen::from("BeforeRead"), CloseConnectionWhen::BeforeRead);
+        assert_eq!(CloseConnectionWhen::from("AfterRead"), CloseConnectionWhen::AfterRead);
+        assert_eq!(CloseConnectionWhen::from("AfterResponse"), CloseConnectionWhen::AfterResponse);
+        assert_eq!(CloseConnectionWhen::from("Never"), CloseConnectionWhen::Never);
+        assert_eq!(CloseConnectionWhen::from("Unknown"), CloseConnectionWhen::AfterResponse);
+    }
+
+    #[test]
+    fn mock_response_configuration_methods() {
+        let mut mock = MockResponseConfiguration::new(Some("old".to_string()), "200".to_string(), HashMap::from([("A".to_string(), "1".to_string())]), 10);
+        assert_eq!(mock.response.as_deref(), Some("old"));
+        assert_eq!(mock.status, "200");
+        assert_eq!(mock.delay, 10);
+
+        mock.update(Some("new".to_string()), "201".to_string(), HashMap::from([("B".to_string(), "2".to_string())]), 20);
+        assert_eq!(mock.response.as_deref(), Some("new"));
+        assert_eq!(mock.status, "201");
+        assert_eq!(mock.headers, HashMap::from([("B".to_string(), "2".to_string())]));
+        assert_eq!(mock.delay, 20);
+    }
+
+    #[test]
+    fn tls_version_conversions() {
+        assert_eq!(String::from(TlsVersion::TLSv1_0), "TLSv1.0");
+        assert_eq!(String::from(TlsVersion::TLSv1_1), "TLSv1.1");
+        assert_eq!(String::from(TlsVersion::TLSv1_2), "TLSv1.2");
+        assert_eq!(String::from(TlsVersion::TLSv1_3), "TLSv1.3");
+
+        assert_eq!(TlsVersion::from("TLSv1.0".to_string()), TlsVersion::TLSv1_0);
+        assert_eq!(TlsVersion::from("TLSv1.1".to_string()), TlsVersion::TLSv1_1);
+        assert_eq!(TlsVersion::from("TLSv1.2".to_string()), TlsVersion::TLSv1_2);
+        assert_eq!(TlsVersion::from("TLSv1.3".to_string()), TlsVersion::TLSv1_3);
+        assert_eq!(TlsVersion::from("Unknown".to_string()), TlsVersion::TLSv1_3);
+    }
+
+    #[test]
+    fn route_configuration_methods() {
+        let mut route = RouteConfiguration::new(
+            "https://example.com".to_string(),
+            Some("http://proxy".to_string()),
+            Some("route.log".to_string()),
+            true,
+            true,
+            true,
+            Some(TlsVersion::TLSv1_2),
+            Some(TlsVersion::TLSv1_3),
+            Some(100),
+            Some(200),
+            Some(300),
+            Some(400),
+        );
+        assert_eq!(route.url, "https://example.com");
+
+        route.update("https://updated.example.com".to_string(), None, None, false, false, false, Some(TlsVersion::TLSv1_3), None, Some(500), Some(600), Some(700), Some(800));
+        assert_eq!(route.url, "https://updated.example.com");
+        assert_eq!(route.proxy_url, None);
+        assert!(!route.http1_only);
+        assert!(!route.accept_invalid_certs);
+        assert!(!route.accept_invalid_hostnames);
+        assert_eq!(route.max_tls_version, None);
+        assert_eq!(route.read_timeout, Some(500));
+        assert_eq!(route.connect_timeout, Some(600));
+        assert_eq!(route.delay_before, Some(700));
+        assert_eq!(route.delay_after, Some(800));
+    }
+
+    #[test]
+    fn default_serde_helpers() {
+        assert_eq!(default_server_supported_tls_versions(), vec![TlsVersion::TLSv1_2, TlsVersion::TLSv1_3]);
+        assert!(default_as_true());
+        assert_eq!(default_close_connection_when(), CloseConnectionWhen::AfterResponse);
+        assert!(get_identifier().is_ok());
+    }
 }

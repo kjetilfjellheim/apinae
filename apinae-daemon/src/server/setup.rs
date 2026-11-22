@@ -84,6 +84,7 @@ mod tests {
         };
         server_setup.setup(&setup_configuration, Vec::new()).await.unwrap();
         let servers = server_setup.start_servers().await;
+        println!("Servers started: {:?}", servers);
         assert!(servers.is_ok());
     }
 }

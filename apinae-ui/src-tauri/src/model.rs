@@ -1,6 +1,9 @@
-use std::collections::{HashMap};
+use std::collections::HashMap;
 
-use apinae_lib::config::{CloseConnectionWhen, CollectionConfiguration, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, SetupConfiguration, TcpListenerData, TlsVersion};
+use apinae_lib::config::{
+    CloseConnectionWhen, CollectionConfiguration, EndpointConfiguration, EndpointType, HttpsConfiguration, MockResponseConfiguration, RouteConfiguration, ServerConfiguration, SetupConfiguration,
+    TcpListenerData, TlsVersion,
+};
 
 use crate::state::ProcessData;
 
@@ -69,16 +72,8 @@ impl From<SetupConfiguration> for SetupRow {
                 params.sort();
                 params
             }),
-            listeners: if listeners.is_empty() {
-                None
-            } else {
-                Some(listeners.iter().map(TcpListenerRow::from).collect())
-            },
-            servers: if servers.is_empty() {
-                None
-            } else {
-                Some(servers.iter().map(HttpServerRow::from).collect())
-            },
+            listeners: if listeners.is_empty() { None } else { Some(listeners.iter().map(TcpListenerRow::from).collect()) },
+            servers: if servers.is_empty() { None } else { Some(servers.iter().map(HttpServerRow::from).collect()) },
             predefined_sets,
         }
     }
@@ -169,19 +164,9 @@ impl From<&EndpointRow> for EndpointConfiguration {
             .mock
             .as_ref()
             .map(|mock_row| EndpointType::Mock { configuration: MockResponseConfiguration::from(mock_row) })
-            .or_else(|| {
-                endpoint_row
-                    .route
-                    .as_ref()
-                    .map(|route_row| EndpointType::Route { configuration: RouteConfiguration::from(route_row) })
-            });
+            .or_else(|| endpoint_row.route.as_ref().map(|route_row| EndpointType::Route { configuration: RouteConfiguration::from(route_row) }));
 
-        EndpointConfiguration::new(
-            endpoint_row.path_expression.clone(),
-            endpoint_row.method.clone(),
-            endpoint_row.body_expression.clone(),
-            endpoint_type,
-        ).unwrap()
+        EndpointConfiguration::new(endpoint_row.path_expression.clone(), endpoint_row.method.clone(), endpoint_row.body_expression.clone(), endpoint_type).unwrap()
     }
 }
 
@@ -412,8 +397,9 @@ impl From<TcpListenerRow> for TcpListenerData {
             tcp_listener_row.delay_write_ms,
             tcp_listener_row.port,
             tcp_listener_row.accept,
-            CloseConnectionWhen::from(tcp_listener_row.close_connection.as_str())
-        ).unwrap()
+            CloseConnectionWhen::from(tcp_listener_row.close_connection.as_str()),
+        )
+        .unwrap()
     }
 }
 
@@ -435,12 +421,7 @@ pub struct ProcessRow {
 
 impl From<&ProcessData> for ProcessRow {
     fn from(process_data: &ProcessData) -> Self {
-        Self {
-            process_id: process_data.process_id,
-            collection_name: process_data.collection_name.clone(),
-            setup_name: process_data.setup_name.clone(),
-            params: process_data.params.clone(),
-        }
+        Self { process_id: process_data.process_id, collection_name: process_data.collection_name.clone(), setup_name: process_data.setup_name.clone(), params: process_data.params.clone() }
     }
 }
 
@@ -514,7 +495,6 @@ mod test {
         assert_eq!(route_row.connect_timeout, None);
         assert_eq!(route_row.delay_before, Some(10));
         assert_eq!(route_row.delay_after, Some(20));
-
     }
 
     /**
