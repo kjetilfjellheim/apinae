@@ -1,3 +1,4 @@
+use std::clone;
 use std::collections::HashSet;
 use std::{collections::HashMap, path::Path};
 
@@ -554,22 +555,24 @@ pub async fn open_dialog(app: AppHandle, name: Option<String>, extension: Option
  * If the setup could not be started.
  */
 #[tauri::command]
-pub async fn start_process(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, params: HashMap<String, String>) -> Result<(), String> {
+pub async fn start_process(app_data: State<'_, AppData>, collectionid: &str, setupid: &str, params: Option<HashMap<String, String>>, predefined_set_name: Option<String>) -> Result<(), String> {
     let mut app_config = get_configuration_data(&app_data)?;
     let collection = app_config.get_collection(collectionid).ok_or("Collection not found".to_string())?;
     let collection_name = collection.name.clone();
-    let setup_name = {
-        let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
-        setup.name.clone()
-    };
+    let setup = collection.get_setup(setupid).ok_or("Setup not found".to_string())?;
     let mut process_data = app_data.process_data.lock().map_err(|err| err.to_string())?;
     let file_path = get_current_file_path(&app_data)?;
     let path = Path::new(&file_path).parent().or_else(|| Some(Path::new("."))).ok_or("Invalid file path")?;
     let app_path = Settings::load().apinae_path.unwrap_or("apinae".to_owned());
     let mut process = std::process::Command::new(app_path);
     let mut process = process.arg("--file").arg(&file_path).arg("--id").arg(collectionid.to_owned() + "-" + setupid);
-    for (key, value) in params.clone() {
-        process = process.arg("--param").arg(format!("{key}={value}"));
+    if let Some(params) = params.clone() {
+        for (key, value) in params {
+            process = process.arg("--param").arg(format!("{key}={value}"));
+        }
+    }
+    if let Some(predefined_set_name) = &predefined_set_name {
+        process = process.arg("--predefined-set").arg(predefined_set_name);
     }
     let mut process = process.stdout(std::process::Stdio::piped()).current_dir(path.as_os_str()).spawn().map_err(|err| err.to_string())?;
     std::thread::sleep(std::time::Duration::from_millis(1000));
@@ -577,7 +580,17 @@ pub async fn start_process(app_data: State<'_, AppData>, collectionid: &str, set
         return Err(format!("Process exited immediately with status: {status}"));
     }
     let process_id = process.id();
-    process_data.insert(process_id, ProcessData::new(process_id, process, collection_name, setup_name, params));
+    // Store the parameters used to start the process, either from the provided params or from the predefined set
+    let params: HashMap<String, String> = if let Some(params) = params {
+        params
+    } else if let Some(predefined_set_name) = &predefined_set_name {
+        let predefined_sets = setup.predefined_sets.as_ref().ok_or("Setup has no predefined sets".to_string())?;
+        let predefined_set = predefined_sets.get(predefined_set_name).ok_or("Predefined set not found".to_string())?;
+        predefined_set.clone()
+    } else {
+        HashMap::new()
+    };
+    process_data.insert(process_id, ProcessData::new(process_id, process, collection_name, setup.name.clone(), params));
     Result::Ok(())
 }
 

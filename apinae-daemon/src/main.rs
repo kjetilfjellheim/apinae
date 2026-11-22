@@ -164,11 +164,10 @@ async fn start_daemon(args: Args, config: &mut AppConfiguration) -> Result<(), A
 fn validate_parameters(setup: &SetupConfiguration, args: &Args) -> Result<Vec<(String, String)>, ApplicationError> {
     let setup_params_required = &setup.params.clone().unwrap_or_default();
     let mut setup_params = Vec::new();
+    update_with_predifined_params(setup, args, setup_params_required, &mut setup_params);
     for (key, value) in &args.param {
-        if setup_params_required.iter().any(|param| param.eq(key)) {
+        if !value.is_empty() {
             setup_params.push((key.clone(), value.clone()));
-        } else {
-            return Err(ApplicationError::CouldNotFind(format!("Parameter {key} not found in setup {}", setup.id)));
         }
     }
     if setup_params_required.is_empty() {
@@ -183,6 +182,32 @@ fn validate_parameters(setup: &SetupConfiguration, args: &Args) -> Result<Vec<(S
         return Err(ApplicationError::CouldNotFind(format!("Missing parameters: {setup_params_required:?}")));
     }
     Ok(setup_params)
+}
+
+/**
+ * Update the setup parameters with the predefined set parameters if a predefined set is specified in the arguments.
+ * 
+ * # Arguments
+ * `setup`: The setup to update the parameters for.
+ * `args`: The application arguments to update the parameters with.
+ * `setup_params_required`: The required parameters for the setup.
+ * `setup_params`: The parameters to update with the predefined set parameters.
+ * 
+ * # Returns
+ * None.
+ */
+fn update_with_predifined_params(setup: &SetupConfiguration, args: &Args, setup_params_required: &std::collections::HashSet<String>, setup_params: &mut Vec<(String, String)>) {
+    if let Some(predefined_set) = &args.predefined_set {
+        if let Some(predefined_sets) = &setup.predefined_sets {
+            if let Some(predefined_set_params) = predefined_sets.get(predefined_set) {
+                for (key, value) in predefined_set_params {
+                    if setup_params_required.iter().any(|param| param.eq(key)) {
+                        setup_params.push((key.clone(), value.clone()));
+                    }
+                }
+            }
+        }
+    }
 }
 
 /**

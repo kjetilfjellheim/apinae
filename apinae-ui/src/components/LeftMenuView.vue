@@ -8,6 +8,16 @@ const emit = defineEmits(['processReload', 'setupSelect', 'editCollection', 'edi
 
 const items = ref<NavigationMenuItem[]>([]);
 
+const editRunData = ref<{
+    params: Map<string, string>;
+    predefinedSets: string[];
+    collectionId: string;
+    setupId: string;
+    selectedPredefinedSetName: string;
+} | null>(null);
+
+const isRunParamsOpen = ref(false);
+
 type CollectionNode = NavigationMenuItem & {
     nodeType: 'collection';
     collection: any;
@@ -58,7 +68,7 @@ function getSetupMenuItems(collectionId: string, setupId: string, setupName: str
                 label: 'Run',
                 icon: 'fa-play',
                 onSelect() {
-                    startProcess(collectionId, setupId);
+                    initWithParams(collectionId, setupId);
                 }
             },
             {
@@ -189,10 +199,21 @@ function parseTreeItems(collections: any[]): CollectionNode[] {
     return treeItems;
 }
 
-function startProcess(collectionId: string, setupId: string) {
-    invoke("start_process", { collectionid: collectionId, setupid: setupId, params: {} })
-        .then(() => {
-            handleProcessReload();
+function initWithParams(collectionId: string, setupId: string) {
+    invoke("get_setup", { collectionid: collectionId, setupid: setupId })
+        .then((setup: any) => {
+            editRunData.value = {
+                params: new Map(setup?.params?.map((str: string) => [str, '']) || []),
+                predefinedSets: Object.keys(setup?.predefinedSets || {}),
+                collectionId: collectionId,
+                setupId: setupId,
+                selectedPredefinedSetName: null
+            };                            
+            if (editRunData.value.params.size > 0) {
+                isRunParamsOpen.value = true;
+            } else {
+                runWithParams();
+            }
         })
         .catch((error) => window.alert(error));
 }
@@ -203,6 +224,20 @@ function handleProcessReload() {
 
 function selectSetup(collectionId: string, setupId: string) {
     emit('setupSelect', { collectionid: collectionId, setupid: setupId });
+}
+
+function runWithParams() {
+    invoke("start_process", { 
+        collectionid: editRunData.value.collectionId, 
+        setupid: editRunData.value.setupId, 
+        params: editRunData.value.params, 
+        predefinedSetName: editRunData.value.selectedPredefinedSetName 
+    })
+    .then(() => {
+        handleProcessReload();
+        isRunParamsOpen.value = false;
+    })
+    .catch((error) => window.alert(error));
 }
 
 defineExpose({ handleDataReload });
@@ -251,4 +286,25 @@ defineExpose({ handleDataReload });
             </UNavigationMenu>
         </div>
     </div>
+    <UModal v-model:open="isRunParamsOpen" title="Run parameters">
+      <template #body>
+        <div class="space-y-4">
+          <div class="grid grid-cols-1 gap-1 md:grid-cols-4 text-sm">
+            <p class="md:col-span-1"><span class="text-neutral-500">Predefined set:</span></p>
+            <USelectMenu clear v-model="editRunData.selectedPredefinedSetName" :items="editRunData?.predefinedSets || []" class="md:col-span-3" />
+            <p class="md:col-span-4"><span class="text-neutral-300">Parameters</span></p>
+            <template v-for="[key, value] in editRunData?.params" :key="key">
+              <span class="text-neutral-500 md:col-span-1">{{ key }}:</span>
+              <UInput :value="editRunData?.params.get(key)" @input="editRunData?.params.set(key, $event.target.value)" class="md:col-span-3" />
+            </template>
+          </div>
+        </div>
+      </template>
+      <template #footer>
+        <div class="flex w-full justify-end gap-2">
+          <UButton color="neutral" variant="ghost" @click="isRunParamsOpen = false">Cancel</UButton>
+          <UButton color="primary" variant="solid" @click="runWithParams()">Run</UButton>
+        </div>
+      </template>
+    </UModal>    
 </template>
